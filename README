@@ -1,1 +1,39 @@
+todo:
 
+- build (copy pytorch)
+    - https://cliutils.gitlab.io/modern-cmake/README.html
+    - CMake Version (CMakeLists.txt)
+    - vcpkg?
+    - clang?
+
+- formatter
+    - clang-format?
+
+- linter
+    - clang-tidy?
+    - cppcheck?
+    - include-what-you-use?
+
+- memory checker
+    - valgrind?
+    - asan?
+    - tsan?
+    - ubsan?
+    - c++ static analyzer?
+
+- qa
+    - unit test library
+
+- accelerators
+    - cuda? apple metal? openmp? pthreads?
+
+- golang concurrency
+    - defer
+    - goroutines
+
+- idiomatic types:
+    - int, float, double, char, byte, bool - with clear size specification like int32, int64, float32, float64
+    - string
+    - array, list, map, set, tuple, struct, class, enum, union, variant, optional
+    - parallel for loops
+    - lambda expressions
