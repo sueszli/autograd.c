@@ -17,13 +17,13 @@ typedef struct {
 static goroutine_t *goroutines[UINT8_MAX + 1] = {0};
 static _Atomic u8 goroutine_count = 0; // smaller means faster wait()
 
-static void *invoke(void *arg) { // pthread doesn't have typed args
+static void *invoke(void *arg) {
     goroutine_t *g = (goroutine_t *)arg;
     assert(g != NULL);
     assert(g->func != NULL);
-    g->func(); // execute
+    g->func(); // call
     atomic_store(&g->finished, true);
-    return NULL; // required by pthreads
+    return NULL;
 }
 
 void spawn(fn_ptr func) {
@@ -44,11 +44,6 @@ void spawn(fn_ptr func) {
     goroutines[idx] = g;
 
     int result = pthread_create(&g->thread, NULL, invoke, g);
-    if (result != 0) {
-        goroutines[idx] = NULL;
-        atomic_fetch_sub(&goroutine_count, 1);
-        free(g);
-    }
     assert(result == 0);
 }
 
@@ -59,7 +54,8 @@ void wait(void) {
         all_finished = true;
         u8 current_count = atomic_load(&goroutine_count);
         for (u8 i = 0; i < current_count; i++) {
-            if (goroutines[i] && !atomic_load(&goroutines[i]->finished)) {
+            bool not_finished = goroutines[i] && !atomic_load(&goroutines[i]->finished);
+            if (not_finished) {
                 all_finished = false;
                 sched_yield(); // avoid busy waiting
                 break;
@@ -70,12 +66,14 @@ void wait(void) {
     // cleanup
     u8 final_count = atomic_load(&goroutine_count);
     for (u8 i = 0; i < final_count; i++) {
-        if (goroutines[i]) {
-            int result = pthread_join(goroutines[i]->thread, NULL);
-            assert(result == 0);
-            free(goroutines[i]);
-            goroutines[i] = NULL;
+        bool doesnt_exist = goroutines[i] == NULL;
+        if (doesnt_exist) {
+            continue;
         }
+        int result = pthread_join(goroutines[i]->thread, NULL);
+        assert(result == 0);
+        free(goroutines[i]);
+        goroutines[i] = NULL;
     }
     atomic_store(&goroutine_count, 0);
 }

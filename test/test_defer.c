@@ -19,7 +19,6 @@ void test_basic_defer() {
 
     {
         defer({ cleaned_up = 1; });
-
         assert(cleaned_up == 0); // should not be cleaned up yet
     }
 
@@ -31,9 +30,7 @@ void test_multiple_defers() {
 
     {
         defer({ cleanup_results[cleanup_order++] = 1; });
-
         defer({ cleanup_results[cleanup_order++] = 2; });
-
         defer({ cleanup_results[cleanup_order++] = 3; });
     }
 
@@ -67,7 +64,6 @@ void test_defer_in_function() {
 
     void test_function() {
         defer({ cleanup_results[cleanup_order++] = 42; });
-
         assert(cleanup_order == 0);
     }
 
@@ -136,7 +132,6 @@ void test_defer_unique_names() {
     {
         defer({ result1 = 1; });
         defer({ result2 = 2; });
-
         assert(result1 == 0 && result2 == 0);
     }
 

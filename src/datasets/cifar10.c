@@ -1,6 +1,8 @@
 #include "cifar10.h"
 #include "../utils/defer.h"
 #include "../utils/go.h"
+#include "../utils/types.h"
+#include <assert.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,17 +10,26 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define CIFAR10_RECORD_SIZE (1 + CIFAR10_PIXELS_PER_IMAGE)
+static const char *BATCH_1_PATH = "/workspace/data/data_batch_1.bin";
+static const char *BATCH_2_PATH = "/workspace/data/data_batch_2.bin";
+static const char *BATCH_3_PATH = "/workspace/data/data_batch_3.bin";
+static const char *BATCH_4_PATH = "/workspace/data/data_batch_4.bin";
+static const char *BATCH_5_PATH = "/workspace/data/data_batch_5.bin";
+static const char *BATCH_TEST_PATH = "/workspace/data/test_batch.bin";
 
-static const char *CIFAR10_DATA_DIR = "/workspace/data";
-static const char *CIFAR10_DOWNLOAD_URL = "https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz";
-static const char *CIFAR10_ARCHIVE_PATH = "/workspace/data/cifar-10-binary.tar.gz";
-static const char *CIFAR10_BATCH_1_PATH = "/workspace/data/data_batch_1.bin";
-static const char *CIFAR10_BATCH_2_PATH = "/workspace/data/data_batch_2.bin";
-static const char *CIFAR10_BATCH_3_PATH = "/workspace/data/data_batch_3.bin";
-static const char *CIFAR10_BATCH_4_PATH = "/workspace/data/data_batch_4.bin";
-static const char *CIFAR10_BATCH_5_PATH = "/workspace/data/data_batch_5.bin";
-static const char *CIFAR10_TEST_BATCH_PATH = "/workspace/data/test_batch.bin";
+static void download(void) {
+    bool exists = stat(BATCH_1_PATH, &(struct stat){0}) == 0;
+    if (exists) {
+        return;
+    }
+
+    const char *mkdir_cmd = "mkdir -p /workspace/data";
+    const char *curl_cmd = "curl -L -o /workspace/data/cifar-10-binary.tar.gz https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz";
+    const char *tar_cmd = "tar -xzf /workspace/data/cifar-10-binary.tar.gz -C /workspace/data --strip-components=1";
+    assert(system(mkdir_cmd) == 0);
+    assert(system(curl_cmd) == 0);
+    assert(system(tar_cmd) == 0);
+}
 
 typedef struct {
     const char *path;
@@ -37,8 +48,9 @@ static cifar10_sample_t *load_batch_samples(const char *filename, u64 *num_sampl
     i64 file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    *num_samples = (u64)file_size / CIFAR10_RECORD_SIZE;
-    if (file_size % CIFAR10_RECORD_SIZE != 0) {
+    u64 record_size = 1 + CIFAR10_PIXELS_PER_IMAGE;
+    *num_samples = (u64)file_size / record_size;
+    if ((u64)file_size % record_size != 0) {
         fclose(file);
         return NULL;
     }
@@ -71,47 +83,17 @@ static void load_batch_worker(batch_loader_t *loader) {
     loader->samples = load_batch_samples(loader->path, &loader->num_samples);
     atomic_store(&loader->loaded, loader->samples != NULL);
 }
-
-cifar10_dataset_t *get_dataset(void) {
-    struct stat st = {0};
-    if (stat(CIFAR10_DATA_DIR, &st) == -1) {
-        char mkdir_cmd[256];
-        snprintf(mkdir_cmd, sizeof(mkdir_cmd), "mkdir -p %s", CIFAR10_DATA_DIR);
-        if (system(mkdir_cmd) != 0) {
-            return NULL;
-        }
-    }
-
-    if (stat(CIFAR10_BATCH_1_PATH, &st) == -1) {
-        printf("Downloading CIFAR-10 dataset...\n");
-        char wget_cmd[512];
-        snprintf(wget_cmd, sizeof(wget_cmd), "wget -P %s %s", CIFAR10_DATA_DIR, CIFAR10_DOWNLOAD_URL);
-        if (system(wget_cmd) != 0) {
-            return NULL;
-        }
-
-        printf("Extracting CIFAR-10 dataset...\n");
-        char extract_cmd[512];
-        snprintf(extract_cmd, sizeof(extract_cmd), "tar -xzf %s -C %s && mv %s/cifar-10-batches-bin/* %s/ && rmdir %s/cifar-10-batches-bin", CIFAR10_ARCHIVE_PATH, CIFAR10_DATA_DIR, CIFAR10_DATA_DIR, CIFAR10_DATA_DIR, CIFAR10_DATA_DIR);
-        if (system(extract_cmd) != 0) {
-            return NULL;
-        }
-    } else {
-        printf("CIFAR-10 dataset already exists, skipping download...\n");
-    }
+cifar10_dataset_t *get_cifar10_dataset(void) {
+    download();
 
     cifar10_dataset_t *dataset = malloc(sizeof(cifar10_dataset_t));
-    if (!dataset) {
-        return NULL;
-    }
+    assert(dataset != NULL);
 
     dataset->train_samples = NULL;
     dataset->test_samples = NULL;
     dataset->num_train_samples = 0;
     dataset->num_test_samples = 0;
-
-    printf("Loading training batches into memory...\n");
-    const char *batch_paths[] = {CIFAR10_BATCH_1_PATH, CIFAR10_BATCH_2_PATH, CIFAR10_BATCH_3_PATH, CIFAR10_BATCH_4_PATH, CIFAR10_BATCH_5_PATH};
+    const char *batch_paths[] = {BATCH_1_PATH, BATCH_2_PATH, BATCH_3_PATH, BATCH_4_PATH, BATCH_5_PATH};
 
     batch_loader_t loaders[5];
     defer({
@@ -153,14 +135,12 @@ cifar10_dataset_t *get_dataset(void) {
     }
     dataset->num_train_samples = total_samples;
 
-    printf("Loading test batch into memory...\n");
-    dataset->test_samples = load_batch_samples(CIFAR10_TEST_BATCH_PATH, &dataset->num_test_samples);
+    dataset->test_samples = load_batch_samples(BATCH_TEST_PATH, &dataset->num_test_samples);
     if (!dataset->test_samples) {
         free(dataset->train_samples);
         free(dataset);
         return NULL;
     }
 
-    printf("CIFAR-10 dataset loaded: %zu training samples, %zu test samples\n", dataset->num_train_samples, dataset->num_test_samples);
     return dataset;
 }

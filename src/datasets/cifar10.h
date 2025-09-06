@@ -19,6 +19,6 @@ typedef struct {
     u64 num_test_samples;
 } cifar10_dataset_t;
 
-static const char *CIFAR10_CLASS_NAMES[CIFAR10_NUM_CLASSES] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
+static const char *CIFAR10_CLASS_NAMES[CIFAR10_NUM_CLASSES] __attribute__((unused)) = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
 
-cifar10_dataset_t *get_dataset(void);
+cifar10_dataset_t *get_cifar10_dataset(void);
