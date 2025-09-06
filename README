@@ -2,7 +2,7 @@ todo:
 
 - build (copy pytorch)
     - https://cliutils.gitlab.io/modern-cmake/README.html
-    - CMake Version (CMakeLists.txt)
+    - CMake Version (CMakeLists.txt) - 3.16
     - vcpkg?
     - clang?
 
@@ -24,10 +24,7 @@ todo:
 - qa
     - unit test library
 
-- accelerators
-    - cuda? apple metal? openmp? pthreads?
-
-- golang concurrency
+- golang style concurrency
     - defer
     - goroutines
 
@@ -37,3 +34,7 @@ todo:
     - array, list, map, set, tuple, struct, class, enum, union, variant, optional
     - parallel for loops
     - lambda expressions
+
+---
+
+later also make one in c++, then try out accelerators (cuda, openmp, apple metal)
