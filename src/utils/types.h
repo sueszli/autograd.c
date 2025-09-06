@@ -5,16 +5,6 @@
 #include <stdint.h>
 
 //
-// assert 64-bit architecture
-//
-
-_Static_assert(sizeof(char) == sizeof(uint8_t), "char must be u8");
-_Static_assert(sizeof(size_t) == sizeof(uint64_t), "size_t must be u64");
-_Static_assert(sizeof(ptrdiff_t) == sizeof(int64_t), "ptrdiff_t must be i64");
-_Static_assert(sizeof(uintptr_t) == sizeof(uint64_t), "uintptr_t must be u64");
-_Static_assert(sizeof(intptr_t) == sizeof(int64_t), "inptr_t must be i64");
-
-//
 // signed integer types
 //
 
@@ -79,3 +69,24 @@ typedef double f64;
 //
 
 typedef void (*fn_ptr)(void);
+
+//
+// assert 64-bit architecture
+//
+
+_Static_assert(sizeof(i8) == 1);
+_Static_assert(sizeof(i16) == 2);
+_Static_assert(sizeof(i32) == 4);
+_Static_assert(sizeof(i64) == 8);
+_Static_assert(sizeof(u8) == 1);
+_Static_assert(sizeof(u16) == 2);
+_Static_assert(sizeof(u32) == 4);
+_Static_assert(sizeof(u64) == 8);
+_Static_assert(sizeof(f32) == 4);
+_Static_assert(sizeof(f64) == 8);
+
+_Static_assert(sizeof(char) == sizeof(u8));
+_Static_assert(sizeof(size_t) == sizeof(u64));
+_Static_assert(sizeof(ptrdiff_t) == sizeof(i64));
+_Static_assert(sizeof(uintptr_t) == sizeof(u64));
+_Static_assert(sizeof(intptr_t) == sizeof(i64));
