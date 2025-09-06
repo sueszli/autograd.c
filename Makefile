@@ -12,11 +12,11 @@ fmt:
 .PHONY: check
 check:
 	$(DOCKER_RUN) 'cppcheck --std=c11 . && clang-tidy main.c -- -std=c11'
-	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./modern_c'
+	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: run
 run:
-	$(DOCKER_RUN) 'cd build && ./modern_c'
+	$(DOCKER_RUN) 'cd build && ./binary'
 
 .PHONY: clean
 clean:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(modern_c LANGUAGES C)
+project(${PROJECT_NAME} LANGUAGES C)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -50,9 +50,9 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 # linking
 # 
 
-add_executable(modern_c main.c)
+add_executable(binary main.c)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(modern_c PRIVATE -fsanitize=address)
-    target_link_options(modern_c PRIVATE -fsanitize=address)
+    target_compile_options(binary PRIVATE -fsanitize=address)
+    target_link_options(binary PRIVATE -fsanitize=address)
 endif()
