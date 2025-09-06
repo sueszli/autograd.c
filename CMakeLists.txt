@@ -43,18 +43,25 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+FetchContent_Declare(
+    unity
+    GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
+    GIT_TAG v2.5.2
+    GIT_SHALLOW TRUE
+)
+
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(cjson)
+FetchContent_MakeAvailable(cjson unity)
 
 # 
 # binary
 # 
 
 add_executable(binary src/main.c)
-target_link_libraries(binary PRIVATE cjson)
-target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
+target_link_libraries(binary PRIVATE cjson unity)
+target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR} ${unity_SOURCE_DIR}/src)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(binary PRIVATE -fsanitize=address)
