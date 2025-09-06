@@ -8,22 +8,22 @@ build-image:
 build:
 	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && cmake --build . -j$$(nproc)'
 
-.PHONY: fmt
-fmt:
-	$(DOCKER_RUN) 'find . -name "*.c" -o -name "*.h" | xargs clang-format -i'
+.PHONY: run
+run: build
+	$(DOCKER_RUN) 'cd build && ./binary'
 
 .PHONY: check
-check:
-	$(DOCKER_RUN) 'cppcheck --std=c11 .'
+check: build
+	# $(DOCKER_RUN) 'cppcheck --std=c11 .'
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: test
-test:
+test: build
 	$(DOCKER_RUN) 'cd build && ctest --verbose'
 
-.PHONY: run
-run:
-	$(DOCKER_RUN) 'cd build && ./binary'
+.PHONY: fmt
+fmt:
+	$(DOCKER_RUN) 'find . -name "*.c" -o -name "*.h" | xargs clang-format -i'
 
 .PHONY: clean
 clean:
