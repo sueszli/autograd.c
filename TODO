@@ -1,4 +1,5 @@
 include-what-you-use
+Automatic dependency vulnerability scanning
 
 Structured error handling (Result/Option types)
 Generic containers (using C11 generics)
@@ -7,4 +8,3 @@ String builder/formatter utilities
 Logging framework with levels
 
 file read/write utilities
-Automatic dependency vulnerability scanning
