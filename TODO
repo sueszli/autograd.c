@@ -1,8 +1,0 @@
-todo:
-
-- unit test library
-- benchmarking library
-
-- python interopt: Python.h extension? cffi?
-- mnist? openmp? blas? lapack? eigen? cuda? apple mps?
-

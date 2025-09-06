@@ -7,7 +7,5 @@
 int main(void) {
     printf("Hello, World!\n");
 
-    benchmark("sleep benchmark", { sleep(4); });
-
     return EXIT_SUCCESS;
 }
