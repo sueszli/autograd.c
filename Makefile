@@ -1,8 +1,8 @@
-DOCKER_RUN = docker run --rm -v $(PWD):/workspace c-image sh -c
+DOCKER_RUN = docker run --rm -v $(PWD):/workspace main sh -c
 
 .PHONY: build-image
 build-image:
-	docker build -t c-image .
+	docker build -t main .
 
 .PHONY: build
 build:
@@ -17,11 +17,15 @@ check:
 	$(DOCKER_RUN) 'cppcheck --std=c11 .'
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
+.PHONY: test
+test:
+	$(DOCKER_RUN) 'cd build && make test_runner && ./test_runner'
+
 .PHONY: run
 run:
 	$(DOCKER_RUN) 'cd build && ./binary'
 
 .PHONY: clean
 clean:
-	docker rmi c-image 2>/dev/null || true
+	docker rmi main 2>/dev/null || true
 	rm -rf build
