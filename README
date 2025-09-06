@@ -1,8 +1,6 @@
-https://www.cs.toronto.edu/~kriz/cifar.html
-
 
 ```
-# get cifar-10 data
+# get cifar-10 dataset
 wget -P data/ https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 tar -xzf data/cifar-10-binary.tar.gz -C data/ && mv data/cifar-10-batches-bin/* data/ && rmdir data/cifar-10-batches-bin
 ```

@@ -23,7 +23,7 @@ static void *invoke(void *arg) { // pthread doesn't have typed args
     assert(g->func != NULL);
     g->func(); // execute
     atomic_store(&g->finished, true);
-    return NULL;
+    return NULL; // required by pthreads
 }
 
 void spawn(fn_ptr func) {
