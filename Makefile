@@ -1,8 +1,11 @@
 DOCKER_RUN = docker run --rm -v $(PWD):/workspace c-image sh -c
 
+.PHONY: build-image
+build-image:
+	docker build -t c-image .
+
 .PHONY: build
 build:
-	docker build -t c-image .
 	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && make -j$$(nproc)'
 
 .PHONY: fmt
@@ -11,7 +14,7 @@ fmt:
 
 .PHONY: check
 check:
-	$(DOCKER_RUN) 'cppcheck --std=c23 . && clang-tidy src/main.c -- -std=c23'
+	$(DOCKER_RUN) 'cppcheck --std=c11 . && clang-tidy src/main.c -- -std=c23'
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: run
