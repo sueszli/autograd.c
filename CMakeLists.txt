@@ -39,14 +39,15 @@ include(FetchContent)
 FetchContent_Declare(
     cjson
     GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
-    GIT_TAG v1.7.15
+    GIT_TAG v1.7.18
     GIT_SHALLOW TRUE
 )
+
 
 FetchContent_Declare(
     unity
     GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
-    GIT_TAG v2.5.2
+    GIT_TAG v2.6.1
     GIT_SHALLOW TRUE
 )
 
