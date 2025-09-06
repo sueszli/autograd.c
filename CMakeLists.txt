@@ -9,8 +9,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -Wall -Wextra
-        # -Wpedantic -Wmissing-prototypes -Wtrampolines
-        -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wredundant-decls -Wshadow -Wstrict-overflow=5 -Wundef -Wuninitialized -Wwrite-strings -Wpointer-arith -Wstrict-prototypes -Wconversion -Wsign-conversion -Wbad-function-cast -Wjump-misses-init -Wold-style-definition -Wmissing-parameter-type -Wempty-body -Wtype-limits -Wclobbered -Wunused-but-set-parameter -Wunused-but-set-variable -Wmaybe-uninitialized -Wstack-protector -fstack-protector-strong -fno-common -Wformat-security -Wno-implicit-function-declaration
+        # -Wpedantic -Wmissing-prototypes -Wtrampolines -Wshadow
+        -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wredundant-decls -Wstrict-overflow=5 -Wundef -Wuninitialized -Wwrite-strings -Wpointer-arith -Wstrict-prototypes -Wconversion -Wsign-conversion -Wbad-function-cast -Wjump-misses-init -Wold-style-definition -Wmissing-parameter-type -Wempty-body -Wtype-limits -Wclobbered -Wunused-but-set-parameter -Wunused-but-set-variable -Wmaybe-uninitialized -Wstack-protector -fstack-protector-strong -fno-common -Wformat-security -Wno-implicit-function-declaration
     )
     
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
