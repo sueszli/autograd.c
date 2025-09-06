@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int main(void) {
-    printf("Modern C Demo\n");
+    printf("whatever\n");
 
     int32_t count = 42;
     float pi = 3.14f;

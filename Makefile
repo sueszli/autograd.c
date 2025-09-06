@@ -11,7 +11,7 @@ fmt:
 
 .PHONY: check
 check:
-	$(DOCKER_RUN) 'cppcheck --std=c11 . && clang-tidy main.c -- -std=c11'
+	$(DOCKER_RUN) 'cppcheck --std=c23 . && clang-tidy src/main.c -- -std=c23'
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: run

@@ -50,7 +50,7 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 # linking
 # 
 
-add_executable(binary main.c)
+add_executable(binary src/main.c)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(binary PRIVATE -fsanitize=address)
