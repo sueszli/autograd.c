@@ -83,6 +83,7 @@ static void load_batch_worker(batch_loader_t *loader) {
     loader->samples = load_batch_samples(loader->path, &loader->num_samples);
     atomic_store(&loader->loaded, loader->samples != NULL);
 }
+
 cifar10_dataset_t *get_cifar10_dataset(void) {
     download();
 
