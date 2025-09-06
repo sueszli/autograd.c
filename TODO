@@ -9,17 +9,6 @@ todo:
 - qa
     - unit test library
 
-- golang style concurrency
-    - defer
-    - goroutines
-
-- idiomatic types:
-    - int, float, double, char, byte, bool - with clear size specification like int32, int64, float32, float64
-    - string
-    - array, list, map, set, tuple, struct, class, enum, union, variant, optional
-    - parallel for loops
-    - lambda expressions
-
 then implement a neural network library from scratch training mnist or something simple
 just for the funsies
 
