@@ -32,116 +32,121 @@ static void download(void) {
 }
 
 typedef struct {
-    const char *path;
     cifar10_sample_t *samples;
-    u64 num_samples;
-    _Atomic bool loaded;
+    u64 count;
+} batch_data_t;
+
+typedef struct {
+    const char *path;
+    batch_data_t data;
 } batch_loader_t;
 
-static cifar10_sample_t *load_batch_samples(const char *filename, u64 *num_samples) {
-    FILE *file = fopen(filename, "rb");
-    if (!file) {
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
+static u64 get_file_size(FILE *file) {
+    assert(fseek(file, 0, SEEK_END) == 0);
     i64 file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    u64 record_size = 1 + CIFAR10_PIXELS_PER_IMAGE;
-    *num_samples = (u64)file_size / record_size;
-    if ((u64)file_size % record_size != 0) {
-        fclose(file);
-        return NULL;
-    }
-
-    cifar10_sample_t *samples = malloc(*num_samples * sizeof(cifar10_sample_t));
-    if (!samples) {
-        fclose(file);
-        return NULL;
-    }
-
-    for (u64 i = 0; i < *num_samples; i++) {
-        if (fread(&samples[i].label, 1, 1, file) != 1) {
-            free(samples);
-            fclose(file);
-            return NULL;
-        }
-
-        if (fread(samples[i].data, 1, CIFAR10_PIXELS_PER_IMAGE, file) != CIFAR10_PIXELS_PER_IMAGE) {
-            free(samples);
-            fclose(file);
-            return NULL;
-        }
-    }
-
-    fclose(file);
-    return samples;
+    assert(file_size >= 0);
+    assert(fseek(file, 0, SEEK_SET) == 0);
+    return (u64)file_size;
 }
 
-static void load_batch_worker(batch_loader_t *loader) {
-    loader->samples = load_batch_samples(loader->path, &loader->num_samples);
-    atomic_store(&loader->loaded, loader->samples != NULL);
+static u64 calculate_num_samples(u64 file_size) {
+    u64 record_size = 1 + CIFAR10_PIXELS_PER_IMAGE;
+    assert(file_size % record_size == 0);
+    return file_size / record_size;
+}
+
+static cifar10_sample_t read_single_sample(FILE *file) {
+    cifar10_sample_t sample;
+    assert(fread(&sample.label, 1, 1, file) == 1);
+    assert(fread(sample.data, 1, CIFAR10_PIXELS_PER_IMAGE, file) == CIFAR10_PIXELS_PER_IMAGE);
+    return sample;
+}
+
+static batch_data_t load_batch_samples(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    assert(file != NULL);
+    
+    defer({ fclose(file); });
+
+    u64 file_size = get_file_size(file);
+    u64 num_samples = calculate_num_samples(file_size);
+
+    cifar10_sample_t *samples = malloc(num_samples * sizeof(cifar10_sample_t));
+    assert(samples != NULL);
+
+    for (u64 i = 0; i < num_samples; i++) {
+        samples[i] = read_single_sample(file);
+    }
+
+    return (batch_data_t){.samples = samples, .count = num_samples};
+}
+
+static batch_data_t load_batch_worker(const char *path) {
+    return load_batch_samples(path);
+}
+
+static batch_loader_t create_batch_loader(const char *path) {
+    return (batch_loader_t){.path = path, .data = {.samples = NULL, .count = 0}};
+}
+
+static batch_loader_t load_batch(batch_loader_t loader) {
+    loader.data = load_batch_worker(loader.path);
+    return loader;
+}
+
+static u64 calculate_total_samples(const batch_loader_t loaders[5]) {
+    u64 total = 0;
+    for (u32 i = 0; i < 5; i++) {
+        total += loaders[i].data.count;
+    }
+    return total;
+}
+
+static cifar10_sample_t *merge_batches(const batch_loader_t loaders[5], u64 total_samples) {
+    cifar10_sample_t *merged = malloc(total_samples * sizeof(cifar10_sample_t));
+    assert(merged != NULL);
+
+    u64 offset = 0;
+    for (u32 i = 0; i < 5; i++) {
+        memcpy(merged + offset, loaders[i].data.samples, loaders[i].data.count * sizeof(cifar10_sample_t));
+        offset += loaders[i].data.count;
+    }
+    return merged;
+}
+
+static void cleanup_loaders(const batch_loader_t loaders[5]) {
+    for (u32 i = 0; i < 5; i++) {
+        if (loaders[i].data.samples) {
+            free(loaders[i].data.samples);
+        }
+    }
 }
 
 cifar10_dataset_t *get_cifar10_dataset(void) {
     download();
 
+    const char *batch_paths[] = {BATCH_1_PATH, BATCH_2_PATH, BATCH_3_PATH, BATCH_4_PATH, BATCH_5_PATH};
+    batch_loader_t loaders[5];
+    
+    for (u32 i = 0; i < 5; i++) {
+        loaders[i] = create_batch_loader(batch_paths[i]);
+        loaders[i] = load_batch(loaders[i]);
+    }
+    
+    defer({ cleanup_loaders(loaders); });
+    
+    u64 total_samples = calculate_total_samples(loaders);
+    cifar10_sample_t *train_samples = merge_batches(loaders, total_samples);
+    
+    batch_data_t test_data = load_batch_samples(BATCH_TEST_PATH);
+    
     cifar10_dataset_t *dataset = malloc(sizeof(cifar10_dataset_t));
     assert(dataset != NULL);
-
-    dataset->train_samples = NULL;
-    dataset->test_samples = NULL;
-    dataset->num_train_samples = 0;
-    dataset->num_test_samples = 0;
-    const char *batch_paths[] = {BATCH_1_PATH, BATCH_2_PATH, BATCH_3_PATH, BATCH_4_PATH, BATCH_5_PATH};
-
-    batch_loader_t loaders[5];
-    defer({
-        for (u32 i = 0; i < 5; i++) {
-            if (atomic_load(&loaders[i].loaded) && loaders[i].samples) {
-                free(loaders[i].samples);
-            }
-        }
-    });
-
-    for (u32 i = 0; i < 5; i++) {
-        loaders[i].path = batch_paths[i];
-        loaders[i].samples = NULL;
-        loaders[i].num_samples = 0;
-        atomic_store(&loaders[i].loaded, false);
-
-        load_batch_worker(&loaders[i]);
-    }
-
-    u64 total_samples = 0;
-    for (u32 i = 0; i < 5; i++) {
-        if (!atomic_load(&loaders[i].loaded) || !loaders[i].samples) {
-            free(dataset);
-            return NULL;
-        }
-        total_samples += loaders[i].num_samples;
-    }
-
-    dataset->train_samples = malloc(total_samples * sizeof(cifar10_sample_t));
-    if (!dataset->train_samples) {
-        free(dataset);
-        return NULL;
-    }
-
-    u64 offset = 0;
-    for (u32 i = 0; i < 5; i++) {
-        memcpy(dataset->train_samples + offset, loaders[i].samples, loaders[i].num_samples * sizeof(cifar10_sample_t));
-        offset += loaders[i].num_samples;
-    }
+    
+    dataset->train_samples = train_samples;
     dataset->num_train_samples = total_samples;
-
-    dataset->test_samples = load_batch_samples(BATCH_TEST_PATH, &dataset->num_test_samples);
-    if (!dataset->test_samples) {
-        free(dataset->train_samples);
-        free(dataset);
-        return NULL;
-    }
+    dataset->test_samples = test_data.samples;
+    dataset->num_test_samples = test_data.count;
 
     return dataset;
 }
