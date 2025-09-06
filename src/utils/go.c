@@ -1,7 +1,9 @@
 #include "go.h"
 #include "types.h"
 
+#include <assert.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,38 +14,67 @@ typedef struct {
     atomic_bool finished;
 } goroutine_t;
 
-static goroutine_t *go_routines[1024];
-static _Atomic u16 goroutine_count = 0;
+static goroutine_t *goroutines[UINT8_MAX + 1] = {0};
+static _Atomic u8 goroutine_count = 0; // smaller means faster wait()
 
-static void *wrap(void *arg) {
+static void *invoke(void *arg) { // pthread doesn't have typed args
     goroutine_t *g = (goroutine_t *)arg;
-    g->func();
+    assert(g != NULL);
+    assert(g->func != NULL);
+    g->func(); // execute
     atomic_store(&g->finished, true);
     return NULL;
 }
 
 void spawn(fn_ptr func) {
+    assert(func != NULL);
+
+    u8 current_count = atomic_load(&goroutine_count);
+    assert(current_count < UINT8_MAX);
+
     goroutine_t *g = malloc(sizeof(goroutine_t));
-    if (!g) {
-        return;
-    }
+    assert(g != NULL);
 
     g->func = func;
     atomic_store(&g->finished, false);
 
-    u16 idx = atomic_fetch_add(&goroutine_count, 1);
-    go_routines[idx] = g;
+    u8 idx = atomic_fetch_add(&goroutine_count, 1);
+    assert(idx < UINT8_MAX);
 
-    pthread_create(&g->thread, NULL, wrap, g);
+    goroutines[idx] = g;
+
+    int result = pthread_create(&g->thread, NULL, invoke, g);
+    if (result != 0) {
+        goroutines[idx] = NULL;
+        atomic_fetch_sub(&goroutine_count, 1);
+        free(g);
+    }
+    assert(result == 0);
 }
 
 void wait(void) {
-    u16 count = atomic_load(&goroutine_count);
-    for (u16 i = 0; i < count; i++) {
-        if (go_routines[i]) {
-            pthread_join(go_routines[i]->thread, NULL);
-            free(go_routines[i]);
-            go_routines[i] = NULL;
+    // barrier
+    bool all_finished = false;
+    while (!all_finished) {
+        all_finished = true;
+        u8 current_count = atomic_load(&goroutine_count);
+        for (u8 i = 0; i < current_count; i++) {
+            if (goroutines[i] && !atomic_load(&goroutines[i]->finished)) {
+                all_finished = false;
+                sched_yield(); // avoid busy waiting
+                break;
+            }
+        }
+    }
+
+    // cleanup
+    u8 final_count = atomic_load(&goroutine_count);
+    for (u8 i = 0; i < final_count; i++) {
+        if (goroutines[i]) {
+            int result = pthread_join(goroutines[i]->thread, NULL);
+            assert(result == 0);
+            free(goroutines[i]);
+            goroutines[i] = NULL;
         }
     }
     atomic_store(&goroutine_count, 0);
