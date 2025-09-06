@@ -1,10 +1,12 @@
+move data download to dockerfile level
+
 include-what-you-use
-Automatic dependency vulnerability scanning
+
+Logging framework with levels
 
 Structured error handling (Result/Option types)
 Generic containers (using C11 generics)
 Memory pool allocators
 String builder/formatter utilities
-Logging framework with levels
 
 file read/write utilities

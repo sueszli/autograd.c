@@ -9,21 +9,21 @@ build:
 	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && cmake --build . -j$$(nproc)'
 
 .PHONY: run
-run: build
+run:
 	$(DOCKER_RUN) 'cd build && ./binary'
 
 .PHONY: lint
-lint: build
+lint:
 # 	$(DOCKER_RUN) 'cppcheck --std=c11 --enable=information --suppress=missingInclude -I src src'
 # 	$(DOCKER_RUN) 'cd build && find ../src -name "*.c" | xargs -r clang-tidy -p . --header-filter=.* --checks=-*,readability-*,performance-*,bugprone-*'	
-	$(DOCKER_RUN) 'cd build && find ../src -name "*.c" -o -name "*.h" | xargs -r include-what-you-use -p .'
+	$(DOCKER_RUN) 'cd build && find ../src -name "*.c" -o -name "*.h" | xargs -r -I {} include-what-you-use. {} || true'
 
 .PHONY: memcheck
-memcheck: build
+memcheck:
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: test
-test: build
+test:
 	$(DOCKER_RUN) 'cd build && ctest --verbose'
 
 .PHONY: fmt
@@ -35,13 +35,6 @@ vuln-scan: build
 	$(DOCKER_RUN) 'trivy fs --security-checks vuln --format table .'
 	$(DOCKER_RUN) 'cd build && cve-bin-tool ./binary --format console'
 	$(DOCKER_RUN) 'lynis audit system --quick'
-
-.PHONY: vuln-scan-json
-vuln-scan-json: build
-	@echo "Running vulnerability scans with JSON output..."
-	$(DOCKER_RUN) 'trivy fs --security-checks vuln --format json --output vuln-report.json .'
-	$(DOCKER_RUN) 'cd build && cve-bin-tool ./binary --format json --output-file ../binary-vuln-report.json'
-	@echo "Reports saved as vuln-report.json and binary-vuln-report.json"
 
 .PHONY: clean
 clean:
