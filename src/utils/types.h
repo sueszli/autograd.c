@@ -74,19 +74,19 @@ typedef void (*fn_ptr)(void);
 // assert 64-bit architecture
 //
 
-_Static_assert(sizeof(i8) == 1);
-_Static_assert(sizeof(i16) == 2);
-_Static_assert(sizeof(i32) == 4);
-_Static_assert(sizeof(i64) == 8);
-_Static_assert(sizeof(u8) == 1);
-_Static_assert(sizeof(u16) == 2);
-_Static_assert(sizeof(u32) == 4);
-_Static_assert(sizeof(u64) == 8);
-_Static_assert(sizeof(f32) == 4);
-_Static_assert(sizeof(f64) == 8);
+_Static_assert(sizeof(i8) == 1, "");
+_Static_assert(sizeof(i16) == 2, "");
+_Static_assert(sizeof(i32) == 4, "");
+_Static_assert(sizeof(i64) == 8, "");
+_Static_assert(sizeof(u8) == 1, "");
+_Static_assert(sizeof(u16) == 2, "");
+_Static_assert(sizeof(u32) == 4, "");
+_Static_assert(sizeof(u64) == 8, "");
+_Static_assert(sizeof(f32) == 4, "");
+_Static_assert(sizeof(f64) == 8, "");
 
-_Static_assert(sizeof(char) == sizeof(u8));
-_Static_assert(sizeof(size_t) == sizeof(u64));
-_Static_assert(sizeof(ptrdiff_t) == sizeof(i64));
-_Static_assert(sizeof(uintptr_t) == sizeof(u64));
-_Static_assert(sizeof(intptr_t) == sizeof(i64));
+_Static_assert(sizeof(char) == sizeof(u8), "");
+_Static_assert(sizeof(size_t) == sizeof(u64), "");
+_Static_assert(sizeof(ptrdiff_t) == sizeof(i64), "");
+_Static_assert(sizeof(uintptr_t) == sizeof(u64), "");
+_Static_assert(sizeof(intptr_t) == sizeof(i64), "");

@@ -12,9 +12,13 @@ build:
 run: build
 	$(DOCKER_RUN) 'cd build && ./binary'
 
-.PHONY: check
-check: build
-	# $(DOCKER_RUN) 'cppcheck --std=c11 .'
+.PHONY: lint
+lint: build
+	$(DOCKER_RUN) 'cppcheck --std=c11 --enable=information --suppress=missingInclude -I src src'
+	$(DOCKER_RUN) 'cd build && find ../src -name "*.c" | xargs -r clang-tidy -p . --header-filter=.* --checks=-*,readability-*,performance-*,bugprone-*'
+
+.PHONY: memcheck
+memcheck: build
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: test

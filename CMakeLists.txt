@@ -5,6 +5,7 @@ project(main LANGUAGES C)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
@@ -57,14 +58,15 @@ set(UNITY_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(unity)
 
 #
-# source code
+# source
 #
 
 file(GLOB UTIL_SOURCES "src/utils/*.c")
 add_library(utils STATIC ${UTIL_SOURCES})
 target_include_directories(utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(binary src/main.c src/cifar10.c)
+file(GLOB MAIN_SOURCES "src/*.c")
+add_executable(binary ${MAIN_SOURCES})
 target_link_libraries(binary PRIVATE utils)
 target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
