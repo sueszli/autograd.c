@@ -64,12 +64,16 @@ set(UNITY_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(cjson unity)
 
-# 
-# binary
-# 
+#
+# source code
+#
+
+file(GLOB UTIL_SOURCES "src/utils/*.c")
+add_library(utils STATIC ${UTIL_SOURCES})
+target_include_directories(utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_executable(binary src/main.c)
-target_link_libraries(binary PRIVATE cjson)
+target_link_libraries(binary PRIVATE cjson utils)
 target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -90,8 +94,8 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     set(TEST_EXECUTABLE "${TEST_NAME}_exe")
     
     add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
-    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity)
-    target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src src)
+    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity utils)
+    target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
     
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)

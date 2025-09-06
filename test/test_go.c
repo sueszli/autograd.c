@@ -1,5 +1,6 @@
 #include "../src/utils/go.h"
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <time.h>
 #include <unistd.h>
 #include <unity.h>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <time.h>
 #include <stdio.h>
+#include <time.h>
 
 // clang-format off
 #define benchmark(name, block) \
