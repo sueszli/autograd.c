@@ -54,7 +54,6 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
-# Disable all testing for external dependencies
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(CJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
