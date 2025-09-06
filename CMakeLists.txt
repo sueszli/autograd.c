@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 project(main LANGUAGES C)
 
+# set(CMAKE_REQUIRED_QUIET ON)
+
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -Wall -Wextra
-        # -Wpedantic -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wredundant-decls -Wshadow -Wstrict-overflow=5 -Wundef -Wuninitialized -Wwrite-strings -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wsign-conversion -Wbad-function-cast -Wc++-compat -Wjump-misses-init -Wold-style-definition -Wmissing-parameter-type -Wempty-body -Wtype-limits -Wclobbered -Wunused-but-set-parameter -Wunused-but-set-variable -Wmaybe-uninitialized -Wstack-protector -fstack-protector-strong -fno-common -Wformat-security -Wtrampolines
+        # -Wpedantic -Wmissing-prototypes -Wtrampolines
+        -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wredundant-decls -Wshadow -Wstrict-overflow=5 -Wundef -Wuninitialized -Wwrite-strings -Wpointer-arith -Wstrict-prototypes -Wconversion -Wsign-conversion -Wbad-function-cast -Wjump-misses-init -Wold-style-definition -Wmissing-parameter-type -Wempty-body -Wtype-limits -Wclobbered -Wunused-but-set-parameter -Wunused-but-set-variable -Wmaybe-uninitialized -Wstack-protector -fstack-protector-strong -fno-common -Wformat-security -Wno-implicit-function-declaration
     )
     
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -51,8 +54,14 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# Disable all testing for external dependencies
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
+set(CJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(UNITY_EXTENSION_FIXTURE OFF CACHE BOOL "" FORCE)
+set(UNITY_EXTENSION_MEMORY OFF CACHE BOOL "" FORCE)
+set(UNITY_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(cjson unity)
 
@@ -68,3 +77,20 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang"
     target_compile_options(binary PRIVATE -fsanitize=address)
     target_link_options(binary PRIVATE -fsanitize=address)
 endif()
+
+# 
+# tests
+# 
+
+enable_testing()
+
+add_executable(tests test/test.c)
+target_link_libraries(tests PRIVATE cjson unity)
+target_include_directories(tests PRIVATE ${cjson_SOURCE_DIR} ${unity_SOURCE_DIR}/src src)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(tests PRIVATE -fsanitize=address)
+    target_link_options(tests PRIVATE -fsanitize=address)
+endif()
+
+add_test(NAME unit_tests COMMAND tests)

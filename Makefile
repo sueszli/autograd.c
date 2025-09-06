@@ -19,7 +19,7 @@ check:
 
 .PHONY: test
 test:
-# 	$(DOCKER_RUN) 'cd build && make tests && ./tests'
+	$(DOCKER_RUN) 'cd build && make tests && ./tests'
 
 .PHONY: run
 run:
