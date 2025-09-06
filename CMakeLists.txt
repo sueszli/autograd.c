@@ -7,7 +7,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -Wall -Wextra
-        
         # -Wpedantic -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wredundant-decls -Wshadow -Wstrict-overflow=5 -Wundef -Wuninitialized -Wwrite-strings -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wsign-conversion -Wbad-function-cast -Wc++-compat -Wjump-misses-init -Wold-style-definition -Wmissing-parameter-type -Wempty-body -Wtype-limits -Wclobbered -Wunused-but-set-parameter -Wunused-but-set-variable -Wmaybe-uninitialized -Wstack-protector -fstack-protector-strong -fno-common -Wformat-security -Wtrampolines
     )
     
@@ -35,13 +34,27 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 # dependencies
 # 
 
-# ...
+include(FetchContent)
+
+FetchContent_Declare(
+    cjson
+    GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+    GIT_TAG v1.7.15
+    GIT_SHALLOW TRUE
+)
+
+set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(cjson)
 
 # 
-# targets
+# binary
 # 
 
 add_executable(binary src/main.c)
+target_link_libraries(binary PRIVATE cjson)
+target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(binary PRIVATE -fsanitize=address)

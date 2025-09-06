@@ -1,3 +1,4 @@
+#include <cJSON.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <time.h>
@@ -11,7 +12,7 @@ static void do_work(int task_id) {
     for (int i = 0; i < 1000000000; i++) {
         result += i % 7;
     }
-    printf("Task %d done\n", task_id, result);
+    printf("Task %d done (result: %d)\n", task_id, result);
 }
 
 static double get_time_ms(void) {
@@ -21,6 +22,18 @@ static double get_time_ms(void) {
 }
 
 int main(void) {
+    cJSON *json = cJSON_CreateObject();
+    cJSON *name = cJSON_CreateString("Modern C Project");
+    cJSON *version = cJSON_CreateString("1.0.0");
+    cJSON_AddItemToObject(json, "name", name);
+    cJSON_AddItemToObject(json, "version", version);
+
+    char *json_string = cJSON_Print(json);
+    printf("JSON: %s\n\n", json_string);
+
+    cJSON_Delete(json);
+    free(json_string);
+
     double start = get_time_ms();
     for (int i = 1; i <= NUM_TASKS; i++) {
         do_work(i);

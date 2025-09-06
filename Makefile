@@ -6,7 +6,7 @@ build-image:
 
 .PHONY: build
 build:
-	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && make -j$$(nproc)'
+	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && cmake --build . -j$$(nproc)'
 
 .PHONY: fmt
 fmt:
@@ -19,7 +19,7 @@ check:
 
 .PHONY: test
 test:
-	$(DOCKER_RUN) 'cd build && make test_runner && ./test_runner'
+# 	$(DOCKER_RUN) 'cd build && make tests && ./tests'
 
 .PHONY: run
 run:

@@ -1,17 +1,8 @@
 todo:
 
-- build (copy pytorch)
-    - https://cliutils.gitlab.io/modern-cmake/README.html
-    - CMake Version (CMakeLists.txt) - 3.16
-    - vcpkg?
-    - clang?
+- unit test library
+- benchmarking library
 
-- qa
-    - unit test library
+- python interopt: Python.h extension? cffi?
+- mnist? openmp? blas? lapack? eigen? cuda? apple mps?
 
-then implement a neural network library from scratch training mnist or something simple
-just for the funsies
-
----
-
-later also make one in c++, then try out accelerators (cuda, openmp, apple metal)
