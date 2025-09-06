@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "benchmark.h"
+#include "utils/benchmark.h"
 
 int main(void) {
     printf("Hello, World!\n");

@@ -1,4 +1,4 @@
-#include "../src/defer.h"
+#include "../src/utils/defer.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

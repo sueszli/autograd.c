@@ -1,4 +1,4 @@
-#include "../src/go.h"
+#include "../src/utils/go.h"
 #include <stdatomic.h>
 #include <time.h>
 #include <unistd.h>
