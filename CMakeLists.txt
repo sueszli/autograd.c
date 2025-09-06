@@ -64,7 +64,7 @@ file(GLOB UTIL_SOURCES "src/utils/*.c")
 add_library(utils STATIC ${UTIL_SOURCES})
 target_include_directories(utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(binary src/main.c)
+add_executable(binary src/main.c src/cifar10.c)
 target_link_libraries(binary PRIVATE utils)
 target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 

@@ -15,7 +15,7 @@ typedef struct {
 static goroutine_t *go_routines[1024];
 static _Atomic u16 goroutine_count = 0;
 
-static ptr wrap(ptr arg) {
+static void *wrap(void *arg) {
     goroutine_t *g = (goroutine_t *)arg;
     g->func();
     atomic_store(&g->finished, true);
