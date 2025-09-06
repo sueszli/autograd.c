@@ -65,32 +65,34 @@ static sample_batch_t load_samples_from_file(const char *filename) {
 }
 
 
-static u64 sum_sample_counts(const sample_batch_t batches[5]) {
-    u64 total = 0;
+static sample_batch_t load_train_samples(void) {
+    sample_batch_t train_batches[5];
     for (u32 i = 0; i < 5; i++) {
-        total += batches[i].count;
+        train_batches[i] = load_samples_from_file(BATCH_PATHS[i]);
     }
-    return total;
-}
-
-static cifar10_sample_t *concatenate_samples(const sample_batch_t batches[5], u64 total_samples) {
+    defer({
+        for (u32 i = 0; i < 5; i++) {
+            if (train_batches[i].samples) {
+                free(train_batches[i].samples);
+            }
+        }
+    });
+    
+    u64 total_samples = 0;
+    for (u32 i = 0; i < 5; i++) {
+        total_samples += train_batches[i].count;
+    }
+    
     cifar10_sample_t *merged = malloc(total_samples * sizeof(cifar10_sample_t));
     assert(merged != NULL);
 
     u64 offset = 0;
     for (u32 i = 0; i < 5; i++) {
-        memcpy(merged + offset, batches[i].samples, batches[i].count * sizeof(cifar10_sample_t));
-        offset += batches[i].count;
+        memcpy(merged + offset, train_batches[i].samples, train_batches[i].count * sizeof(cifar10_sample_t));
+        offset += train_batches[i].count;
     }
-    return merged;
-}
-
-static void free_sample_batches(const sample_batch_t batches[5]) {
-    for (u32 i = 0; i < 5; i++) {
-        if (batches[i].samples) {
-            free(batches[i].samples);
-        }
-    }
+    
+    return (sample_batch_t){.samples = merged, .count = total_samples};
 }
 
 static void download(void) {
@@ -107,25 +109,16 @@ static void download(void) {
 cifar10_dataset_t *get_cifar10_dataset(void) {
     download();
 
-    sample_batch_t train_batches[5];
-    for (u32 i = 0; i < 5; i++) {
-        train_batches[i] = load_samples_from_file(BATCH_PATHS[i]);
-    }
-    
-    defer({ free_sample_batches(train_batches); });
-    
-    u64 total_train_samples = sum_sample_counts(train_batches);
-    cifar10_sample_t *train_samples = concatenate_samples(train_batches, total_train_samples);
-    
-    sample_batch_t test_batch = load_samples_from_file(BATCH_PATHS[5]);
+    sample_batch_t train_data = load_train_samples();
+    sample_batch_t test_data = load_samples_from_file(BATCH_PATHS[5]);
     
     cifar10_dataset_t *dataset = malloc(sizeof(cifar10_dataset_t));
     assert(dataset != NULL);
     
-    dataset->train_samples = train_samples;
-    dataset->num_train_samples = total_train_samples;
-    dataset->test_samples = test_batch.samples;
-    dataset->num_test_samples = test_batch.count;
+    dataset->train_samples = train_data.samples;
+    dataset->num_train_samples = train_data.count;
+    dataset->test_samples = test_data.samples;
+    dataset->num_test_samples = test_data.count;
 
     return dataset;
 }
