@@ -70,8 +70,8 @@ FetchContent_MakeAvailable(cjson unity)
 # 
 
 add_executable(binary src/main.c)
-target_link_libraries(binary PRIVATE cjson unity)
-target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR} ${unity_SOURCE_DIR}/src)
+target_link_libraries(binary PRIVATE cjson)
+target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(binary PRIVATE -fsanitize=address)
@@ -84,13 +84,20 @@ endif()
 
 enable_testing()
 
-add_executable(tests test/test.c)
-target_link_libraries(tests PRIVATE cjson unity)
-target_include_directories(tests PRIVATE ${cjson_SOURCE_DIR} ${unity_SOURCE_DIR}/src src)
+file(GLOB TEST_SOURCES "test/*.c")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(tests PRIVATE -fsanitize=address)
-    target_link_options(tests PRIVATE -fsanitize=address)
-endif()
-
-add_test(NAME unit_tests COMMAND tests)
+foreach(TEST_SOURCE ${TEST_SOURCES})
+    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+    set(TEST_EXECUTABLE "${TEST_NAME}_exe")
+    
+    add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
+    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity)
+    target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src src)
+    
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
+        target_link_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
+    endif()
+    
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXECUTABLE})
+endforeach()
