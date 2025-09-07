@@ -65,14 +65,10 @@ file(GLOB UTIL_SOURCES "src/utils/*.c")
 add_library(utils STATIC ${UTIL_SOURCES})
 target_include_directories(utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-file(GLOB DATASET_SOURCES "src/datasets/*.c")
-add_library(datasets STATIC ${DATASET_SOURCES})
-target_link_libraries(datasets PRIVATE utils)
-target_include_directories(datasets INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
 file(GLOB MAIN_SOURCES "src/*.c")
-add_executable(binary ${MAIN_SOURCES})
-target_link_libraries(binary PRIVATE utils datasets)
+file(GLOB DATASET_SOURCES "src/datasets/*.c")
+add_executable(binary ${MAIN_SOURCES} ${DATASET_SOURCES})
+target_link_libraries(binary PRIVATE utils)
 target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

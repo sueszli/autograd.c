@@ -10,16 +10,15 @@
 #include "utils/types.h"
 
 int main(void) {
-    cifar10_dataset_t *dataset = get_cifar10_dataset();
-    assert(dataset != NULL);
-    defer({
-        free(dataset->train_samples);
-        free(dataset->test_samples);
-        free(dataset);
-    });
+    samples_count_t train_samples = get_train_samples();
+    samples_count_t test_samples = get_test_samples();
+    assert(train_samples.samples != NULL);
+    assert(test_samples.samples != NULL);
 
-    printf("loaded: %zu train, %zu test\n", dataset->num_train_samples, dataset->num_test_samples);
-    printf("first sample: %s\n", CIFAR10_CLASS_NAMES[dataset->train_samples[0].label]);
+    printf("loaded %lu training samples and %lu test samples.\n", train_samples.count, test_samples.count);
+
+    sample_t first_sample = train_samples.samples[0];
+    printf("first sample label: %u\n", first_sample.label);
 
     return EXIT_SUCCESS;
 }
