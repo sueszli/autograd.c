@@ -8,7 +8,7 @@
 
 static struct timeval start_time = {0, 0};
 
-void tqdm(u64 current, u64 total, const char *desc, const char *info) {
+void tqdm(u64 current, u64 total, const char *prefix, const char *postfix) {
     if (start_time.tv_sec == 0 && start_time.tv_usec == 0) {
         gettimeofday(&start_time, NULL);
     }
@@ -23,7 +23,7 @@ void tqdm(u64 current, u64 total, const char *desc, const char *info) {
     f64 elapsed = (f64)(now.tv_sec - start_time.tv_sec) + (f64)(now.tv_usec - start_time.tv_usec) / 1e6;
     f64 rate = (elapsed > 0) ? (f64)current / elapsed : 0.0;
 
-    printf("\r%s: %3u%%|", desc ? desc : "Progress", percentage);
+    printf("\r%s: %3u%%|", prefix ? prefix : "Progress", percentage);
     for (u32 i = 0; i < filled; i++) {
         printf("█");
     }
@@ -43,8 +43,8 @@ void tqdm(u64 current, u64 total, const char *desc, const char *info) {
         }
     }
     printf("| %" PRIu64 "/%" PRIu64 " [%.1fit/s]", current, total, rate);
-    if (info && info[0] != '\0') {
-        printf(" %s", info);
+    if (postfix && postfix[0] != '\0') {
+        printf(" %s", postfix);
     }
     printf("   ");
     fflush(stdout);
