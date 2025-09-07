@@ -18,6 +18,7 @@ typedef struct {
 } sample_arr_t;
 
 sample_arr_t get_test_samples(void);
+
 sample_arr_t get_train_samples(void);
 
 char *get_class_name(u8 class_id);
