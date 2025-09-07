@@ -101,9 +101,9 @@ sample_arr_t get_train_samples(void) {
     return (sample_arr_t){.samples = merged, .count = total_samples};
 }
 
-// 
+//
 // utils
-// 
+//
 
 static const char *CIFAR10_CLASSES[CIFAR10_NUM_CLASSES] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
 

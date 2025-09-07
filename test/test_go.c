@@ -49,7 +49,7 @@ void test_go_multiple_goroutines(void) {
 }
 
 void test_go_concurrent_execution(void) {
-    const i32 delay_ms = 50;
+    const u32 delay_ms = 50;
 
     go({
         usleep(delay_ms * 1000);

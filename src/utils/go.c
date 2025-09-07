@@ -31,7 +31,7 @@ void spawn(fn_ptr func) {
     assert(func != NULL);
 
     pthread_mutex_lock(&spawn_mutex);
-    
+
     u8 current_count = atomic_load(&goroutine_count);
     assert(current_count < UINT8_MAX);
 
@@ -48,7 +48,7 @@ void spawn(fn_ptr func) {
 
     int result = pthread_create(&g->thread, NULL, invoke, g);
     assert(result == 0);
-    
+
     pthread_mutex_unlock(&spawn_mutex);
 }
 
@@ -66,7 +66,7 @@ void wait(void) {
             }
         }
         pthread_mutex_unlock(&spawn_mutex);
-        
+
         if (!all_finished) {
             sched_yield(); // avoid busy waiting
         }
