@@ -8,7 +8,7 @@
 
 static struct timeval start_time = {0, 0};
 
-void tqdm(u64 current, u64 total, const char *desc) {
+void tqdm(u64 current, u64 total, const char *desc, const char *info) {
     if (start_time.tv_sec == 0 && start_time.tv_usec == 0) {
         gettimeofday(&start_time, NULL);
     }
@@ -42,7 +42,11 @@ void tqdm(u64 current, u64 total, const char *desc) {
             printf(" ");
         }
     }
-    printf("| %" PRIu64 "/%" PRIu64 " [%.1fit/s]   ", current, total, rate);
+    printf("| %" PRIu64 "/%" PRIu64 " [%.1fit/s]", current, total, rate);
+    if (info && info[0] != '\0') {
+        printf(" %s", info);
+    }
+    printf("   ");
     fflush(stdout);
 
     // reset for next use
