@@ -14,4 +14,6 @@
     } while(0)
 // clang-format on
 
+void spawn(fn_ptr func);
+
 void wait(void);

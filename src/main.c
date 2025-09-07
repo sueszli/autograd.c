@@ -74,7 +74,7 @@ f32 simple_log(f32 x) {
 }
 
 f32 random_weight(void) {
-    return ((f32)rand() / (f32)RAND_MAX) * 2.0f - 1.0f;
+    return (rand() / (f32)RAND_MAX) * 2.0f - 1.0f;
 }
 
 void init_layer(layer_t *layer, u32 input_size, u32 output_size) {

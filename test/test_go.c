@@ -1,4 +1,7 @@
 #include "../src/utils/go.h"
+#include "../src/utils/types.h"
+#include <float.h>
+#include <math.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <time.h>
@@ -14,7 +17,7 @@ void setUp(void) {
     atomic_store(&test_counter, 0);
     atomic_store(&test_flag, false);
     atomic_store(&execution_index, 0);
-    for (int i = 0; i < 10; i++) {
+    for (i32 i = 0; i < 10; i++) {
         atomic_store(&execution_order[i], -1);
     }
 }
@@ -34,9 +37,9 @@ void test_go_single_goroutine(void) {
 }
 
 void test_go_multiple_goroutines(void) {
-    const int num_goroutines = 5;
+    const i32 num_goroutines = 5;
 
-    for (int i = 0; i < num_goroutines; i++) {
+    for (i32 i = 0; i < num_goroutines; i++) {
         go({ atomic_fetch_add(&test_counter, 1); });
     }
 
@@ -46,23 +49,23 @@ void test_go_multiple_goroutines(void) {
 }
 
 void test_go_concurrent_execution(void) {
-    const int delay_ms = 50;
+    const i32 delay_ms = 50;
 
     go({
         usleep(delay_ms * 1000);
-        int idx = atomic_fetch_add(&execution_index, 1);
+        i32 idx = atomic_fetch_add(&execution_index, 1);
         atomic_store(&execution_order[idx], 1);
     });
 
     go({
         usleep(delay_ms * 1000);
-        int idx = atomic_fetch_add(&execution_index, 1);
+        i32 idx = atomic_fetch_add(&execution_index, 1);
         atomic_store(&execution_order[idx], 2);
     });
 
     go({
         usleep(delay_ms * 1000);
-        int idx = atomic_fetch_add(&execution_index, 1);
+        i32 idx = atomic_fetch_add(&execution_index, 1);
         atomic_store(&execution_order[idx], 3);
     });
 
@@ -70,10 +73,10 @@ void test_go_concurrent_execution(void) {
 
     TEST_ASSERT_EQUAL(3, atomic_load(&execution_index));
 
-    int executed_goroutines[3] = {atomic_load(&execution_order[0]), atomic_load(&execution_order[1]), atomic_load(&execution_order[2])};
+    i32 executed_goroutines[3] = {atomic_load(&execution_order[0]), atomic_load(&execution_order[1]), atomic_load(&execution_order[2])};
 
     bool found_1 = false, found_2 = false, found_3 = false;
-    for (int i = 0; i < 3; i++) {
+    for (i32 i = 0; i < 3; i++) {
         if (executed_goroutines[i] == 1)
             found_1 = true;
         if (executed_goroutines[i] == 2)
@@ -111,7 +114,7 @@ void test_go_empty_block(void) {
 
 void test_go_variable_capture(void) {
     atomic_int captured_value = 0;
-    int local_value = 42;
+    i32 local_value = 42;
 
     go({ atomic_store(&captured_value, local_value); });
 
@@ -121,9 +124,9 @@ void test_go_variable_capture(void) {
 }
 
 void test_go_race_condition_safety(void) {
-    const int num_increments = 100;
+    const i32 num_increments = 100;
 
-    for (int i = 0; i < num_increments; i++) {
+    for (i32 i = 0; i < num_increments; i++) {
         go({ atomic_fetch_add(&test_counter, 1); });
     }
 
@@ -154,14 +157,14 @@ void test_go_goroutine_isolation(void) {
     atomic_int counter2 = 0;
 
     go({
-        for (int i = 0; i < 10; i++) {
+        for (i32 i = 0; i < 10; i++) {
             atomic_fetch_add(&counter1, 1);
             usleep(1000);
         }
     });
 
     go({
-        for (int i = 0; i < 15; i++) {
+        for (i32 i = 0; i < 15; i++) {
             atomic_fetch_add(&counter2, 1);
             usleep(1000);
         }
@@ -174,9 +177,9 @@ void test_go_goroutine_isolation(void) {
 }
 
 void test_go_large_number_of_goroutines(void) {
-    const int num_goroutines = 50;
+    const i32 num_goroutines = 50;
 
-    for (int i = 0; i < num_goroutines; i++) {
+    for (i32 i = 0; i < num_goroutines; i++) {
         go({
             atomic_fetch_add(&test_counter, 1);
             usleep(1000);
@@ -188,7 +191,7 @@ void test_go_large_number_of_goroutines(void) {
     TEST_ASSERT_EQUAL(num_goroutines, atomic_load(&test_counter));
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
 
     RUN_TEST(test_go_single_goroutine);

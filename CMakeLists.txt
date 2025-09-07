@@ -40,22 +40,25 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 
 include(FetchContent)
 
-FetchContent_Declare(
-    unity
-    GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
-    GIT_TAG v2.6.1
-    GIT_SHALLOW TRUE
-)
+# only for testing
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR DEFINED BUILD_TESTS)
+    FetchContent_Declare(
+        unity
+        GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
+        GIT_TAG v2.6.1
+        GIT_SHALLOW TRUE
+    )
 
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
-set(CJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(UNITY_EXTENSION_FIXTURE OFF CACHE BOOL "" FORCE)
-set(UNITY_EXTENSION_MEMORY OFF CACHE BOOL "" FORCE)
-set(UNITY_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
+    set(CJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(UNITY_EXTENSION_FIXTURE OFF CACHE BOOL "" FORCE)
+    set(UNITY_EXTENSION_MEMORY OFF CACHE BOOL "" FORCE)
+    set(UNITY_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(unity)
+    FetchContent_MakeAvailable(unity)
+endif()
 
 #
 # source
@@ -80,22 +83,24 @@ endif()
 # tests
 # 
 
-enable_testing()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR DEFINED BUILD_TESTS)
+    enable_testing()
 
-file(GLOB TEST_SOURCES "test/*.c")
+    file(GLOB TEST_SOURCES "test/*.c")
 
-foreach(TEST_SOURCE ${TEST_SOURCES})
-    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-    set(TEST_EXECUTABLE "${TEST_NAME}_exe")
-    
-    add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
-    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity utils)
-    target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
-    
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
-        target_link_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
-    endif()
-    
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXECUTABLE})
-endforeach()
+    foreach(TEST_SOURCE ${TEST_SOURCES})
+        get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+        set(TEST_EXECUTABLE "${TEST_NAME}_exe")
+        
+        add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
+        target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity utils)
+        target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
+        
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+            target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
+            target_link_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
+        endif()
+        
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXECUTABLE})
+    endforeach()
+endif()

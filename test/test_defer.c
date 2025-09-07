@@ -1,11 +1,14 @@
 #include "../src/utils/defer.h"
+#include "../src/utils/types.h"
 #include <assert.h>
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static int cleanup_order = 0; // cleanup execution order
-static int cleanup_results[10];
+static i32 cleanup_order = 0; // cleanup execution order
+static i32 cleanup_results[10];
 
 void reset_cleanup_tracking() {
     cleanup_order = 0;
@@ -15,7 +18,7 @@ void reset_cleanup_tracking() {
 void test_basic_defer() {
     reset_cleanup_tracking();
 
-    int cleaned_up = 0;
+    i32 cleaned_up = 0;
 
     {
         defer({ cleaned_up = 1; });
@@ -43,7 +46,7 @@ void test_multiple_defers() {
 
 void test_defer_with_variables() {
     char *buffer = malloc(100);
-    int freed = 0;
+    i32 freed = 0;
 
     {
         defer({
@@ -99,8 +102,8 @@ void test_nested_scopes() {
 
 void test_defer_with_complex_block() {
     FILE *file = NULL;
-    int *array = NULL;
-    int success = 0;
+    i32 *array = NULL;
+    i32 success = 0;
 
     {
         defer({
@@ -113,10 +116,10 @@ void test_defer_with_complex_block() {
             success = 1;
         });
 
-        array = malloc(sizeof(int) * 10);
+        array = malloc(sizeof(i32) * 10);
         assert(array != NULL);
 
-        for (int i = 0; i < 10; i++) {
+        for (i32 i = 0; i < 10; i++) {
             array[i] = i * i;
         }
 
@@ -127,7 +130,7 @@ void test_defer_with_complex_block() {
 }
 
 void test_defer_unique_names() {
-    int result1 = 0, result2 = 0;
+    i32 result1 = 0, result2 = 0;
 
     {
         defer({ result1 = 1; });
@@ -138,7 +141,7 @@ void test_defer_unique_names() {
     assert(result1 == 1 && result2 == 2);
 }
 
-int main() {
+i32 main() {
 
     test_basic_defer();
     test_multiple_defers();

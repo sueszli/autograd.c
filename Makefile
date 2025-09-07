@@ -4,9 +4,17 @@ DOCKER_RUN = docker run --rm -v $(PWD):/workspace main sh -c
 build-image:
 	docker build -t main .
 
-.PHONY: build
-build:
-	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake .. && cmake --build . -j$$(nproc)'
+.PHONY: build-release
+build-release:
+	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build . -j$$(nproc)'
+
+.PHONY: build-debug
+build-debug:
+	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . -j$$(nproc)'
+
+.PHONY: build-test
+build-test:
+	$(DOCKER_RUN) 'rm -rf build && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON .. && cmake --build . -j$$(nproc)'
 
 .PHONY: run
 run: build
@@ -23,7 +31,7 @@ memcheck: build
 	$(DOCKER_RUN) 'cd build && valgrind --leak-check=full ./binary'
 
 .PHONY: test
-test: build
+test: build-test
 	$(DOCKER_RUN) 'cd build && ctest --verbose'
 
 .PHONY: fmt

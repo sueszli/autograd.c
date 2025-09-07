@@ -16,6 +16,7 @@ typedef struct {
 
 static goroutine_t *goroutines[UINT8_MAX + 1] = {0};
 static _Atomic u8 goroutine_count = 0; // smaller means faster wait()
+static pthread_mutex_t spawn_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void *invoke(void *arg) {
     goroutine_t *g = (goroutine_t *)arg;
@@ -29,6 +30,8 @@ static void *invoke(void *arg) {
 void spawn(fn_ptr func) {
     assert(func != NULL);
 
+    pthread_mutex_lock(&spawn_mutex);
+    
     u8 current_count = atomic_load(&goroutine_count);
     assert(current_count < UINT8_MAX);
 
@@ -45,35 +48,41 @@ void spawn(fn_ptr func) {
 
     int result = pthread_create(&g->thread, NULL, invoke, g);
     assert(result == 0);
+    
+    pthread_mutex_unlock(&spawn_mutex);
 }
 
 void wait(void) {
     // barrier
     bool all_finished = false;
     while (!all_finished) {
+        pthread_mutex_lock(&spawn_mutex);
         all_finished = true;
         u8 current_count = atomic_load(&goroutine_count);
         for (u8 i = 0; i < current_count; i++) {
-            bool not_finished = goroutines[i] && !atomic_load(&goroutines[i]->finished);
-            if (not_finished) {
+            if (goroutines[i] && !atomic_load(&goroutines[i]->finished)) {
                 all_finished = false;
-                sched_yield(); // avoid busy waiting
                 break;
             }
+        }
+        pthread_mutex_unlock(&spawn_mutex);
+        
+        if (!all_finished) {
+            sched_yield(); // avoid busy waiting
         }
     }
 
     // cleanup
+    pthread_mutex_lock(&spawn_mutex);
     u8 final_count = atomic_load(&goroutine_count);
     for (u8 i = 0; i < final_count; i++) {
-        bool doesnt_exist = goroutines[i] == NULL;
-        if (doesnt_exist) {
-            continue;
+        if (goroutines[i] != NULL) {
+            int result = pthread_join(goroutines[i]->thread, NULL);
+            assert(result == 0);
+            free(goroutines[i]);
+            goroutines[i] = NULL;
         }
-        int result = pthread_join(goroutines[i]->thread, NULL);
-        assert(result == 0);
-        free(goroutines[i]);
-        goroutines[i] = NULL;
     }
     atomic_store(&goroutine_count, 0);
+    pthread_mutex_unlock(&spawn_mutex);
 }
