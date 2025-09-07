@@ -1,4 +1,3 @@
-
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
@@ -256,31 +255,25 @@ u8 predict(neural_network_t *network, sample_t *sample) {
 
 f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     u32 correct = 0;
+    u64 eval_step = test_samples->count / 100; // Update every 1%
+    if (eval_step == 0) eval_step = 1;
 
     for (u64 i = 0; i < test_samples->count; i++) {
         u8 predicted = predict(network, &test_samples->samples[i]);
         if (predicted == test_samples->samples[i].label) {
             correct++;
         }
+        
+        if (i % eval_step == 0 || i == test_samples->count - 1) {
+            char info[64];
+            snprintf(info, sizeof(info), "Accuracy: %.2f%%", (f32)correct * 100.0f / (f32)(i + 1));
+            tqdm(i + 1, test_samples->count, "Evaluating", info);
+        }
     }
 
     return (f32)correct / (f32)test_samples->count;
 }
 
-void print_progress_bar(u32 current, u32 total, u32 width) {
-    f32 progress = (f32)current / (f32)total;
-    u32 filled = (u32)(progress * (f32)width);
-
-    printf("\r[");
-    for (u32 i = 0; i < filled; i++) {
-        printf("=");
-    }
-    for (u32 i = filled; i < width; i++) {
-        printf(" ");
-    }
-    printf("] %3.0f%%", progress * 100.0f);
-    fflush(stdout);
-}
 
 void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
     printf("Starting training...\n");
@@ -308,13 +301,14 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
             total_loss += batch_loss;
             batch_count++;
 
-            print_progress_bar(batch_count, total_batches, 30);
-            printf(" Batch %u/%u | Loss: %.4f", batch_count, total_batches, batch_loss);
-
+            char info[128];
             if (batch_count % 50 == 0 || batch_count == total_batches) {
                 f32 current_avg_loss = total_loss / (f32)batch_count;
-                printf(" | Avg Loss: %.4f", current_avg_loss);
+                snprintf(info, sizeof(info), "Batch %u/%u | Loss: %.4f | Avg Loss: %.4f", batch_count, total_batches, batch_loss, current_avg_loss);
+            } else {
+                snprintf(info, sizeof(info), "Batch %u/%u | Loss: %.4f", batch_count, total_batches, batch_loss);
             }
+            tqdm(batch_count, total_batches, "Training", info);
         }
 
         printf("\n\nEvaluating epoch %u...\n", epoch + 1);
@@ -328,27 +322,6 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
 
 int main(void) {
     srand((u32)time(NULL));
-
-    u64 total = 100;
-
-    // Simple progress demo
-    for (u64 i = 0; i < total; i++) {
-        // Simulate some work
-        usleep(50000); // 50ms delay
-
-        // Update progress bar
-        tqdm(i + 1, total, "Processing", NULL);
-    }
-
-    total = 50;
-    for (u64 i = 0; i < total; i++) {
-        usleep(100000); // 100ms delay
-        char info[32];
-        snprintf(info, sizeof(info), "Step %lu/%lu", i + 1, total);
-        tqdm(i + 1, total, "Loading data", info);
-    }
-
-    return 0;
 
     printf("Loading CIFAR-10 dataset...\n");
     sample_arr_t train_samples = get_train_samples();
