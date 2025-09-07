@@ -1,4 +1,6 @@
+
 #include <assert.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +10,7 @@
 
 #include "datasets/cifar10.h"
 #include "utils/defer.h"
+#include "utils/tqdm.h"
 #include "utils/types.h"
 
 #define INPUT_SIZE 3072 // 32*32*3
@@ -31,58 +34,15 @@ typedef struct {
     f32 *final_output;
     f32 *hidden_delta;
     f32 *output_delta;
+    f32 *normalized_input; // Pre-allocated for normalized input data
+    f32 *temp_softmax;     // Pre-allocated for softmax calculations
 } neural_network_t;
 
-f32 simple_sqrt(f32 x) {
-    if (x <= 0.0f)
-        return 0.0f;
-    f32 guess = x;
-    for (int i = 0; i < 10; i++) {
-        guess = (guess + x / guess) * 0.5f;
-    }
-    return guess;
-}
-
-f32 simple_exp(f32 x) {
-    if (x > 88.0f)
-        return 1e38f;
-    if (x < -88.0f)
-        return 0.0f;
-
-    f32 result = 1.0f;
-    f32 term = 1.0f;
-    for (int i = 1; i < 20; i++) {
-        term *= x / (f32)i;
-        result += term;
-        if (term < 1e-10f)
-            break;
-    }
-    return result;
-}
-
-f32 simple_log(f32 x) {
-    if (x <= 0.0f)
-        return -1e38f;
-    if (x == 1.0f)
-        return 0.0f;
-
-    x = (x - 1.0f) / (x + 1.0f);
-    f32 x2 = x * x;
-    f32 result = x;
-    f32 term = x;
-
-    for (int i = 1; i < 20; i++) {
-        term *= x2;
-        result += term / (f32)(2 * i + 1);
-        if (term < 1e-10f)
-            break;
-    }
-    return 2.0f * result;
-}
-
 f32 random_weight(void) {
+    // Use constant to avoid repeated division
+    static const f32 inv_rand_max = 2.0f / (f32)RAND_MAX;
     int r = rand();
-    return ((f32)r / (f32)RAND_MAX) * 2.0f - 1.0f;
+    return (f32)r * inv_rand_max - 1.0f;
 }
 
 void init_layer(layer_t *layer, u32 input_size, u32 output_size) {
@@ -94,9 +54,9 @@ void init_layer(layer_t *layer, u32 input_size, u32 output_size) {
     assert(layer->weights != NULL);
     assert(layer->bias != NULL);
 
-    f32 xavier_std = simple_sqrt(2.0f / (f32)(input_size + output_size));
+    f32 xavier_multiplier = sqrtf(2.0f / (f32)(input_size + output_size)) * 0.1f;
     for (u32 i = 0; i < input_size * output_size; i++) {
-        layer->weights[i] = random_weight() * xavier_std * 0.1f;
+        layer->weights[i] = random_weight() * xavier_multiplier;
     }
 }
 
@@ -116,11 +76,15 @@ neural_network_t *create_network(void) {
     network->final_output = malloc(OUTPUT_SIZE * sizeof(f32));
     network->hidden_delta = malloc(HIDDEN_SIZE * sizeof(f32));
     network->output_delta = malloc(OUTPUT_SIZE * sizeof(f32));
+    network->normalized_input = malloc(INPUT_SIZE * sizeof(f32));
+    network->temp_softmax = malloc(OUTPUT_SIZE * sizeof(f32));
 
     assert(network->hidden_output != NULL);
     assert(network->final_output != NULL);
     assert(network->hidden_delta != NULL);
     assert(network->output_delta != NULL);
+    assert(network->normalized_input != NULL);
+    assert(network->temp_softmax != NULL);
 
     return network;
 }
@@ -135,6 +99,8 @@ void free_network(neural_network_t *network) {
     free(network->final_output);
     free(network->hidden_delta);
     free(network->output_delta);
+    free(network->normalized_input);
+    free(network->temp_softmax);
     free(network);
 }
 
@@ -143,26 +109,32 @@ f32 relu(f32 x) { return x > 0.0f ? x : 0.0f; }
 f32 relu_derivative(f32 x) { return x > 0.0f ? 1.0f : 0.0f; }
 
 void softmax(f32 *input, f32 *output, u32 size) {
+    // Find max value in single pass
     f32 max_val = input[0];
     for (u32 i = 1; i < size; i++) {
         if (input[i] > max_val)
             max_val = input[i];
     }
 
+    // Compute exp and sum in single pass
     f32 sum = 0.0f;
     for (u32 i = 0; i < size; i++) {
-        output[i] = simple_exp(input[i] - max_val);
+        output[i] = expf(input[i] - max_val);
         sum += output[i];
     }
 
+    // Normalize with reciprocal multiplication (faster than division)
+    f32 inv_sum = 1.0f / sum;
     for (u32 i = 0; i < size; i++) {
-        output[i] /= sum;
+        output[i] *= inv_sum;
     }
 }
 
 void normalize_input(u8 *input, f32 *output, u32 size) {
+    // Use constant multiplication instead of division for better performance
+    const f32 inv_255 = 1.0f / 255.0f;
     for (u32 i = 0; i < size; i++) {
-        output[i] = (f32)input[i] / 255.0f;
+        output[i] = (f32)input[i] * inv_255;
     }
 }
 
@@ -170,20 +142,37 @@ void forward_pass(neural_network_t *network, f32 *input) {
     layer_t *hidden = &network->hidden_layer;
     layer_t *output = &network->output_layer;
 
+    // Initialize hidden layer with bias values
     for (u32 j = 0; j < HIDDEN_SIZE; j++) {
-        f32 sum = hidden->bias[j];
-        for (u32 i = 0; i < INPUT_SIZE; i++) {
-            sum += input[i] * hidden->weights[i * HIDDEN_SIZE + j];
-        }
-        network->hidden_output[j] = relu(sum);
+        network->hidden_output[j] = hidden->bias[j];
     }
 
-    for (u32 j = 0; j < OUTPUT_SIZE; j++) {
-        f32 sum = output->bias[j];
-        for (u32 i = 0; i < HIDDEN_SIZE; i++) {
-            sum += network->hidden_output[i] * output->weights[i * OUTPUT_SIZE + j];
+    // Compute hidden layer: iterate over inputs for better cache locality
+    for (u32 i = 0; i < INPUT_SIZE; i++) {
+        f32 input_val = input[i];
+        u32 weight_offset = i * HIDDEN_SIZE;
+        for (u32 j = 0; j < HIDDEN_SIZE; j++) {
+            network->hidden_output[j] += input_val * hidden->weights[weight_offset + j];
         }
-        network->final_output[j] = sum;
+    }
+
+    // Apply ReLU activation
+    for (u32 j = 0; j < HIDDEN_SIZE; j++) {
+        network->hidden_output[j] = relu(network->hidden_output[j]);
+    }
+
+    // Initialize output layer with bias values
+    for (u32 j = 0; j < OUTPUT_SIZE; j++) {
+        network->final_output[j] = output->bias[j];
+    }
+
+    // Compute output layer: iterate over hidden nodes for better cache locality
+    for (u32 i = 0; i < HIDDEN_SIZE; i++) {
+        f32 hidden_val = network->hidden_output[i];
+        u32 weight_offset = i * OUTPUT_SIZE;
+        for (u32 j = 0; j < OUTPUT_SIZE; j++) {
+            network->final_output[j] += hidden_val * output->weights[weight_offset + j];
+        }
     }
 
     softmax(network->final_output, network->final_output, OUTPUT_SIZE);
@@ -195,7 +184,7 @@ f32 compute_loss(neural_network_t *network, u8 target_label) {
         prob = 1e-7f;
     if (prob > 1.0f - 1e-7f)
         prob = 1.0f - 1e-7f;
-    return -simple_log(prob);
+    return -logf(prob);
 }
 
 f32 clip_gradient(f32 grad, f32 max_norm) {
@@ -250,9 +239,9 @@ void backward_pass(neural_network_t *network, f32 *input, u8 target_label) {
 }
 
 u8 predict(neural_network_t *network, sample_t *sample) {
-    f32 input[INPUT_SIZE];
-    normalize_input(sample->data, input, INPUT_SIZE);
-    forward_pass(network, input);
+    // Use pre-allocated normalized_input buffer to avoid stack allocation
+    normalize_input(sample->data, network->normalized_input, INPUT_SIZE);
+    forward_pass(network, network->normalized_input);
 
     u8 predicted = 0;
     f32 max_prob = network->final_output[0];
@@ -283,11 +272,11 @@ void print_progress_bar(u32 current, u32 total, u32 width) {
     u32 filled = (u32)(progress * (f32)width);
 
     printf("\r[");
-    for (u32 i = 0; i < width; i++) {
-        if (i < filled)
-            printf("█");
-        else
-            printf(" ");
+    for (u32 i = 0; i < filled; i++) {
+        printf("=");
+    }
+    for (u32 i = filled; i < width; i++) {
+        printf(" ");
     }
     printf("] %3.0f%%", progress * 100.0f);
     fflush(stdout);
@@ -307,12 +296,12 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
             u64 batch_end = (i + BATCH_SIZE < train_samples->count) ? i + BATCH_SIZE : train_samples->count;
 
             for (u64 j = i; j < batch_end; j++) {
-                f32 input[INPUT_SIZE];
-                normalize_input(train_samples->samples[j].data, input, INPUT_SIZE);
+                // Use pre-allocated normalized_input buffer to avoid repeated allocations
+                normalize_input(train_samples->samples[j].data, network->normalized_input, INPUT_SIZE);
 
-                forward_pass(network, input);
+                forward_pass(network, network->normalized_input);
                 batch_loss += compute_loss(network, train_samples->samples[j].label);
-                backward_pass(network, input, train_samples->samples[j].label);
+                backward_pass(network, network->normalized_input, train_samples->samples[j].label);
             }
 
             batch_loss /= (f32)(batch_end - i);
