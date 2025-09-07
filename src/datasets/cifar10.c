@@ -56,7 +56,7 @@ static void download(void) {
 }
 
 samples_count_t get_test_samples(void) {
-    if(!is_downloaded()) {
+    if (!is_downloaded()) {
         download();
     }
 
@@ -66,17 +66,11 @@ samples_count_t get_test_samples(void) {
 }
 
 samples_count_t get_train_samples(void) {
-    if(!is_downloaded()) {
+    if (!is_downloaded()) {
         download();
     }
 
-    static const char *TRAIN_BATCH_PATHS[5] = {
-        "/workspace/data/data_batch_1.bin",
-        "/workspace/data/data_batch_2.bin",
-        "/workspace/data/data_batch_3.bin",
-        "/workspace/data/data_batch_4.bin",
-        "/workspace/data/data_batch_5.bin"
-    };
+    static const char *TRAIN_BATCH_PATHS[5] = {"/workspace/data/data_batch_1.bin", "/workspace/data/data_batch_2.bin", "/workspace/data/data_batch_3.bin", "/workspace/data/data_batch_4.bin", "/workspace/data/data_batch_5.bin"};
 
     // load all
     samples_count_t train_batches[5];
@@ -103,6 +97,6 @@ samples_count_t get_train_samples(void) {
         memcpy(merged + offset, train_batches[i].samples, train_batches[i].count * sizeof(sample_t));
         offset += train_batches[i].count;
     }
-    
+
     return (samples_count_t){.samples = merged, .count = total_samples};
 }
