@@ -343,7 +343,9 @@ int main(void) {
     total = 50;
     for (u64 i = 0; i < total; i++) {
         usleep(100000); // 100ms delay
-        tqdm(i + 1, total, "Loading data", NULL);
+        char info[32];
+        snprintf(info, sizeof(info), "Step %lu/%lu", i + 1, total);
+        tqdm(i + 1, total, "Loading data", info);
     }
 
     return 0;
