@@ -15,7 +15,7 @@ typedef struct {
 } goroutine_t;
 
 static goroutine_t *goroutines[UINT8_MAX + 1] = {0};
-static _Atomic u8 goroutine_count = 0; // smaller means faster wait()
+static _Atomic u8 goroutine_count = 0;
 static pthread_mutex_t spawn_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void *invoke(void *arg) {
