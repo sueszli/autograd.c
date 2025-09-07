@@ -241,7 +241,7 @@ u8 predict(neural_network_t *network, sample_t *sample) {
     return predicted;
 }
 
-f32 evaluate_accuracy(neural_network_t *network, samples_count_t *test_samples) {
+f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     u32 correct = 0;
     
     for (u64 i = 0; i < test_samples->count; i++) {
@@ -254,7 +254,7 @@ f32 evaluate_accuracy(neural_network_t *network, samples_count_t *test_samples) 
     return (f32)correct / (f32)test_samples->count;
 }
 
-void train_network(neural_network_t *network, samples_count_t *train_samples, samples_count_t *test_samples) {
+void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
     printf("Starting training...\n");
     
     for (u32 epoch = 0; epoch < EPOCHS; epoch++) {
@@ -295,8 +295,8 @@ int main(void) {
     srand((u32)time(NULL));
     
     printf("Loading CIFAR-10 dataset...\n");
-    samples_count_t train_samples = get_train_samples();
-    samples_count_t test_samples = get_test_samples();
+    sample_arr_t train_samples = get_train_samples();
+    sample_arr_t test_samples = get_test_samples();
     assert(train_samples.samples != NULL);
     assert(test_samples.samples != NULL);
 

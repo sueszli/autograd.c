@@ -26,7 +26,7 @@ static u64 get_num_samples(FILE *file) {
     return (u64)(file_size / record_size);
 }
 
-static samples_count_t get_samples(const char *filename) {
+static sample_arr_t get_samples(const char *filename) {
     FILE *file = fopen(filename, "rb");
     assert(file != NULL);
     defer({ fclose(file); });
@@ -42,7 +42,7 @@ static samples_count_t get_samples(const char *filename) {
         samples[i] = sample;
     }
 
-    return (samples_count_t){.samples = samples, .count = num_samples};
+    return (sample_arr_t){.samples = samples, .count = num_samples};
 }
 
 static bool is_downloaded(void) {
@@ -59,7 +59,7 @@ static void download(void) {
     assert(system("tar -xzf /workspace/data/cifar-10-binary.tar.gz -C /workspace/data --strip-components=1") == 0);
 }
 
-samples_count_t get_test_samples(void) {
+sample_arr_t get_test_samples(void) {
     if (!is_downloaded()) {
         download();
     }
@@ -69,7 +69,7 @@ samples_count_t get_test_samples(void) {
     return get_samples(TEST_BATCH_PATH);
 }
 
-samples_count_t get_train_samples(void) {
+sample_arr_t get_train_samples(void) {
     if (!is_downloaded()) {
         download();
     }
@@ -77,7 +77,7 @@ samples_count_t get_train_samples(void) {
     static const char *TRAIN_BATCH_PATHS[5] = {"/workspace/data/data_batch_1.bin", "/workspace/data/data_batch_2.bin", "/workspace/data/data_batch_3.bin", "/workspace/data/data_batch_4.bin", "/workspace/data/data_batch_5.bin"};
 
     // load all
-    samples_count_t train_batches[5];
+    sample_arr_t train_batches[5];
     for (u32 i = 0; i < 5; i++) {
         train_batches[i] = get_samples(TRAIN_BATCH_PATHS[i]);
     }
@@ -102,7 +102,7 @@ samples_count_t get_train_samples(void) {
         offset += train_batches[i].count;
     }
 
-    return (samples_count_t){.samples = merged, .count = total_samples};
+    return (sample_arr_t){.samples = merged, .count = total_samples};
 }
 
 // 

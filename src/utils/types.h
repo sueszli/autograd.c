@@ -63,7 +63,7 @@ typedef double f64;
 #define F64_NAN NAN
 
 //
-// syntactic sugar
+// pointers
 //
 
 typedef void (*fn_ptr)(void);
