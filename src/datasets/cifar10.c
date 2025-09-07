@@ -111,7 +111,7 @@ samples_count_t get_train_samples(void) {
 
 static const char *CIFAR10_CLASSES[CIFAR10_NUM_CLASSES] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
 
-char *get_class_name(u8 idx) {
-    assert(idx < CIFAR10_NUM_CLASSES);
-    return (char *)CIFAR10_CLASSES[idx];
+char *get_class_name(u8 class_id) {
+    assert(class_id < CIFAR10_NUM_CLASSES);
+    return (char *)CIFAR10_CLASSES[class_id];
 }
