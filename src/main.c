@@ -13,7 +13,7 @@
 #define INPUT_SIZE 3072    // 32*32*3
 #define HIDDEN_SIZE 64
 #define OUTPUT_SIZE 10
-#define LEARNING_RATE 0.01f
+#define LEARNING_RATE 0.001f
 #define EPOCHS 2
 #define BATCH_SIZE 100
 
@@ -86,9 +86,9 @@ void init_layer(layer_t *layer, u32 input_size, u32 output_size) {
     assert(layer->weights != NULL);
     assert(layer->bias != NULL);
     
-    f32 xavier_std = simple_sqrt(2.0f / (f32)input_size);
+    f32 xavier_std = simple_sqrt(2.0f / (f32)(input_size + output_size));
     for (u32 i = 0; i < input_size * output_size; i++) {
-        layer->weights[i] = random_weight() * xavier_std;
+        layer->weights[i] = random_weight() * xavier_std * 0.1f;
     }
 }
 
@@ -184,7 +184,16 @@ void forward_pass(neural_network_t *network, f32 *input) {
 }
 
 f32 compute_loss(neural_network_t *network, u8 target_label) {
-    return -simple_log(network->final_output[target_label] + 1e-10f);
+    f32 prob = network->final_output[target_label];
+    if (prob < 1e-7f) prob = 1e-7f;
+    if (prob > 1.0f - 1e-7f) prob = 1.0f - 1e-7f;
+    return -simple_log(prob);
+}
+
+f32 clip_gradient(f32 grad, f32 max_norm) {
+    if (grad > max_norm) return max_norm;
+    if (grad < -max_norm) return -max_norm;
+    return grad;
 }
 
 void backward_pass(neural_network_t *network, f32 *input, u8 target_label) {
@@ -196,6 +205,7 @@ void backward_pass(neural_network_t *network, f32 *input, u8 target_label) {
         if (i == target_label) {
             network->output_delta[i] -= 1.0f;
         }
+        network->output_delta[i] = clip_gradient(network->output_delta[i], 5.0f);
     }
     
     for (u32 i = 0; i < HIDDEN_SIZE; i++) {
@@ -203,25 +213,29 @@ void backward_pass(neural_network_t *network, f32 *input, u8 target_label) {
         for (u32 j = 0; j < OUTPUT_SIZE; j++) {
             sum += network->output_delta[j] * output->weights[i * OUTPUT_SIZE + j];
         }
-        network->hidden_delta[i] = sum * relu_derivative(network->hidden_output[i]);
+        network->hidden_delta[i] = clip_gradient(sum * relu_derivative(network->hidden_output[i]), 5.0f);
     }
     
     for (u32 i = 0; i < HIDDEN_SIZE; i++) {
         for (u32 j = 0; j < OUTPUT_SIZE; j++) {
-            output->weights[i * OUTPUT_SIZE + j] -= LEARNING_RATE * network->output_delta[j] * network->hidden_output[i];
+            f32 grad = clip_gradient(network->output_delta[j] * network->hidden_output[i], 1.0f);
+            output->weights[i * OUTPUT_SIZE + j] -= LEARNING_RATE * grad;
         }
     }
     for (u32 j = 0; j < OUTPUT_SIZE; j++) {
-        output->bias[j] -= LEARNING_RATE * network->output_delta[j];
+        f32 grad = clip_gradient(network->output_delta[j], 1.0f);
+        output->bias[j] -= LEARNING_RATE * grad;
     }
     
     for (u32 i = 0; i < INPUT_SIZE; i++) {
         for (u32 j = 0; j < HIDDEN_SIZE; j++) {
-            hidden->weights[i * HIDDEN_SIZE + j] -= LEARNING_RATE * network->hidden_delta[j] * input[i];
+            f32 grad = clip_gradient(network->hidden_delta[j] * input[i], 1.0f);
+            hidden->weights[i * HIDDEN_SIZE + j] -= LEARNING_RATE * grad;
         }
     }
     for (u32 j = 0; j < HIDDEN_SIZE; j++) {
-        hidden->bias[j] -= LEARNING_RATE * network->hidden_delta[j];
+        f32 grad = clip_gradient(network->hidden_delta[j], 1.0f);
+        hidden->bias[j] -= LEARNING_RATE * grad;
     }
 }
 
@@ -254,10 +268,25 @@ f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     return (f32)correct / (f32)test_samples->count;
 }
 
+void print_progress_bar(u32 current, u32 total, u32 width) {
+    f32 progress = (f32)current / (f32)total;
+    u32 filled = (u32)(progress * width);
+    
+    printf("\r[");
+    for (u32 i = 0; i < width; i++) {
+        if (i < filled) printf("█");
+        else printf(" ");
+    }
+    printf("] %3.0f%%", progress * 100.0f);
+    fflush(stdout);
+}
+
 void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
     printf("Starting training...\n");
+    u32 total_batches = (train_samples->count + BATCH_SIZE - 1) / BATCH_SIZE;
     
     for (u32 epoch = 0; epoch < EPOCHS; epoch++) {
+        printf("\nEpoch %u/%u:\n", epoch + 1, EPOCHS);
         f32 total_loss = 0.0f;
         u32 batch_count = 0;
         
@@ -274,20 +303,26 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
                 backward_pass(network, input, train_samples->samples[j].label);
             }
             
-            total_loss += batch_loss / (f32)(batch_end - i);
+            batch_loss /= (f32)(batch_end - i);
+            total_loss += batch_loss;
             batch_count++;
             
-            if (batch_count % 200 == 0) {
-                printf("  Batch %u completed\n", batch_count);
+            print_progress_bar(batch_count, total_batches, 30);
+            printf(" Batch %u/%u | Loss: %.4f", batch_count, total_batches, batch_loss);
+            
+            if (batch_count % 50 == 0 || batch_count == total_batches) {
+                f32 current_avg_loss = total_loss / (f32)batch_count;
+                printf(" | Avg Loss: %.4f", current_avg_loss);
             }
         }
-        
+
+        printf("\n\nEvaluating epoch %u...\n", epoch + 1);
         f32 avg_loss = total_loss / (f32)batch_count;
         f32 train_accuracy = evaluate_accuracy(network, train_samples);
         f32 test_accuracy = evaluate_accuracy(network, test_samples);
         
-        printf("Epoch %u: Loss=%.4f, Train Acc=%.4f, Test Acc=%.4f\n", 
-               epoch + 1, avg_loss, train_accuracy, test_accuracy);
+        printf("✓ Epoch %u Complete: Loss=%.4f, Train Acc=%.4f (%.2f%%), Test Acc=%.4f (%.2f%%)\n", 
+               epoch + 1, avg_loss, train_accuracy, train_accuracy * 100.0f, test_accuracy, test_accuracy * 100.0f);
     }
 }
 
