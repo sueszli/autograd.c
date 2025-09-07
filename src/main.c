@@ -267,20 +267,6 @@ f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     return (f32)correct / (f32)test_samples->count;
 }
 
-void print_progress_bar(u32 current, u32 total, u32 width) {
-    f32 progress = (f32)current / (f32)total;
-    u32 filled = (u32)(progress * (f32)width);
-
-    printf("\r[");
-    for (u32 i = 0; i < filled; i++) {
-        printf("=");
-    }
-    for (u32 i = filled; i < width; i++) {
-        printf(" ");
-    }
-    printf("] %3.0f%%", progress * 100.0f);
-    fflush(stdout);
-}
 
 void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
     printf("Starting training...\n");
@@ -308,8 +294,7 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
             total_loss += batch_loss;
             batch_count++;
 
-            print_progress_bar(batch_count, total_batches, 30);
-            printf(" Batch %u/%u | Loss: %.4f", batch_count, total_batches, batch_loss);
+            tqdm(batch_count, total_batches, "Training");
 
             if (batch_count % 50 == 0 || batch_count == total_batches) {
                 f32 current_avg_loss = total_loss / (f32)batch_count;
