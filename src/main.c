@@ -18,7 +18,7 @@ int main(void) {
     printf("loaded %lu training samples and %lu test samples.\n", train_samples.count, test_samples.count);
 
     sample_t first_sample = train_samples.samples[0];
-    printf("first sample label: %u\n", first_sample.label);
+    printf("first sample label: %u (%s)\n", first_sample.label, get_class_name(first_sample.label));
 
     return EXIT_SUCCESS;
 }
