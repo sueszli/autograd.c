@@ -46,7 +46,7 @@ void spawn(fn_ptr func) {
 
     goroutines[idx] = g;
 
-    int result = pthread_create(&g->thread, NULL, invoke, g);
+    i32 result = pthread_create(&g->thread, NULL, invoke, g);
     assert(result == 0);
 
     pthread_mutex_unlock(&spawn_mutex);
@@ -77,7 +77,7 @@ void wait(void) {
     u8 final_count = atomic_load(&goroutine_count);
     for (u8 i = 0; i < final_count; i++) {
         if (goroutines[i] != NULL) {
-            int result = pthread_join(goroutines[i]->thread, NULL);
+            i32 result = pthread_join(goroutines[i]->thread, NULL);
             assert(result == 0);
             free(goroutines[i]);
             goroutines[i] = NULL;

@@ -2,23 +2,20 @@
 
 #include "../utils/types.h"
 
-#define CIFAR10_IMAGE_SIZE 32
-#define CIFAR10_NUM_CHANNELS 3
-#define CIFAR10_NUM_CLASSES 10
-#define CIFAR10_PIXELS_PER_IMAGE (CIFAR10_IMAGE_SIZE * CIFAR10_IMAGE_SIZE * CIFAR10_NUM_CHANNELS)
+#define NUM_CLASSES 10
+#define NUM_PIXELS (32 * 32 * 3)
+#define NUM_TRAIN_SAMPLES 50000
+#define NUM_TEST_SAMPLES 10000
 
 typedef struct {
     u8 label;
-    u8 data[CIFAR10_PIXELS_PER_IMAGE];
+    u8 data[NUM_PIXELS];
 } sample_t;
 
-typedef struct {
-    sample_t *samples;
-    u64 count;
-} sample_arr_t;
+typedef sample_t train_samples_t[NUM_TRAIN_SAMPLES];
+typedef sample_t test_samples_t[NUM_TEST_SAMPLES];
 
-sample_arr_t get_test_samples(void);
-
-sample_arr_t get_train_samples(void);
+void get_test_samples(test_samples_t samples);
+void get_train_samples(train_samples_t samples);
 
 const char *get_class_name(u8 class_id);

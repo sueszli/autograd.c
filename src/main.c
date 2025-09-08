@@ -12,7 +12,7 @@
 #include "utils/tqdm.h"
 #include "utils/types.h"
 
-#define INPUT_SIZE 3072 // 32*32*3
+#define INPUT_SIZE NUM_PIXELS
 #define HIDDEN_SIZE 64
 #define OUTPUT_SIZE 10
 #define LEARNING_RATE 0.001f
@@ -40,7 +40,7 @@ typedef struct {
 f32 random_weight(void) {
     // Use constant to avoid repeated division
     static const f32 inv_rand_max = 2.0f / (f32)RAND_MAX;
-    int r = rand();
+    i32 r = rand();
     return (f32)r * inv_rand_max - 1.0f;
 }
 
@@ -253,6 +253,11 @@ u8 predict(neural_network_t *network, sample_t *sample) {
     return predicted;
 }
 
+typedef struct {
+    sample_t *samples;
+    u64 count;
+} sample_arr_t;
+
 f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     u32 correct = 0;
     u64 eval_step = test_samples->count / 100; // Update every 1%
@@ -320,12 +325,17 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
     }
 }
 
-int main(void) {
+i32 main(void) {
     srand((u32)time(NULL));
 
     printf("Loading CIFAR-10 dataset...\n");
-    sample_arr_t train_samples = get_train_samples();
-    sample_arr_t test_samples = get_test_samples();
+    static train_samples_t train_data;
+    static test_samples_t test_data;
+    get_train_samples(train_data);
+    get_test_samples(test_data);
+    
+    sample_arr_t train_samples = {(sample_t*)train_data, NUM_TRAIN_SAMPLES};
+    sample_arr_t test_samples = {(sample_t*)test_data, NUM_TEST_SAMPLES};
     assert(train_samples.samples != NULL);
     assert(test_samples.samples != NULL);
 
