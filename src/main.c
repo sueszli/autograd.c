@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "datasets/cifar10.h"
+#include "math/metrics.h"
 #include "utils/defer.h"
 #include "utils/tqdm.h"
 #include "utils/types.h"
@@ -254,26 +255,32 @@ u8 predict(neural_network_t *network, sample_t *sample) {
 }
 
 f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
-    u32 correct = 0;
+    u8 *true_labels = malloc(count * sizeof(u8));
+    u8 *predicted_labels = malloc(count * sizeof(u8));
+    assert(true_labels != NULL);
+    assert(predicted_labels != NULL);
+
     u64 eval_step = count / 100;
     if (eval_step == 0) {
         eval_step = 1;
     }
 
     for (u64 i = 0; i < count; i++) {
-        u8 predicted = predict(network, &samples[i]);
-        if (predicted == samples[i].label) {
-            correct++;
-        }
+        true_labels[i] = samples[i].label;
+        predicted_labels[i] = predict(network, &samples[i]);
 
         if (i % eval_step == 0 || i == count - 1) {
+            f32 current_accuracy = accuracy(true_labels, predicted_labels, i + 1);
             char info[64];
-            snprintf(info, sizeof(info), "Accuracy: %.2f%%", (f32)correct * 100.0f / (f32)(i + 1));
+            snprintf(info, sizeof(info), "Accuracy: %.2f%%", current_accuracy * 100.0f);
             tqdm(i + 1, count, "Evaluating", info);
         }
     }
 
-    return (f32)correct / (f32)count;
+    f32 final_accuracy = accuracy(true_labels, predicted_labels, count);
+    free(true_labels);
+    free(predicted_labels);
+    return final_accuracy;
 }
 
 void train_network(neural_network_t *network, sample_t *train_samples, sample_t *test_samples) {
