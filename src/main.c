@@ -253,53 +253,48 @@ u8 predict(neural_network_t *network, sample_t *sample) {
     return predicted;
 }
 
-typedef struct {
-    sample_t *samples;
-    u64 count;
-} sample_arr_t;
 
-f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
+f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
     u32 correct = 0;
-    u64 eval_step = test_samples->count / 100; // Update every 1%
+    u64 eval_step = count / 100; // Update every 1%
     if (eval_step == 0)
         eval_step = 1;
 
-    for (u64 i = 0; i < test_samples->count; i++) {
-        u8 predicted = predict(network, &test_samples->samples[i]);
-        if (predicted == test_samples->samples[i].label) {
+    for (u64 i = 0; i < count; i++) {
+        u8 predicted = predict(network, &samples[i]);
+        if (predicted == samples[i].label) {
             correct++;
         }
 
-        if (i % eval_step == 0 || i == test_samples->count - 1) {
+        if (i % eval_step == 0 || i == count - 1) {
             char info[64];
             snprintf(info, sizeof(info), "Accuracy: %.2f%%", (f32)correct * 100.0f / (f32)(i + 1));
-            tqdm(i + 1, test_samples->count, "Evaluating", info);
+            tqdm(i + 1, count, "Evaluating", info);
         }
     }
 
-    return (f32)correct / (f32)test_samples->count;
+    return (f32)correct / (f32)count;
 }
 
-void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
+void train_network(neural_network_t *network, sample_t *train_samples, sample_t *test_samples) {
     printf("Starting training...\n");
-    u32 total_batches = (u32)((train_samples->count + BATCH_SIZE - 1) / BATCH_SIZE);
+    u32 total_batches = (NUM_TRAIN_SAMPLES + BATCH_SIZE - 1) / BATCH_SIZE;
 
     for (u32 epoch = 0; epoch < EPOCHS; epoch++) {
         printf("\nEpoch %u/%u:\n", epoch + 1, EPOCHS);
         f32 total_loss = 0.0f;
         u32 batch_count = 0;
 
-        for (u64 i = 0; i < train_samples->count; i += BATCH_SIZE) {
+        for (u64 i = 0; i < NUM_TRAIN_SAMPLES; i += BATCH_SIZE) {
             f32 batch_loss = 0.0f;
-            u64 batch_end = (i + BATCH_SIZE < train_samples->count) ? i + BATCH_SIZE : train_samples->count;
+            u64 batch_end = (i + BATCH_SIZE < NUM_TRAIN_SAMPLES) ? i + BATCH_SIZE : NUM_TRAIN_SAMPLES;
 
             for (u64 j = i; j < batch_end; j++) {
-                // Use pre-allocated normalized_input buffer to avoid repeated allocations
-                normalize_input(train_samples->samples[j].data, network->normalized_input, INPUT_SIZE);
+                normalize_input(train_samples[j].data, network->normalized_input, INPUT_SIZE);
 
                 forward_pass(network, network->normalized_input);
-                batch_loss += compute_loss(network, train_samples->samples[j].label);
-                backward_pass(network, network->normalized_input, train_samples->samples[j].label);
+                batch_loss += compute_loss(network, train_samples[j].label);
+                backward_pass(network, network->normalized_input, train_samples[j].label);
             }
 
             batch_loss /= (f32)(batch_end - i);
@@ -318,8 +313,8 @@ void train_network(neural_network_t *network, sample_arr_t *train_samples, sampl
 
         printf("\n\nEvaluating epoch %u...\n", epoch + 1);
         f32 avg_loss = total_loss / (f32)batch_count;
-        f32 train_accuracy = evaluate_accuracy(network, train_samples);
-        f32 test_accuracy = evaluate_accuracy(network, test_samples);
+        f32 train_accuracy = evaluate_accuracy(network, train_samples, NUM_TRAIN_SAMPLES);
+        f32 test_accuracy = evaluate_accuracy(network, test_samples, NUM_TEST_SAMPLES);
 
         printf("✓ Epoch %u Complete: Loss=%.4f, Train Acc=%.4f (%.2f%%), Test Acc=%.4f (%.2f%%)\n", epoch + 1, avg_loss, train_accuracy, train_accuracy * 100.0f, test_accuracy, test_accuracy * 100.0f);
     }
@@ -333,13 +328,6 @@ i32 main(void) {
     static test_samples_t test_data;
     get_train_samples(train_data);
     get_test_samples(test_data);
-    
-    sample_arr_t train_samples = {(sample_t*)train_data, NUM_TRAIN_SAMPLES};
-    sample_arr_t test_samples = {(sample_t*)test_data, NUM_TEST_SAMPLES};
-    assert(train_samples.samples != NULL);
-    assert(test_samples.samples != NULL);
-
-    printf("Loaded %lu training samples and %lu test samples.\n", train_samples.count, test_samples.count);
 
     printf("Creating neural network...\n");
     neural_network_t *network = create_network();
@@ -347,16 +335,16 @@ i32 main(void) {
 
     printf("Network architecture: %d -> %d -> %d\n", INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
 
-    train_network(network, &train_samples, &test_samples);
+    train_network(network, train_data, test_data);
 
     printf("\nFinal evaluation:\n");
-    f32 final_accuracy = evaluate_accuracy(network, &test_samples);
+    f32 final_accuracy = evaluate_accuracy(network, test_data, NUM_TEST_SAMPLES);
     printf("Final test accuracy: %.4f (%.2f%%)\n", final_accuracy, final_accuracy * 100.0f);
 
     printf("\nSample predictions:\n");
     for (u32 i = 0; i < 5; i++) {
-        u8 predicted = predict(network, &test_samples.samples[i]);
-        u8 actual = test_samples.samples[i].label;
+        u8 predicted = predict(network, &test_data[i]);
+        u8 actual = test_data[i].label;
         printf("Sample %u: Predicted=%s, Actual=%s %s\n", i + 1, get_class_name(predicted), get_class_name(actual), predicted == actual ? "✓" : "✗");
     }
 
