@@ -7,6 +7,8 @@
 #define NUM_TRAIN_SAMPLES 50000
 #define NUM_TEST_SAMPLES 10000
 
+static const char *CIFAR10_CLASSES[NUM_CLASSES] __attribute__((unused)) = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
+
 typedef struct {
     u8 label;
     u8 data[NUM_PIXELS];
