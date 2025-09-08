@@ -1,36 +1,32 @@
 #include "../src/utils/defer.h"
 #include "../src/utils/types.h"
-#include <assert.h>
-#include <float.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unity.h>
 
 static i32 cleanup_order = 0; // cleanup execution order
 static i32 cleanup_results[10];
 
-void reset_cleanup_tracking() {
+void setUp(void) {
     cleanup_order = 0;
     memset(cleanup_results, 0, sizeof(cleanup_results));
 }
 
-void test_basic_defer() {
-    reset_cleanup_tracking();
+void tearDown(void) {}
 
+void test_basic_defer(void) {
     i32 cleaned_up = 0;
 
     {
         defer({ cleaned_up = 1; });
-        assert(cleaned_up == 0); // should not be cleaned up yet
+        TEST_ASSERT_EQUAL(0, cleaned_up); // should not be cleaned up yet
     }
 
-    assert(cleaned_up == 1); // should be cleaned up after scope exit
+    TEST_ASSERT_EQUAL(1, cleaned_up); // should be cleaned up after scope exit
 }
 
-void test_multiple_defers() {
-    reset_cleanup_tracking();
-
+void test_multiple_defers(void) {
     {
         defer({ cleanup_results[cleanup_order++] = 1; });
         defer({ cleanup_results[cleanup_order++] = 2; });
@@ -38,13 +34,13 @@ void test_multiple_defers() {
     }
 
     // defers should execute in reverse order (LIFO)
-    assert(cleanup_order == 3);
-    assert(cleanup_results[0] == 3);
-    assert(cleanup_results[1] == 2);
-    assert(cleanup_results[2] == 1);
+    TEST_ASSERT_EQUAL(3, cleanup_order);
+    TEST_ASSERT_EQUAL(3, cleanup_results[0]);
+    TEST_ASSERT_EQUAL(2, cleanup_results[1]);
+    TEST_ASSERT_EQUAL(1, cleanup_results[2]);
 }
 
-void test_defer_with_variables() {
+void test_defer_with_variables(void) {
     char *buffer = malloc(100);
     i32 freed = 0;
 
@@ -55,29 +51,25 @@ void test_defer_with_variables() {
         });
 
         strcpy(buffer, "test string");
-        assert(strcmp(buffer, "test string") == 0);
-        assert(freed == 0);
+        TEST_ASSERT_EQUAL_STRING("test string", buffer);
+        TEST_ASSERT_EQUAL(0, freed);
     }
 
-    assert(freed == 1);
+    TEST_ASSERT_EQUAL(1, freed);
 }
 
-void test_defer_in_function() {
-    reset_cleanup_tracking();
-
+void test_defer_in_function(void) {
     void test_function() {
         defer({ cleanup_results[cleanup_order++] = 42; });
-        assert(cleanup_order == 0);
+        TEST_ASSERT_EQUAL(0, cleanup_order);
     }
 
     test_function();
-    assert(cleanup_order == 1);
-    assert(cleanup_results[0] == 42);
+    TEST_ASSERT_EQUAL(1, cleanup_order);
+    TEST_ASSERT_EQUAL(42, cleanup_results[0]);
 }
 
-void test_nested_scopes() {
-    reset_cleanup_tracking();
-
+void test_nested_scopes(void) {
     {
         defer({ cleanup_results[cleanup_order++] = 1; });
 
@@ -88,19 +80,19 @@ void test_nested_scopes() {
                 defer({ cleanup_results[cleanup_order++] = 3; });
             }
 
-            assert(cleanup_order == 1);
-            assert(cleanup_results[0] == 3);
+            TEST_ASSERT_EQUAL(1, cleanup_order);
+            TEST_ASSERT_EQUAL(3, cleanup_results[0]);
         }
 
-        assert(cleanup_order == 2);
-        assert(cleanup_results[1] == 2);
+        TEST_ASSERT_EQUAL(2, cleanup_order);
+        TEST_ASSERT_EQUAL(2, cleanup_results[1]);
     }
 
-    assert(cleanup_order == 3);
-    assert(cleanup_results[2] == 1);
+    TEST_ASSERT_EQUAL(3, cleanup_order);
+    TEST_ASSERT_EQUAL(1, cleanup_results[2]);
 }
 
-void test_defer_with_complex_block() {
+void test_defer_with_complex_block(void) {
     FILE *file = NULL;
     i32 *array = NULL;
     i32 success = 0;
@@ -117,39 +109,42 @@ void test_defer_with_complex_block() {
         });
 
         array = malloc(sizeof(i32) * 10);
-        assert(array != NULL);
+        TEST_ASSERT_NOT_NULL(array);
 
         for (i32 i = 0; i < 10; i++) {
             array[i] = i * i;
         }
 
-        assert(success == 0);
+        TEST_ASSERT_EQUAL(0, success);
     }
 
-    assert(success == 1);
+    TEST_ASSERT_EQUAL(1, success);
 }
 
-void test_defer_unique_names() {
+void test_defer_unique_names(void) {
     i32 result1 = 0, result2 = 0;
 
     {
         defer({ result1 = 1; });
         defer({ result2 = 2; });
-        assert(result1 == 0 && result2 == 0);
+        TEST_ASSERT_EQUAL(0, result1);
+        TEST_ASSERT_EQUAL(0, result2);
     }
 
-    assert(result1 == 1 && result2 == 2);
+    TEST_ASSERT_EQUAL(1, result1);
+    TEST_ASSERT_EQUAL(2, result2);
 }
 
-i32 main() {
+i32 main(void) {
+    UNITY_BEGIN();
 
-    test_basic_defer();
-    test_multiple_defers();
-    test_defer_with_variables();
-    test_defer_in_function();
-    test_nested_scopes();
-    test_defer_with_complex_block();
-    test_defer_unique_names();
+    RUN_TEST(test_basic_defer);
+    RUN_TEST(test_multiple_defers);
+    RUN_TEST(test_defer_with_variables);
+    RUN_TEST(test_defer_in_function);
+    RUN_TEST(test_nested_scopes);
+    RUN_TEST(test_defer_with_complex_block);
+    RUN_TEST(test_defer_unique_names);
 
-    return 0;
+    return UNITY_END();
 }
