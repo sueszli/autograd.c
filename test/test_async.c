@@ -16,13 +16,9 @@ void setUp(void) {
     async_cleanup_all();
 }
 
-void tearDown(void) {
-    async_cleanup_all();
-}
+void tearDown(void) { async_cleanup_all(); }
 
-void simple_task(void) {
-    atomic_fetch_add(&test_counter, 1);
-}
+void simple_task(void) { atomic_fetch_add(&test_counter, 1); }
 
 void yield_task(void) {
     atomic_store(&flags[0], true);
@@ -37,9 +33,7 @@ void interaction_task_1(void) {
     atomic_store(&flags[1], true);
 }
 
-void interaction_task_2(void) {
-    atomic_store(&flags[0], true);
-}
+void interaction_task_2(void) { atomic_store(&flags[0], true); }
 
 void recursive_task(int depth) {
     if (depth > 0) {
@@ -50,9 +44,7 @@ void recursive_task(int depth) {
     }
 }
 
-void deep_recursion_task(void) {
-    recursive_task(1000);
-}
+void deep_recursion_task(void) { recursive_task(1000); }
 
 void test_async_spawn_single_thread(void) {
     async_spawn(simple_task);
