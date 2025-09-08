@@ -104,7 +104,7 @@ void test_async_cleanup(void) {
     TEST_ASSERT_EQUAL(0, atomic_load(&test_counter));
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_async_spawn_single_thread);
     RUN_TEST(test_async_spawn_multiple_threads);
