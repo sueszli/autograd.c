@@ -6,6 +6,7 @@
     "files.associations": {
         "locale": "c",
         "types.h": "c",
-        "mman.h": "c"
+        "mman.h": "c",
+        "go.h": "c"
     }
 }
