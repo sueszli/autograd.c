@@ -256,14 +256,15 @@ u8 predict(neural_network_t *network, sample_t *sample) {
 f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
     u32 correct = 0;
     u64 eval_step = test_samples->count / 100; // Update every 1%
-    if (eval_step == 0) eval_step = 1;
+    if (eval_step == 0)
+        eval_step = 1;
 
     for (u64 i = 0; i < test_samples->count; i++) {
         u8 predicted = predict(network, &test_samples->samples[i]);
         if (predicted == test_samples->samples[i].label) {
             correct++;
         }
-        
+
         if (i % eval_step == 0 || i == test_samples->count - 1) {
             char info[64];
             snprintf(info, sizeof(info), "Accuracy: %.2f%%", (f32)correct * 100.0f / (f32)(i + 1));
@@ -273,7 +274,6 @@ f32 evaluate_accuracy(neural_network_t *network, sample_arr_t *test_samples) {
 
     return (f32)correct / (f32)test_samples->count;
 }
-
 
 void train_network(neural_network_t *network, sample_arr_t *train_samples, sample_arr_t *test_samples) {
     printf("Starting training...\n");
