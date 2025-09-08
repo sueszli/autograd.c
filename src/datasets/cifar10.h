@@ -17,7 +17,7 @@ typedef struct {
 typedef sample_t train_samples_t[NUM_TRAIN_SAMPLES];
 typedef sample_t test_samples_t[NUM_TEST_SAMPLES];
 
-void get_test_samples(test_samples_t samples);
-void get_train_samples(train_samples_t samples);
+void load_test_samples_to_buffer(test_samples_t samples);
+void load_train_samples_to_buffer(train_samples_t samples);
 
 const char *get_class_name(u8 class_id);
