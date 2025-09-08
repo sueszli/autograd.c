@@ -253,7 +253,6 @@ u8 predict(neural_network_t *network, sample_t *sample) {
     return predicted;
 }
 
-
 f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
     u32 correct = 0;
     u64 eval_step = count / 100; // Update every 1%

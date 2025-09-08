@@ -11,8 +11,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-static const char *CIFAR10_CLASSES[NUM_CLASSES] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
-
 static u64 get_num_samples(FILE *file) {
     assert(fseek(file, 0, SEEK_END) == 0);
     i64 file_size = ftell(file);
