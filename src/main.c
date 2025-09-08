@@ -255,9 +255,10 @@ u8 predict(neural_network_t *network, sample_t *sample) {
 
 f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
     u32 correct = 0;
-    u64 eval_step = count / 100; // Update every 1%
-    if (eval_step == 0)
+    u64 eval_step = count / 100;
+    if (eval_step == 0) {
         eval_step = 1;
+    }
 
     for (u64 i = 0; i < count; i++) {
         u8 predicted = predict(network, &samples[i]);
@@ -322,30 +323,19 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
 i32 main(void) {
     srand((u32)time(NULL));
 
-    printf("Loading CIFAR-10 dataset...\n");
     static train_samples_t train_data;
     static test_samples_t test_data;
-    get_train_samples(train_data);
-    get_test_samples(test_data);
+    load_train_samples_to_buffer(train_data);
+    load_test_samples_to_buffer(test_data);
 
-    printf("Creating neural network...\n");
+    printf("Network architecture: %d -> %d -> %d\n", INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
     neural_network_t *network = create_network();
     defer({ free_network(network); });
 
-    printf("Network architecture: %d -> %d -> %d\n", INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
-
     train_network(network, train_data, test_data);
 
-    printf("\nFinal evaluation:\n");
     f32 final_accuracy = evaluate_accuracy(network, test_data, NUM_TEST_SAMPLES);
     printf("Final test accuracy: %.4f (%.2f%%)\n", final_accuracy, final_accuracy * 100.0f);
-
-    printf("\nSample predictions:\n");
-    for (u32 i = 0; i < 5; i++) {
-        u8 predicted = predict(network, &test_data[i]);
-        u8 actual = test_data[i].label;
-        printf("Sample %u: Predicted=%s, Actual=%s %s\n", i + 1, get_class_name(predicted), get_class_name(actual), predicted == actual ? "✓" : "✗");
-    }
 
     return EXIT_SUCCESS;
 }

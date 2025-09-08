@@ -52,7 +52,7 @@ static void download(void) {
     assert(system("tar -xzf /workspace/data/cifar-10-binary.tar.gz -C /workspace/data --strip-components=1") == 0);
 }
 
-void get_test_samples(test_samples_t samples) {
+void load_test_samples_to_buffer(test_samples_t samples) {
     if (!is_downloaded()) {
         download();
     }
@@ -61,7 +61,7 @@ void get_test_samples(test_samples_t samples) {
     load_samples_to_buffer(TEST_BATCH_PATH, samples, NUM_TEST_SAMPLES);
 }
 
-void get_train_samples(train_samples_t samples) {
+void load_train_samples_to_buffer(train_samples_t samples) {
     if (!is_downloaded()) {
         download();
     }
