@@ -1,9 +1,7 @@
 TODO:
 
-- use types.h everywhere in src/tensor/* and test/* and src/main.c
-
 - extend with small tested modules
-    - broadcasting logic for tensor ops
+    - broadcasting
 
 - "Fake" Batching: The training loop in main.c simulates batching by accumulating gradients over several samples before updating the weights. A true PyTorch-style implementation would collate the batch of inputs into a single, higher-dimensional tensor (e.g., shape [32, 3072]) and perform a single forward and backward pass on the entire batch. The current method is computationally different and much slower, though the gradient accumulation achieves a similar result for SGD.
 
