@@ -441,6 +441,299 @@ void test_tensor_broadcast_precision_floating_point(void) {
     tensor_destroy(b);
 }
 
+void test_tensor_broadcast_inplace_basic(void) {
+    i32 shape_a[] = {2, 1};
+    i32 shape_b[] = {1, 3};
+    f32 data_a[] = {1, 2};
+    f32 data_b[] = {10, 20, 30};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
+
+    tensor_t *orig_a = a;
+    tensor_t *orig_b = b;
+
+    tensor_broadcast_inplace(&a, &b);
+
+    TEST_ASSERT_NOT_NULL(a);
+    TEST_ASSERT_NOT_NULL(b);
+    TEST_ASSERT_NOT_EQUAL(orig_a, a);
+    TEST_ASSERT_NOT_EQUAL(orig_b, b);
+
+    TEST_ASSERT_EQUAL(2, a->ndim);
+    TEST_ASSERT_EQUAL(2, a->shape[0]);
+    TEST_ASSERT_EQUAL(3, a->shape[1]);
+
+    TEST_ASSERT_EQUAL(2, b->ndim);
+    TEST_ASSERT_EQUAL(2, b->shape[0]);
+    TEST_ASSERT_EQUAL(3, b->shape[1]);
+
+    f32 expected_a[] = {1, 1, 1, 2, 2, 2};
+    f32 expected_b[] = {10, 20, 30, 10, 20, 30};
+
+    for (i32 i = 0; i < 6; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_a[i], a->data[i]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_b[i], b->data[i]);
+    }
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_broadcast_inplace_scalar(void) {
+    i32 shape_scalar[] = {1};
+    i32 shape_tensor[] = {2, 3};
+    f32 data_scalar[] = {5.0f};
+    f32 data_tensor[] = {1, 2, 3, 4, 5, 6};
+
+    tensor_t *scalar = tensor_create(data_scalar, shape_scalar, 1, false);
+    tensor_t *tensor = tensor_create(data_tensor, shape_tensor, 2, false);
+
+    tensor_broadcast_inplace(&scalar, &tensor);
+
+    TEST_ASSERT_EQUAL(2, scalar->ndim);
+    TEST_ASSERT_EQUAL(2, scalar->shape[0]);
+    TEST_ASSERT_EQUAL(3, scalar->shape[1]);
+
+    TEST_ASSERT_EQUAL(2, tensor->ndim);
+    TEST_ASSERT_EQUAL(2, tensor->shape[0]);
+    TEST_ASSERT_EQUAL(3, tensor->shape[1]);
+
+    for (i32 i = 0; i < 6; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 5.0f, scalar->data[i]);
+    }
+
+    tensor_destroy(scalar);
+    tensor_destroy(tensor);
+}
+
+void test_tensor_broadcast_inplace_same_shape(void) {
+    i32 shape[] = {2, 3};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6};
+    f32 data_b[] = {10, 20, 30, 40, 50, 60};
+
+    tensor_t *a = tensor_create(data_a, shape, 2, false);
+    tensor_t *b = tensor_create(data_b, shape, 2, false);
+
+    tensor_t *orig_a = a;
+    tensor_t *orig_b = b;
+
+    tensor_broadcast_inplace(&a, &b);
+
+    TEST_ASSERT_EQUAL(orig_a, a);
+    TEST_ASSERT_EQUAL(orig_b, b);
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_broadcast_inplace_incompatible(void) {
+    i32 shape_a[] = {2, 3};
+    i32 shape_b[] = {2, 4};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6};
+    f32 data_b[] = {1, 2, 3, 4, 5, 6, 7, 8};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
+
+    tensor_t *orig_a = a;
+    tensor_t *orig_b = b;
+
+    tensor_broadcast_inplace(&a, &b);
+
+    TEST_ASSERT_EQUAL(orig_a, a);
+    TEST_ASSERT_EQUAL(orig_b, b);
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_broadcast_inplace_null_inputs(void) {
+    i32 shape[] = {2, 3};
+    f32 data[] = {1, 2, 3, 4, 5, 6};
+    tensor_t *tensor = tensor_create(data, shape, 2, false);
+
+    tensor_broadcast_inplace(NULL, NULL);
+
+    tensor_t *null_tensor = NULL;
+    tensor_broadcast_inplace(&tensor, &null_tensor);
+    tensor_broadcast_inplace(&null_tensor, &tensor);
+
+    TEST_ASSERT_NOT_NULL(tensor);
+
+    tensor_destroy(tensor);
+}
+
+void test_tensor_broadcast_inplace_complex(void) {
+    i32 shape_a[] = {1, 2, 1};
+    i32 shape_b[] = {3, 1, 4};
+    f32 data_a[] = {1, 2};
+    f32 data_b[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 3, false);
+
+    tensor_broadcast_inplace(&a, &b);
+
+    TEST_ASSERT_EQUAL(3, a->ndim);
+    TEST_ASSERT_EQUAL(3, a->shape[0]);
+    TEST_ASSERT_EQUAL(2, a->shape[1]);
+    TEST_ASSERT_EQUAL(4, a->shape[2]);
+
+    TEST_ASSERT_EQUAL(3, b->ndim);
+    TEST_ASSERT_EQUAL(3, b->shape[0]);
+    TEST_ASSERT_EQUAL(2, b->shape[1]);
+    TEST_ASSERT_EQUAL(4, b->shape[2]);
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_identical(void) {
+    i32 shape[] = {2, 3, 4};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+    f32 data_b[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240};
+
+    tensor_t *a = tensor_create(data_a, shape, 3, false);
+    tensor_t *b = tensor_create(data_b, shape, 3, false);
+
+    TEST_ASSERT_TRUE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_different_ndim(void) {
+    i32 shape_a[] = {2, 3};
+    i32 shape_b[] = {2, 3, 1};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6};
+    f32 data_b[] = {1, 2, 3, 4, 5, 6};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 3, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_different_dimensions(void) {
+    i32 shape_a[] = {2, 3};
+    i32 shape_b[] = {2, 4};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6};
+    f32 data_b[] = {1, 2, 3, 4, 5, 6, 7, 8};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_scalar_tensors(void) {
+    i32 shape[] = {1};
+    f32 data_a[] = {42.0f};
+    f32 data_b[] = {3.14f};
+
+    tensor_t *a = tensor_create(data_a, shape, 1, false);
+    tensor_t *b = tensor_create(data_b, shape, 1, false);
+
+    TEST_ASSERT_TRUE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_multi_dimensional(void) {
+    i32 shape[] = {3, 4, 2, 5};
+    f32 *data_a = (f32 *)malloc(120 * sizeof(f32));
+    f32 *data_b = (f32 *)malloc(120 * sizeof(f32));
+
+    for (i32 i = 0; i < 120; i++) {
+        data_a[i] = (f32)i;
+        data_b[i] = (f32)(i * 2);
+    }
+
+    tensor_t *a = tensor_create(data_a, shape, 4, false);
+    tensor_t *b = tensor_create(data_b, shape, 4, false);
+
+    TEST_ASSERT_TRUE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+    free(data_a);
+    free(data_b);
+}
+
+void test_tensor_shapes_match_partial_different(void) {
+    i32 shape_a[] = {2, 3, 4};
+    i32 shape_b[] = {2, 3, 5};
+    f32 data_a[24], data_b[30];
+
+    for (i32 i = 0; i < 24; i++) data_a[i] = (f32)i;
+    for (i32 i = 0; i < 30; i++) data_b[i] = (f32)i;
+
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 3, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_null_inputs(void) {
+    i32 shape[] = {2, 3};
+    f32 data[] = {1, 2, 3, 4, 5, 6};
+    tensor_t *tensor = tensor_create(data, shape, 2, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(NULL, NULL));
+    TEST_ASSERT_FALSE(tensor_shapes_match(NULL, tensor));
+    TEST_ASSERT_FALSE(tensor_shapes_match(tensor, NULL));
+
+    tensor_destroy(tensor);
+}
+
+void test_tensor_shapes_match_single_element_different_shapes(void) {
+    i32 shape_a[] = {1, 1, 1};
+    i32 shape_b[] = {1, 1};
+    f32 data_a[] = {5.0f};
+    f32 data_b[] = {5.0f};
+
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(a, b));
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_shapes_match_edge_cases(void) {
+    i32 shape_large[] = {1, 1, 1, 1, 1, 1};
+    i32 shape_small[] = {1, 1, 1, 1, 1, 2};
+    f32 data_large[] = {1.0f};
+    f32 data_small[2] = {1.0f, 2.0f};
+
+    tensor_t *large = tensor_create(data_large, shape_large, 6, false);
+    tensor_t *small = tensor_create(data_small, shape_small, 6, false);
+
+    TEST_ASSERT_FALSE(tensor_shapes_match(large, small));
+
+    i32 shape_match[] = {1, 1, 1, 1, 1, 1};
+    f32 data_match[] = {42.0f};
+    tensor_t *match = tensor_create(data_match, shape_match, 6, false);
+
+    TEST_ASSERT_TRUE(tensor_shapes_match(large, match));
+
+    tensor_destroy(large);
+    tensor_destroy(small);
+    tensor_destroy(match);
+}
+
 i32 main(void) {
     UNITY_BEGIN();
 
@@ -463,6 +756,21 @@ i32 main(void) {
     RUN_TEST(test_tensor_broadcast_memory_stress);
     RUN_TEST(test_tensor_broadcast_boundary_conditions);
     RUN_TEST(test_tensor_broadcast_error_conditions);
+    RUN_TEST(test_tensor_broadcast_inplace_basic);
+    RUN_TEST(test_tensor_broadcast_inplace_scalar);
+    RUN_TEST(test_tensor_broadcast_inplace_same_shape);
+    RUN_TEST(test_tensor_broadcast_inplace_incompatible);
+    RUN_TEST(test_tensor_broadcast_inplace_null_inputs);
+    RUN_TEST(test_tensor_broadcast_inplace_complex);
+    RUN_TEST(test_tensor_shapes_match_identical);
+    RUN_TEST(test_tensor_shapes_match_different_ndim);
+    RUN_TEST(test_tensor_shapes_match_different_dimensions);
+    RUN_TEST(test_tensor_shapes_match_scalar_tensors);
+    RUN_TEST(test_tensor_shapes_match_multi_dimensional);
+    RUN_TEST(test_tensor_shapes_match_partial_different);
+    RUN_TEST(test_tensor_shapes_match_null_inputs);
+    RUN_TEST(test_tensor_shapes_match_single_element_different_shapes);
+    RUN_TEST(test_tensor_shapes_match_edge_cases);
 
     return UNITY_END();
 }
