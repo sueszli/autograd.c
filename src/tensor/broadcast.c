@@ -27,6 +27,7 @@
 #include "broadcast.h"
 #include "../utils/defer.h"
 #include "../utils/types.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +78,23 @@ bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b) {
     return true;
 }
 
+bool tensor_can_broadcast_to_shape(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
+    if (!tensor || !target_shape) {
+        return false;
+    }
+
+    for (i32 i = 0; i < target_ndim; i++) {
+        i32 tensor_dim = (i < tensor->ndim) ? tensor->shape[tensor->ndim - 1 - i] : 1;
+        i32 target_dim = target_shape[target_ndim - 1 - i];
+
+        if (tensor_dim != target_dim && tensor_dim != 1) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 shape_t get_tensor_broadcast_shape(const tensor_t *a, const tensor_t *b) {
     shape_t result = {NULL, 0};
 
@@ -97,8 +115,23 @@ shape_t get_tensor_broadcast_shape(const tensor_t *a, const tensor_t *b) {
     return result;
 }
 
-// helper function to calculate linear index from multi-dimensional indices
-static u64 calculate_index(const i32 *indices, const i32 *shape, i32 ndim) {
+// helper function to convert multi-dimensional indices to linear index
+//
+// example:
+//
+// ┌─────┬─────┬─────┐
+// │ [0] │ [1] │ [2] │
+// ├─────┼─────┼─────┤
+// │ [3] │ [4] │ [5] │
+// └─────┴─────┴─────┘
+//
+// - indices = [1, 2]    (argument to convert into linear index)
+// - shape = [2, 3]      (2 rows, 3 columns)
+// - ndim = 2            (length of shape)
+//
+// result: 1*3 + 2 = 5
+//
+static u64 get_linear_idx(const i32 *indices, const i32 *shape, i32 ndim) {
     u64 index = 0;
     u64 stride = 1;
 
@@ -111,26 +144,20 @@ static u64 calculate_index(const i32 *indices, const i32 *shape, i32 ndim) {
 }
 
 // helper function to convert linear index to multi-dimensional indices
-static void linear_to_indices(u64 linear_index, const i32 *shape, i32 ndim, i32 *indices) {
+static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
+    i32 *indices = (i32 *)malloc((u64)ndim * sizeof(i32));
+    assert(indices != NULL);
+
     for (i32 i = ndim - 1; i >= 0; i--) {
         indices[i] = (i32)(linear_index % (u64)shape[i]);
         linear_index /= (u64)shape[i];
     }
+    return indices;
 }
 
-// Broadcast a tensor to a new shape
 tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
-    if (!tensor || !target_shape)
+    if (!tensor_can_broadcast_to_shape(tensor, target_shape, target_ndim)) {
         return NULL;
-
-    // Check if broadcasting is possible
-    for (i32 i = 0; i < target_ndim; i++) {
-        i32 tensor_dim = (i < tensor->ndim) ? tensor->shape[tensor->ndim - 1 - i] : 1;
-        i32 target_dim = target_shape[target_ndim - 1 - i];
-
-        if (tensor_dim != target_dim && tensor_dim != 1) {
-            return NULL;
-        }
     }
 
     // Calculate total size of target tensor
@@ -148,14 +175,16 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
     free(shape_copy); // Free the temporary copy since tensor_create makes its own copy
 
     // Fill the broadcasted data
-    i32 *target_indices = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     i32 *source_indices = (i32 *)malloc((u64)tensor->ndim * sizeof(i32));
-    defer({ free(target_indices); });
     defer({ free(source_indices); });
 
     for (u64 i = 0; i < target_size; i++) {
         // Convert linear index to multi-dimensional indices for target
-        linear_to_indices(i, target_shape, target_ndim, target_indices);
+        i32 *target_indices = get_multi_dim_idx(i, target_shape, target_ndim);
+        if (!target_indices) {
+            tensor_destroy(result);
+            return NULL;
+        }
 
         // Map target indices to source indices
         for (i32 j = 0; j < tensor->ndim; j++) {
@@ -168,8 +197,10 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
         }
 
         // Calculate source index and copy data
-        u64 source_idx = calculate_index(source_indices, tensor->shape, tensor->ndim);
+        u64 source_idx = get_linear_idx(source_indices, tensor->shape, tensor->ndim);
         result->data[i] = tensor->data[source_idx];
+
+        free(target_indices);
     }
 
     return result;
