@@ -1,7 +1,5 @@
 TODO:
 
-- study broadcasting.c
-
 - extend with small tested modules
     - src/tensor/ops.c/h (can use broadcasting, but with a boolean flag for performance reasons)
 
