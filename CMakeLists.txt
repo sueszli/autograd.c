@@ -97,6 +97,10 @@ if(BUILD_TESTS)
         add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
         target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity utils)
         target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
+
+        if (TEST_NAME STREQUAL "test_metrics")
+            target_sources(${TEST_EXECUTABLE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/eval/metrics.c ${CMAKE_CURRENT_SOURCE_DIR}/src/datasets/cifar10.c)
+        endif()
         
         if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND NOT DISABLE_ASAN)
             target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)

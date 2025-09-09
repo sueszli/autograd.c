@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unity.h>
 
-static i32 cleanup_order = 0; // cleanup execution order
+static i32 cleanup_order = 0;
 static i32 cleanup_results[10];
 
 void setUp(void) {
@@ -20,10 +20,10 @@ void test_basic_defer(void) {
 
     {
         defer({ cleaned_up = 1; });
-        TEST_ASSERT_EQUAL(0, cleaned_up); // should not be cleaned up yet
+        TEST_ASSERT_EQUAL(0, cleaned_up);
     }
 
-    TEST_ASSERT_EQUAL(1, cleaned_up); // should be cleaned up after scope exit
+    TEST_ASSERT_EQUAL(1, cleaned_up);
 }
 
 void test_multiple_defers(void) {
@@ -33,7 +33,6 @@ void test_multiple_defers(void) {
         defer({ cleanup_results[cleanup_order++] = 3; });
     }
 
-    // defers should execute in reverse order (LIFO)
     TEST_ASSERT_EQUAL(3, cleanup_order);
     TEST_ASSERT_EQUAL(3, cleanup_results[0]);
     TEST_ASSERT_EQUAL(2, cleanup_results[1]);
