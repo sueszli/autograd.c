@@ -94,13 +94,7 @@ static void reduce_gradient_if_needed(tensor_t *grad_tensor, tensor_t *original_
 
 typedef void (*gradient_accumulator_fn)(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b);
 
-static void add_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    (void)broadcast_b;
-    grad_tensor->data[i] += output_grad->data[i];
-}
-
-static void add_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
+static void add_gradient(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
     (void)broadcast_a;
     (void)broadcast_b;
     grad_tensor->data[i] += output_grad->data[i];
@@ -133,7 +127,9 @@ static void div_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, 
     grad_tensor->data[i] += output_grad->data[i] / broadcast_b->data[i];
 }
 
-static void div_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) { grad_tensor->data[i] -= output_grad->data[i] * broadcast_a->data[i] / (broadcast_b->data[i] * broadcast_b->data[i]); }
+static void div_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
+    grad_tensor->data[i] -= output_grad->data[i] * broadcast_a->data[i] / (broadcast_b->data[i] * broadcast_b->data[i]);
+}
 
 static void accumulate_gradient(tensor_t *tensor, tensor_t *output_tensor, bool use_broadcasting, tensor_t *broadcast_a, tensor_t *broadcast_b, gradient_accumulator_fn accumulator) {
     if (!tensor->requires_grad)
@@ -156,8 +152,8 @@ static void add_backward_broadcast(tensor_t *t) {
     tensor_t *b = (tensor_t *)t->ctx[1];
     bool used_broadcasting = (bool)(intptr_t)t->ctx[2];
 
-    accumulate_gradient(a, t, used_broadcasting, a, b, add_gradient_a);
-    accumulate_gradient(b, t, used_broadcasting, a, b, add_gradient_b);
+    accumulate_gradient(a, t, used_broadcasting, a, b, add_gradient);
+    accumulate_gradient(b, t, used_broadcasting, a, b, add_gradient);
 }
 
 static void sub_backward_broadcast(tensor_t *t) {
