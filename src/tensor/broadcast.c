@@ -4,6 +4,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+// rules for broadcasting:
+// 
+// - the trailing dimensions must match or one must be 1.
+// - leading dimensions can be missing (treated as 1).
+// 
+// we just look at the shape of the tensors, not the data.
+// 
+// example: [3,1,4] and [2,4]
+// 
+// position:  2  1  0  ← dimension positions (right-to-left)
+//            ↑  ↑  ↑
+// tensor A: [3, 1, 4]
+// tensor B:    [2, 4]  ← B doesn't have position 2
+// 
+// (1) compare: A[0] = 4 vs B[0] = 4 ✓
+// (2) compare: A[1] = 1 vs B[1] = 2 ✓ (1 can broadcast)
+// (3) compare: A[2] = 3 vs B[2] = (missing, treated as 1) ✓
+// (4) result shape: [3, 2, 4]
+//
 bool tensor_can_broadcast(const Tensor *a, const Tensor *b) {
     if (!a || !b) {
         return false;
