@@ -17,7 +17,7 @@ static u64 get_num_samples(FILE *file) {
     assert(file_size >= 0);
     assert(fseek(file, 0, SEEK_SET) == 0);
 
-    i64 record_size = 1 + NUM_PIXELS;
+    i64 record_size = 1 + INPUT_SIZE;
     assert(file_size % record_size == 0);
     return (u64)(file_size / record_size);
 }
@@ -32,7 +32,7 @@ static u64 load_samples_to_buffer(const char *filename, sample_t *buffer, u64 ma
 
     for (u64 i = 0; i < num_samples; i++) {
         assert(fread(&buffer[i].label, 1, 1, file) == 1);
-        assert(fread(buffer[i].data, 1, NUM_PIXELS, file) == NUM_PIXELS);
+        assert(fread(buffer[i].data, 1, INPUT_SIZE, file) == INPUT_SIZE);
     }
 
     return num_samples;

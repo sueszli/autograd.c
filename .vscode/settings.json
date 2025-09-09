@@ -10,6 +10,7 @@
         "go.h": "c",
         "stdlib.h": "c",
         "tensor.h": "c",
-        "autograd.h": "c"
+        "autograd.h": "c",
+        "defer.h": "c"
     }
 }
