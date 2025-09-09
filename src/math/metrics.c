@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
-f32 accuracy(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+f32 accuracy(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     if (length == 0) {
         return 0.0f;
     }
@@ -18,7 +18,7 @@ f32 accuracy(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
     return (f32)correct / (f32)length;
 }
 
-f32 precision(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 class_id) {
+f32 precision(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length, cifar10_class_t class_id) {
     if (length == 0) {
         return 0.0f;
     }
@@ -41,7 +41,7 @@ f32 precision(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 
     return (f32)true_positives / (f32)predicted_positives;
 }
 
-f32 recall(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 class_id) {
+f32 recall(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length, cifar10_class_t class_id) {
     if (length == 0) {
         return 0.0f;
     }
@@ -64,7 +64,7 @@ f32 recall(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 cla
     return (f32)true_positives / (f32)actual_positives;
 }
 
-f32 f1_score(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 class_id) {
+f32 f1_score(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length, cifar10_class_t class_id) {
     f32 prec = precision(true_labels, predicted_labels, length, class_id);
     f32 rec = recall(true_labels, predicted_labels, length, class_id);
 
@@ -78,30 +78,30 @@ f32 f1_score(const u8 *true_labels, const u8 *predicted_labels, u64 length, u8 c
 // macro-averaged (avg across all classes)
 //
 
-f32 macro_precision(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+f32 macro_precision(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     f32 total_precision = 0.0f;
 
-    for (u8 class_id = 0; class_id < NUM_CLASSES; class_id++) {
+    for (cifar10_class_t class_id = 0; class_id < NUM_CLASSES; class_id++) {
         total_precision += precision(true_labels, predicted_labels, length, class_id);
     }
 
     return total_precision / (f32)NUM_CLASSES;
 }
 
-f32 macro_recall(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+f32 macro_recall(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     f32 total_recall = 0.0f;
 
-    for (u8 class_id = 0; class_id < NUM_CLASSES; class_id++) {
+    for (cifar10_class_t class_id = 0; class_id < NUM_CLASSES; class_id++) {
         total_recall += recall(true_labels, predicted_labels, length, class_id);
     }
 
     return total_recall / (f32)NUM_CLASSES;
 }
 
-f32 macro_f1_score(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+f32 macro_f1_score(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     f32 total_f1 = 0.0f;
 
-    for (u8 class_id = 0; class_id < NUM_CLASSES; class_id++) {
+    for (cifar10_class_t class_id = 0; class_id < NUM_CLASSES; class_id++) {
         total_f1 += f1_score(true_labels, predicted_labels, length, class_id);
     }
 
@@ -112,7 +112,7 @@ f32 macro_f1_score(const u8 *true_labels, const u8 *predicted_labels, u64 length
 // ascii tables
 //
 
-void print_metrics(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+void print_metrics(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     f32 acc = accuracy(true_labels, predicted_labels, length);
     f32 prec = macro_precision(true_labels, predicted_labels, length);
     f32 rec = macro_recall(true_labels, predicted_labels, length);
@@ -130,7 +130,7 @@ void print_metrics(const u8 *true_labels, const u8 *predicted_labels, u64 length
     printf("└─────────────┴─────────┘\n");
 }
 
-void print_detailed_metrics(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+void print_detailed_metrics(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     print_metrics(true_labels, predicted_labels, length);
 
     printf("\n┌────────────┬───────────┬────────┬──────────┐\n");
@@ -139,7 +139,7 @@ void print_detailed_metrics(const u8 *true_labels, const u8 *predicted_labels, u
     printf("│ str        ┆ f32       ┆ f32    ┆ f32      │\n");
     printf("╞════════════╪═══════════╪════════╪══════════╡\n");
 
-    for (u8 class_id = 0; class_id < NUM_CLASSES; class_id++) {
+    for (cifar10_class_t class_id = 0; class_id < NUM_CLASSES; class_id++) {
         f32 prec = precision(true_labels, predicted_labels, length, class_id);
         f32 rec = recall(true_labels, predicted_labels, length, class_id);
         f32 f1 = f1_score(true_labels, predicted_labels, length, class_id);
@@ -150,7 +150,7 @@ void print_detailed_metrics(const u8 *true_labels, const u8 *predicted_labels, u
     printf("└────────────┴───────────┴────────┴──────────┘\n");
 }
 
-void print_confusion_matrix(const u8 *true_labels, const u8 *predicted_labels, u64 length) {
+void print_confusion_matrix(const cifar10_class_t *true_labels, const cifar10_class_t *predicted_labels, u64 length) {
     u32 confusion_matrix[NUM_CLASSES][NUM_CLASSES] = {0};
 
     for (u64 i = 0; i < length; i++) {
@@ -165,9 +165,9 @@ void print_confusion_matrix(const u8 *true_labels, const u8 *predicted_labels, u
 
     const char *short_names[] = {"airp", "auto", "bird", "cat ", "deer", "dog ", "frog", "hors", "ship", "truc"};
 
-    for (u8 i = 0; i < NUM_CLASSES; i++) {
+    for (cifar10_class_t i = 0; i < NUM_CLASSES; i++) {
         printf("│ %-4s ┆", short_names[i]);
-        for (u8 j = 0; j < NUM_CLASSES; j++) {
+        for (cifar10_class_t j = 0; j < NUM_CLASSES; j++) {
             printf(" %-4u ┆", confusion_matrix[i][j]);
         }
         printf("\n");

@@ -130,7 +130,7 @@ Tensor *forward_pass(neural_network_t *network, Tensor *input, TensorList *graph
     return output2;
 }
 
-u8 predict(neural_network_t *network, sample_t *sample) {
+cifar10_class_t predict(neural_network_t *network, sample_t *sample) {
     float *normalized_input = malloc(INPUT_SIZE * sizeof(float));
     normalize_input(sample->data, normalized_input, INPUT_SIZE);
 
@@ -141,9 +141,9 @@ u8 predict(neural_network_t *network, sample_t *sample) {
     TensorList *graph = list_create();
     Tensor *output = forward_pass(network, input_tensor, graph);
 
-    u8 predicted = 0;
+    cifar10_class_t predicted = 0;
     f32 max_prob = output->data[0];
-    for (u8 i = 1; i < OUTPUT_SIZE; i++) {
+    for (cifar10_class_t i = 1; i < OUTPUT_SIZE; i++) {
         if (output->data[i] > max_prob) {
             max_prob = output->data[i];
             predicted = i;
@@ -155,8 +155,8 @@ u8 predict(neural_network_t *network, sample_t *sample) {
 }
 
 f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
-    u8 *true_labels = malloc(count * sizeof(u8));
-    u8 *predicted_labels = malloc(count * sizeof(u8));
+    cifar10_class_t *true_labels = malloc(count * sizeof(cifar10_class_t));
+    cifar10_class_t *predicted_labels = malloc(count * sizeof(cifar10_class_t));
     assert(true_labels != NULL);
     assert(predicted_labels != NULL);
 
