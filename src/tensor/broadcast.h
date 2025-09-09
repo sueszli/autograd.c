@@ -4,8 +4,15 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-bool tensor_can_broadcast(const Tensor *a, const Tensor *b);
+typedef struct {
+    i32 *shape;
+    i32 ndim;
+} shape_t;
 
-i32 *get_tensor_broadcast_shape(const Tensor *a, const Tensor *b, i32 *result_ndim);
+void shape_free(shape_t *s);
 
-Tensor *tensor_broadcast_to(const Tensor *tensor, const i32 *target_shape, i32 target_ndim);
+bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b);
+
+shape_t get_tensor_broadcast_shape(const tensor_t *a, const tensor_t *b);
+
+tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim);

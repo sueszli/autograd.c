@@ -7,7 +7,7 @@
 #include <string.h>
 
 // Function to calculate the total number of elements in a tensor
-u64 tensor_size(const Tensor *t) {
+u64 tensor_size(const tensor_t *t) {
     if (t == NULL)
         return 0;
     u64 size = 1;
@@ -18,8 +18,8 @@ u64 tensor_size(const Tensor *t) {
 }
 
 // Create a new tensor
-Tensor *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad) {
-    Tensor *t = (Tensor *)malloc(sizeof(Tensor));
+tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad) {
+    tensor_t *t = (tensor_t *)malloc(sizeof(tensor_t));
     t->shape = (i32 *)malloc((u64)ndim * sizeof(i32));
     memcpy(t->shape, shape, (u64)ndim * sizeof(i32));
     t->ndim = ndim;
@@ -44,7 +44,7 @@ Tensor *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad) {
 }
 
 // Destroy a tensor and its data
-void tensor_destroy(Tensor *t) {
+void tensor_destroy(tensor_t *t) {
     if (t == NULL)
         return;
     free(t->data);
@@ -59,8 +59,8 @@ void tensor_destroy(Tensor *t) {
 }
 
 // print a tensor (simple implementation)
-void tensor_print(const Tensor *t) {
-    printf("Tensor (shape: [");
+void tensor_print(const tensor_t *t) {
+    printf("tensor_t (shape: [");
     for (i32 i = 0; i < t->ndim; i++) {
         printf("%d", t->shape[i]);
         if (i < t->ndim - 1)
@@ -75,16 +75,16 @@ void tensor_print(const Tensor *t) {
     printf("\n");
 }
 
-void tensor_zero_grad(Tensor *t) {
+void tensor_zero_grad(tensor_t *t) {
     if (t->grad) {
         memset(t->grad->data, 0, tensor_size(t->grad) * sizeof(f32));
     }
 }
 
 // Backward function for addition
-void add_backward(Tensor *t) {
-    Tensor *a = (Tensor *)t->ctx[0];
-    Tensor *b = (Tensor *)t->ctx[1];
+void add_backward(tensor_t *t) {
+    tensor_t *a = (tensor_t *)t->ctx[0];
+    tensor_t *b = (tensor_t *)t->ctx[1];
 
     if (a->requires_grad) {
         for (u64 i = 0; i < tensor_size(a); i++) {
@@ -106,8 +106,8 @@ void add_backward(Tensor *t) {
     }
 }
 
-// Tensor addition
-Tensor *tensor_add(Tensor *a, Tensor *b) {
+// tensor_t addition
+tensor_t *tensor_add(tensor_t *a, tensor_t *b) {
     // Basic shape check
     if (a->ndim != b->ndim)
         return NULL;
@@ -122,7 +122,7 @@ Tensor *tensor_add(Tensor *a, Tensor *b) {
     }
 
     bool requires_grad = a->requires_grad || b->requires_grad;
-    Tensor *result = tensor_create(new_data, a->shape, a->ndim, requires_grad);
+    tensor_t *result = tensor_create(new_data, a->shape, a->ndim, requires_grad);
     free(new_data);
 
     if (requires_grad) {
@@ -137,9 +137,9 @@ Tensor *tensor_add(Tensor *a, Tensor *b) {
 }
 
 // Backward function for multiplication
-void mul_backward(Tensor *t) {
-    Tensor *a = (Tensor *)t->ctx[0];
-    Tensor *b = (Tensor *)t->ctx[1];
+void mul_backward(tensor_t *t) {
+    tensor_t *a = (tensor_t *)t->ctx[0];
+    tensor_t *b = (tensor_t *)t->ctx[1];
 
     if (a->requires_grad) {
         for (u64 i = 0; i < tensor_size(a); i++) {
@@ -161,8 +161,8 @@ void mul_backward(Tensor *t) {
     }
 }
 
-// Tensor multiplication
-Tensor *tensor_mul(Tensor *a, Tensor *b) {
+// tensor_t multiplication
+tensor_t *tensor_mul(tensor_t *a, tensor_t *b) {
     // Basic shape check
     if (a->ndim != b->ndim)
         return NULL;
@@ -177,7 +177,7 @@ Tensor *tensor_mul(Tensor *a, Tensor *b) {
     }
 
     bool requires_grad = a->requires_grad || b->requires_grad;
-    Tensor *result = tensor_create(new_data, a->shape, a->ndim, requires_grad);
+    tensor_t *result = tensor_create(new_data, a->shape, a->ndim, requires_grad);
     free(new_data);
 
     if (requires_grad) {
@@ -192,8 +192,8 @@ Tensor *tensor_mul(Tensor *a, Tensor *b) {
 }
 
 // Backward function for relu
-void relu_backward(Tensor *t) {
-    Tensor *a = (Tensor *)t->ctx[0];
+void relu_backward(tensor_t *t) {
+    tensor_t *a = (tensor_t *)t->ctx[0];
     if (a->requires_grad) {
         for (u64 i = 0; i < tensor_size(a); i++) {
             if (a->grad == NULL) {
@@ -206,13 +206,13 @@ void relu_backward(Tensor *t) {
 }
 
 // ReLU activation
-Tensor *tensor_relu(Tensor *a) {
+tensor_t *tensor_relu(tensor_t *a) {
     f32 *new_data = (f32 *)malloc(tensor_size(a) * sizeof(f32));
     for (u64 i = 0; i < tensor_size(a); i++) {
         new_data[i] = a->data[i] > 0 ? a->data[i] : 0;
     }
 
-    Tensor *result = tensor_create(new_data, a->shape, a->ndim, a->requires_grad);
+    tensor_t *result = tensor_create(new_data, a->shape, a->ndim, a->requires_grad);
     free(new_data);
 
     if (a->requires_grad) {
@@ -225,7 +225,7 @@ Tensor *tensor_relu(Tensor *a) {
     return result;
 }
 
-Tensor *tensor_transpose(Tensor *a) {
+tensor_t *tensor_transpose(tensor_t *a) {
     if (a->ndim != 2)
         return NULL;
     i32 new_shape[] = {a->shape[1], a->shape[0]};
@@ -237,7 +237,7 @@ Tensor *tensor_transpose(Tensor *a) {
         }
     }
 
-    Tensor *result = tensor_create(new_data, new_shape, 2, a->requires_grad);
+    tensor_t *result = tensor_create(new_data, new_shape, 2, a->requires_grad);
     free(new_data);
     result->requires_grad = false; // Transpose backward is not implemented for simplicity
 
@@ -245,13 +245,13 @@ Tensor *tensor_transpose(Tensor *a) {
 }
 
 // Backward function for matmul
-void matmul_backward(Tensor *t) {
-    Tensor *a = (Tensor *)t->ctx[0];
-    Tensor *b = (Tensor *)t->ctx[1];
+void matmul_backward(tensor_t *t) {
+    tensor_t *a = (tensor_t *)t->ctx[0];
+    tensor_t *b = (tensor_t *)t->ctx[1];
 
     if (a->requires_grad) {
-        Tensor *b_t = tensor_transpose(b);
-        Tensor *da = tensor_matmul(t->grad, b_t);
+        tensor_t *b_t = tensor_transpose(b);
+        tensor_t *da = tensor_matmul(t->grad, b_t);
         if (a->grad == NULL) {
             a->grad = tensor_create(NULL, a->shape, a->ndim, false);
             memset(a->grad->data, 0, tensor_size(a) * sizeof(f32));
@@ -264,8 +264,8 @@ void matmul_backward(Tensor *t) {
     }
 
     if (b->requires_grad) {
-        Tensor *a_t = tensor_transpose(a);
-        Tensor *db = tensor_matmul(a_t, t->grad);
+        tensor_t *a_t = tensor_transpose(a);
+        tensor_t *db = tensor_matmul(a_t, t->grad);
         if (b->grad == NULL) {
             b->grad = tensor_create(NULL, b->shape, b->ndim, false);
             memset(b->grad->data, 0, tensor_size(b) * sizeof(f32));
@@ -279,7 +279,7 @@ void matmul_backward(Tensor *t) {
 }
 
 // Matrix multiplication
-Tensor *tensor_matmul(Tensor *a, Tensor *b) {
+tensor_t *tensor_matmul(tensor_t *a, tensor_t *b) {
     // Basic shape check for 2D matrices
     if (a->ndim != 2 || b->ndim != 2 || a->shape[1] != b->shape[0]) {
         return NULL;
@@ -297,7 +297,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     }
 
     bool requires_grad = a->requires_grad || b->requires_grad;
-    Tensor *result = tensor_create(new_data, new_shape, 2, requires_grad);
+    tensor_t *result = tensor_create(new_data, new_shape, 2, requires_grad);
     free(new_data);
 
     if (requires_grad) {
@@ -312,7 +312,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
 }
 
 // Softmax (for a 1D tensor)
-Tensor *tensor_softmax(Tensor *a) {
+tensor_t *tensor_softmax(tensor_t *a) {
     f32 max_val = a->data[0];
     for (u64 i = 1; i < tensor_size(a); i++) {
         if (a->data[i] > max_val) {
@@ -331,7 +331,7 @@ Tensor *tensor_softmax(Tensor *a) {
         new_data[i] /= sum;
     }
 
-    Tensor *result = tensor_create(new_data, a->shape, a->ndim, a->requires_grad);
+    tensor_t *result = tensor_create(new_data, a->shape, a->ndim, a->requires_grad);
     free(new_data);
 
     // Backward for softmax is complex and will be added later
@@ -339,8 +339,8 @@ Tensor *tensor_softmax(Tensor *a) {
     return result;
 }
 
-void cross_entropy_backward(Tensor *t) {
-    Tensor *a = (Tensor *)t->ctx[0];
+void cross_entropy_backward(tensor_t *t) {
+    tensor_t *a = (tensor_t *)t->ctx[0];
     i32 target_idx = *(i32 *)t->ctx[1];
 
     if (a->requires_grad) {
@@ -379,7 +379,7 @@ void cross_entropy_backward(Tensor *t) {
 }
 
 // Cross-entropy loss
-Tensor *tensor_cross_entropy(Tensor *a, i32 target_idx) {
+tensor_t *tensor_cross_entropy(tensor_t *a, i32 target_idx) {
     // This is a simplified version that combines softmax and cross-entropy.
     // It assumes the input 'a' is the raw output (logits) of the network.
 
@@ -405,7 +405,7 @@ Tensor *tensor_cross_entropy(Tensor *a, i32 target_idx) {
     free(softmax_out);
 
     i32 shape[] = {1};
-    Tensor *loss = tensor_create(&loss_val, shape, 1, a->requires_grad);
+    tensor_t *loss = tensor_create(&loss_val, shape, 1, a->requires_grad);
 
     if (a->requires_grad) {
         loss->grad_fn = cross_entropy_backward;

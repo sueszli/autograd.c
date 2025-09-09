@@ -4,33 +4,33 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct Tensor Tensor;
+typedef struct tensor_t tensor_t;
 
-typedef void (*grad_fn)(Tensor *); // for gradient functions
+typedef void (*grad_fn)(tensor_t *); // for gradient functions
 
-struct Tensor {
+struct tensor_t {
     f32 *data;
     i32 *shape;
     i32 ndim;
     bool requires_grad;
-    Tensor *grad;
+    tensor_t *grad;
     grad_fn grad_fn;
     void **ctx; // context for backward pass (e.g., saved tensors)
     i32 ctx_size;
 };
 
-Tensor *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad);
-void tensor_destroy(Tensor *t);
+tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad);
+void tensor_destroy(tensor_t *t);
 
-void tensor_pri32(const Tensor *t);
-void tensor_zero_grad(Tensor *t);
-u64 tensor_size(const Tensor *t);
-Tensor *tensor_add(Tensor *a, Tensor *b);
-Tensor *tensor_mul(Tensor *a, Tensor *b);
-Tensor *tensor_matmul(Tensor *a, Tensor *b);
-Tensor *tensor_relu(Tensor *a);
-Tensor *tensor_softmax(Tensor *a);
-Tensor *tensor_cross_entropy(Tensor *a, i32 target_idx);
-Tensor *tensor_transpose(Tensor *a);
+void tensor_pri32(const tensor_t *t);
+void tensor_zero_grad(tensor_t *t);
+u64 tensor_size(const tensor_t *t);
+tensor_t *tensor_add(tensor_t *a, tensor_t *b);
+tensor_t *tensor_mul(tensor_t *a, tensor_t *b);
+tensor_t *tensor_matmul(tensor_t *a, tensor_t *b);
+tensor_t *tensor_relu(tensor_t *a);
+tensor_t *tensor_softmax(tensor_t *a);
+tensor_t *tensor_cross_entropy(tensor_t *a, i32 target_idx);
+tensor_t *tensor_transpose(tensor_t *a);
 
-void cross_entropy_backward(Tensor *t);
+void cross_entropy_backward(tensor_t *t);

@@ -14,8 +14,8 @@ void test_tensor_can_broadcast_same_shape(void) {
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 1, 2, 2, 2};
 
-    Tensor *a = tensor_create(data_a, shape, 2, false);
-    Tensor *b = tensor_create(data_b, shape, 2, false);
+    tensor_t *a = tensor_create(data_a, shape, 2, false);
+    tensor_t *b = tensor_create(data_b, shape, 2, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
@@ -29,8 +29,8 @@ void test_tensor_can_broadcast_scalar_and_tensor(void) {
     f32 data_scalar[] = {5.0f};
     f32 data_tensor[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-    Tensor *scalar = tensor_create(data_scalar, shape_scalar, 1, false);
-    Tensor *tensor = tensor_create(data_tensor, shape_tensor, 2, false);
+    tensor_t *scalar = tensor_create(data_scalar, shape_scalar, 1, false);
+    tensor_t *tensor = tensor_create(data_tensor, shape_tensor, 2, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(scalar, tensor));
     TEST_ASSERT_TRUE(tensor_can_broadcast(tensor, scalar));
@@ -45,8 +45,8 @@ void test_tensor_can_broadcast_different_dimensions(void) {
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4};
 
-    Tensor *a = tensor_create(data_a, shape_a, 3, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
@@ -60,8 +60,8 @@ void test_tensor_cannot_broadcast_incompatible(void) {
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 1, 1, 2, 2, 2, 2};
 
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     TEST_ASSERT_FALSE(tensor_can_broadcast(a, b));
 
@@ -75,19 +75,18 @@ void test_tensor_broadcast_shape(void) {
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4};
 
-    Tensor *a = tensor_create(data_a, shape_a, 3, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(a, b, &result_ndim);
+    shape_t result = get_tensor_broadcast_shape(a, b);
 
-    TEST_ASSERT_NOT_NULL(result_shape);
-    TEST_ASSERT_EQUAL(3, result_ndim);
-    TEST_ASSERT_EQUAL(2, result_shape[0]);
-    TEST_ASSERT_EQUAL(4, result_shape[1]);
-    TEST_ASSERT_EQUAL(3, result_shape[2]);
+    TEST_ASSERT_NOT_NULL(result.shape);
+    TEST_ASSERT_EQUAL(3, result.ndim);
+    TEST_ASSERT_EQUAL(2, result.shape[0]);
+    TEST_ASSERT_EQUAL(4, result.shape[1]);
+    TEST_ASSERT_EQUAL(3, result.shape[2]);
 
-    free(result_shape);
+    shape_free(&result);
     tensor_destroy(a);
     tensor_destroy(b);
 }
@@ -97,8 +96,8 @@ void test_tensor_broadcast_to_simple(void) {
     i32 target_shape[] = {2, 3};
     f32 data[] = {1, 2, 3};
 
-    Tensor *tensor = tensor_create(data, shape, 2, false);
-    Tensor *broadcasted = tensor_broadcast_to(tensor, target_shape, 2);
+    tensor_t *tensor = tensor_create(data, shape, 2, false);
+    tensor_t *broadcasted = tensor_broadcast_to(tensor, target_shape, 2);
 
     TEST_ASSERT_NOT_NULL(broadcasted);
     TEST_ASSERT_EQUAL(2, broadcasted->ndim);
@@ -119,8 +118,8 @@ void test_tensor_broadcast_to_scalar(void) {
     i32 target_shape[] = {2, 3};
     f32 data[] = {5.0f};
 
-    Tensor *tensor = tensor_create(data, shape, 1, false);
-    Tensor *broadcasted = tensor_broadcast_to(tensor, target_shape, 2);
+    tensor_t *tensor = tensor_create(data, shape, 1, false);
+    tensor_t *broadcasted = tensor_broadcast_to(tensor, target_shape, 2);
 
     TEST_ASSERT_NOT_NULL(broadcasted);
     TEST_ASSERT_EQUAL(2, broadcasted->ndim);
@@ -141,21 +140,20 @@ void test_tensor_broadcast_complex_case(void) {
     f32 data_a[] = {1, 2};
     f32 data_b[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
 
-    Tensor *a = tensor_create(data_a, shape_a, 3, false);
-    Tensor *b = tensor_create(data_b, shape_b, 3, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 3, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(a, b, &result_ndim);
+    shape_t result = get_tensor_broadcast_shape(a, b);
 
-    TEST_ASSERT_NOT_NULL(result_shape);
-    TEST_ASSERT_EQUAL(3, result_ndim);
-    TEST_ASSERT_EQUAL(3, result_shape[0]);
-    TEST_ASSERT_EQUAL(2, result_shape[1]);
-    TEST_ASSERT_EQUAL(4, result_shape[2]);
+    TEST_ASSERT_NOT_NULL(result.shape);
+    TEST_ASSERT_EQUAL(3, result.ndim);
+    TEST_ASSERT_EQUAL(3, result.shape[0]);
+    TEST_ASSERT_EQUAL(2, result.shape[1]);
+    TEST_ASSERT_EQUAL(4, result.shape[2]);
 
-    free(result_shape);
+    shape_free(&result);
     tensor_destroy(a);
     tensor_destroy(b);
 }
@@ -165,7 +163,7 @@ void test_tensor_broadcast_null_inputs(void) {
 
     i32 shape[] = {2, 3};
     f32 data[] = {1, 2, 3, 4, 5, 6};
-    Tensor *tensor = tensor_create(data, shape, 2, false);
+    tensor_t *tensor = tensor_create(data, shape, 2, false);
 
     TEST_ASSERT_FALSE(tensor_can_broadcast(NULL, tensor));
     TEST_ASSERT_FALSE(tensor_can_broadcast(tensor, NULL));
@@ -181,17 +179,16 @@ void test_tensor_broadcast_zero_dim_scalars(void) {
     f32 data_a[] = {42.0f};
     f32 data_b[] = {3.14f};
 
-    Tensor *a = tensor_create(data_a, shape_scalar, 1, false);
-    Tensor *b = tensor_create(data_b, shape_scalar, 1, false);
+    tensor_t *a = tensor_create(data_a, shape_scalar, 1, false);
+    tensor_t *b = tensor_create(data_b, shape_scalar, 1, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(a, b, &result_ndim);
-    TEST_ASSERT_EQUAL(1, result_ndim);
-    TEST_ASSERT_EQUAL(1, result_shape[0]);
+    shape_t result = get_tensor_broadcast_shape(a, b);
+    TEST_ASSERT_EQUAL(1, result.ndim);
+    TEST_ASSERT_EQUAL(1, result.shape[0]);
 
-    free(result_shape);
+    shape_free(&result);
     tensor_destroy(a);
     tensor_destroy(b);
 }
@@ -202,8 +199,8 @@ void test_tensor_broadcast_single_element_different_shapes(void) {
     f32 data_a[] = {7.0f};
     f32 data_b[] = {2.0f};
 
-    Tensor *a = tensor_create(data_a, shape_a, 3, false);
-    Tensor *b = tensor_create(data_b, shape_b, 1, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 1, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
@@ -218,18 +215,17 @@ void test_tensor_broadcast_dimension_compatibility(void) {
     f32 data_a[] = {1, 2, 3};
     f32 data_b[] = {10, 20, 30, 40};
 
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(a, b, &result_ndim);
-    TEST_ASSERT_EQUAL(2, result_ndim);
-    TEST_ASSERT_EQUAL(3, result_shape[0]);
-    TEST_ASSERT_EQUAL(4, result_shape[1]);
+    shape_t result = get_tensor_broadcast_shape(a, b);
+    TEST_ASSERT_EQUAL(2, result.ndim);
+    TEST_ASSERT_EQUAL(3, result.shape[0]);
+    TEST_ASSERT_EQUAL(4, result.shape[1]);
 
-    free(result_shape);
+    shape_free(&result);
     tensor_destroy(a);
     tensor_destroy(b);
 }
@@ -245,21 +241,20 @@ void test_tensor_broadcast_max_dimensions(void) {
         data_b[i] = (f32)(i + 1);
     }
 
-    Tensor *a = tensor_create(data_a, shape_a, 5, false);
-    Tensor *b = tensor_create(data_b, shape_b, 5, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 5, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 5, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(a, b, &result_ndim);
-    TEST_ASSERT_EQUAL(5, result_ndim);
-    TEST_ASSERT_EQUAL(2, result_shape[0]);
-    TEST_ASSERT_EQUAL(2, result_shape[1]);
-    TEST_ASSERT_EQUAL(4, result_shape[2]);
-    TEST_ASSERT_EQUAL(3, result_shape[3]);
-    TEST_ASSERT_EQUAL(5, result_shape[4]);
+    shape_t result = get_tensor_broadcast_shape(a, b);
+    TEST_ASSERT_EQUAL(5, result.ndim);
+    TEST_ASSERT_EQUAL(2, result.shape[0]);
+    TEST_ASSERT_EQUAL(2, result.shape[1]);
+    TEST_ASSERT_EQUAL(4, result.shape[2]);
+    TEST_ASSERT_EQUAL(3, result.shape[3]);
+    TEST_ASSERT_EQUAL(5, result.shape[4]);
 
-    free(result_shape);
+    shape_free(&result);
     tensor_destroy(a);
     tensor_destroy(b);
 }
@@ -270,8 +265,8 @@ void test_tensor_broadcast_incompatible_detailed(void) {
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 2, 2, 3, 3};
 
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     TEST_ASSERT_FALSE(tensor_can_broadcast(a, b));
 
@@ -285,8 +280,8 @@ void test_tensor_broadcast_incompatible_detailed(void) {
     for (i32 i = 0; i < 10; i++)
         data_d[i] = (f32)i;
 
-    Tensor *c = tensor_create(data_c, shape_c, 3, false);
-    Tensor *d = tensor_create(data_d, shape_d, 3, false);
+    tensor_t *c = tensor_create(data_c, shape_c, 3, false);
+    tensor_t *d = tensor_create(data_d, shape_d, 3, false);
 
     TEST_ASSERT_FALSE(tensor_can_broadcast(c, d));
 
@@ -300,11 +295,11 @@ void test_tensor_broadcast_to_edge_cases(void) {
     // from (1,) to various shapes
     i32 scalar_shape[] = {1};
     f32 scalar_data[] = {99.5f};
-    Tensor *scalar = tensor_create(scalar_data, scalar_shape, 1, false);
+    tensor_t *scalar = tensor_create(scalar_data, scalar_shape, 1, false);
 
     // to 4D shape
     i32 target_shape[] = {2, 3, 4, 5};
-    Tensor *broadcasted = tensor_broadcast_to(scalar, target_shape, 4);
+    tensor_t *broadcasted = tensor_broadcast_to(scalar, target_shape, 4);
 
     TEST_ASSERT_NOT_NULL(broadcasted);
     TEST_ASSERT_EQUAL(4, broadcasted->ndim);
@@ -323,9 +318,9 @@ void test_tensor_broadcast_to_edge_cases(void) {
     i32 invalid_target[] = {3, 2};
     i32 source_shape[] = {2, 3};
     f32 source_data[] = {1, 2, 3, 4, 5, 6};
-    Tensor *source = tensor_create(source_data, source_shape, 2, false);
+    tensor_t *source = tensor_create(source_data, source_shape, 2, false);
 
-    Tensor *invalid_broadcast = tensor_broadcast_to(source, invalid_target, 2);
+    tensor_t *invalid_broadcast = tensor_broadcast_to(source, invalid_target, 2);
     TEST_ASSERT_NULL(invalid_broadcast);
 
     tensor_destroy(scalar);
@@ -347,8 +342,8 @@ void test_tensor_broadcast_large_tensors(void) {
         data_b[i] = (f32)(i % 5) * 0.1f;
     }
 
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     TEST_ASSERT_TRUE(tensor_can_broadcast(a, b));
 
@@ -362,11 +357,11 @@ void test_tensor_broadcast_memory_stress(void) {
     i32 shape_base[] = {1};
     f32 data_base[] = {1.0f};
 
-    Tensor *base = tensor_create(data_base, shape_base, 1, false);
+    tensor_t *base = tensor_create(data_base, shape_base, 1, false);
 
     for (i32 iteration = 0; iteration < 50; iteration++) {
         i32 target_shape[] = {iteration + 1, 2};
-        Tensor *broadcast = tensor_broadcast_to(base, target_shape, 2);
+        tensor_t *broadcast = tensor_broadcast_to(base, target_shape, 2);
 
         if (broadcast) {
             TEST_ASSERT_EQUAL(iteration + 1, broadcast->shape[0]);
@@ -385,8 +380,8 @@ void test_tensor_broadcast_index_mapping_correctness(void) {
     f32 data_a[] = {1, 2, 3, 10, 20, 30};
     f32 data_b[] = {100, 200, 300, 400};
 
-    Tensor *a = tensor_create(data_a, shape_a, 3, false);
-    Tensor *b = tensor_create(data_b, shape_b, 3, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 3, false);
 
     tensor_destroy(a);
     tensor_destroy(b);
@@ -397,8 +392,8 @@ void test_tensor_broadcast_boundary_conditions(void) {
     i32 shape_target[] = {5, 3, 2, 4};
     f32 data_ones[] = {42.0f};
 
-    Tensor *ones = tensor_create(data_ones, shape_ones, 4, false);
-    Tensor *broadcasted = tensor_broadcast_to(ones, shape_target, 4);
+    tensor_t *ones = tensor_create(data_ones, shape_ones, 4, false);
+    tensor_t *broadcasted = tensor_broadcast_to(ones, shape_target, 4);
 
     TEST_ASSERT_NOT_NULL(broadcasted);
     u64 total_elements = 5 * 3 * 2 * 4;
@@ -413,20 +408,21 @@ void test_tensor_broadcast_boundary_conditions(void) {
 void test_tensor_broadcast_error_conditions(void) {
     i32 shape[] = {2, 3};
     f32 data[] = {1, 2, 3, 4, 5, 6};
-    Tensor *tensor = tensor_create(data, shape, 2, false);
+    tensor_t *tensor = tensor_create(data, shape, 2, false);
 
-    i32 result_ndim;
-    i32 *result_shape = get_tensor_broadcast_shape(tensor, NULL, &result_ndim);
-    TEST_ASSERT_NULL(result_shape);
+    shape_t result = get_tensor_broadcast_shape(tensor, NULL);
+    TEST_ASSERT_NULL(result.shape);
+    TEST_ASSERT_EQUAL(0, result.ndim);
 
-    result_shape = get_tensor_broadcast_shape(NULL, NULL, &result_ndim);
-    TEST_ASSERT_NULL(result_shape);
+    result = get_tensor_broadcast_shape(NULL, NULL);
+    TEST_ASSERT_NULL(result.shape);
+    TEST_ASSERT_EQUAL(0, result.ndim);
 
     i32 invalid_target[] = {3, 2};
-    Tensor *invalid = tensor_broadcast_to(tensor, invalid_target, 2);
+    tensor_t *invalid = tensor_broadcast_to(tensor, invalid_target, 2);
     TEST_ASSERT_NULL(invalid);
 
-    Tensor *null_broadcast = tensor_broadcast_to(NULL, invalid_target, 2);
+    tensor_t *null_broadcast = tensor_broadcast_to(NULL, invalid_target, 2);
     TEST_ASSERT_NULL(null_broadcast);
 
     tensor_destroy(tensor);
@@ -438,8 +434,8 @@ void test_tensor_broadcast_precision_floating_point(void) {
     f32 data_a[] = {1e-6f, -1e-6f};
     f32 data_b[] = {1e6f, -1e6f};
 
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
     tensor_destroy(a);
     tensor_destroy(b);

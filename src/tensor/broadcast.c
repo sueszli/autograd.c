@@ -1,28 +1,28 @@
-// 
+//
 // broadcasting means expanding the smaller tensor to match the larger one.
 // we follow the numpy/pytorch broadcasting convention.
-// 
+//
 // example: adding a 2x1 tensor to a 1x3 tensor results in a 2x3 tensor
-// 
+//
 //    A (2x1)       B (1x3)      Result (2x3)
 //    ┌─────┐    ┌──────────┐    ┌──────────┐
 //    │  1  │ +  │ 10 20 30 │ =  │ 11 21 31 │
 //    │  4  │    └──────────┘    │ 14 24 34 │
 //    └─────┘                    └──────────┘
-// 
+//
 // steps:
 //                       ┌─────┐   ┌───────────┐
 //    (1) A is expanded: │  1  │ → │ 1   1   1 │ (repeat across columns)
 //                       │  4  │   │ 4   4   4 │
 //                       └─────┘   └───────────┘
-// 
+//
 //                       ┌──────────┐   ┌──────────┐
 //    (2) B is expanded: │ 10 20 30 │ → │ 10 20 30 │ (repeat across rows)
 //                       └──────────┘   │ 10 20 30 │
 //                                      └──────────┘
-// 
+//
 //    (3) operation is performed element-wise
-// 
+//
 
 #include "broadcast.h"
 #include "../utils/types.h"
@@ -30,26 +30,34 @@
 #include <stdlib.h>
 #include <string.h>
 
+void shape_free(shape_t *s) {
+    if (s && s->shape) {
+        free(s->shape);
+        s->shape = NULL;
+        s->ndim = 0;
+    }
+}
+
 // rules for broadcasting:
-// 
+//
 // - the trailing dimensions must match or one must be 1.
 // - leading dimensions can be missing (treated as 1).
-// 
+//
 // we just look at the shape of the tensors, not the data.
-// 
+//
 // example: [3,1,4] and [2,4]
-// 
+//
 // position:  2  1  0  ← dimension positions (right-to-left)
 //            ↑  ↑  ↑
 // tensor A: [3, 1, 4]
 // tensor B:    [2, 4]  ← B doesn't have position 2
-// 
+//
 // (1) compare: A[0] = 4 vs B[0] = 4 ✓
 // (2) compare: A[1] = 1 vs B[1] = 2 ✓ (1 can broadcast)
 // (3) compare: A[2] = 3 vs B[2] = (missing, treated as 1) ✓
 // (4) result shape: [3, 2, 4]
 //
-bool tensor_can_broadcast(const Tensor *a, const Tensor *b) {
+bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b) {
     if (!a || !b) {
         return false;
     }
@@ -68,24 +76,24 @@ bool tensor_can_broadcast(const Tensor *a, const Tensor *b) {
     return true;
 }
 
-// get the resulting shape after broadcasting two tensors
-i32 *get_tensor_broadcast_shape(const Tensor *a, const Tensor *b, i32 *result_ndim) {
+shape_t get_tensor_broadcast_shape(const tensor_t *a, const tensor_t *b) {
+    shape_t result = {NULL, 0};
+
     if (!tensor_can_broadcast(a, b)) {
-        *result_ndim = 0;
-        return NULL;
+        return result;
     }
 
-    *result_ndim = a->ndim > b->ndim ? a->ndim : b->ndim;
-    i32 *result_shape = (i32 *)malloc((u64)*result_ndim * sizeof(i32));
+    result.ndim = a->ndim > b->ndim ? a->ndim : b->ndim;
+    result.shape = (i32 *)malloc((u64)result.ndim * sizeof(i32));
 
-    for (i32 i = 0; i < *result_ndim; i++) {
+    for (i32 i = 0; i < result.ndim; i++) {
         i32 dim_a = (i < a->ndim) ? a->shape[a->ndim - 1 - i] : 1;
         i32 dim_b = (i < b->ndim) ? b->shape[b->ndim - 1 - i] : 1;
 
-        result_shape[*result_ndim - 1 - i] = dim_a > dim_b ? dim_a : dim_b;
+        result.shape[result.ndim - 1 - i] = dim_a > dim_b ? dim_a : dim_b;
     }
 
-    return result_shape;
+    return result;
 }
 
 // helper function to calculate linear index from multi-dimensional indices
@@ -110,7 +118,7 @@ static void linear_to_indices(u64 linear_index, const i32 *shape, i32 ndim, i32 
 }
 
 // Broadcast a tensor to a new shape
-Tensor *tensor_broadcast_to(const Tensor *tensor, const i32 *target_shape, i32 target_ndim) {
+tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
     if (!tensor || !target_shape)
         return NULL;
 
@@ -135,7 +143,7 @@ Tensor *tensor_broadcast_to(const Tensor *tensor, const i32 *target_shape, i32 t
     for (i32 i = 0; i < target_ndim; i++) {
         shape_copy[i] = target_shape[i];
     }
-    Tensor *result = tensor_create(NULL, shape_copy, target_ndim, tensor->requires_grad);
+    tensor_t *result = tensor_create(NULL, shape_copy, target_ndim, tensor->requires_grad);
     free(shape_copy); // Free the temporary copy since tensor_create makes its own copy
 
     // Fill the broadcasted data
