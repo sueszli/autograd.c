@@ -3,7 +3,7 @@ TODO:
 - study broadcasting.c
 
 - extend with small tested modules
-    - try to move some ops to ops.c/h that use broadcasting (e.g. tensor_add) and drop them from tensor.c/h
+    - src/tensor/ops.c/h (can use broadcasting, but with a boolean flag for performance reasons)
 
 - study autograd.c and tensor.c
 
