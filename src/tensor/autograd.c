@@ -19,7 +19,7 @@ typedef struct NodeList {
 void nodelist_add(NodeList *list, TopoNode *node) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->nodes = realloc(list->nodes, list->capacity * sizeof(TopoNode *));
+        list->nodes = realloc(list->nodes, (size_t)list->capacity * sizeof(TopoNode *));
     }
     list->nodes[list->count++] = node;
 }
@@ -75,13 +75,13 @@ void tensor_backward(Tensor *t) {
     NodeList *all_nodes = malloc(sizeof(NodeList));
     all_nodes->capacity = 16;
     all_nodes->count = 0;
-    all_nodes->nodes = malloc(all_nodes->capacity * sizeof(TopoNode *));
+    all_nodes->nodes = malloc((size_t)all_nodes->capacity * sizeof(TopoNode *));
     find_all_tensors(all_nodes, t);
 
     NodeList *sorted = malloc(sizeof(NodeList));
     sorted->capacity = all_nodes->count;
     sorted->count = 0;
-    sorted->nodes = malloc(sorted->capacity * sizeof(TopoNode *));
+    sorted->nodes = malloc((size_t)sorted->capacity * sizeof(TopoNode *));
     build_topo_sort(sorted, all_nodes, t);
 
     if (t->grad == NULL) {

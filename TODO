@@ -1,0 +1,9 @@
+TODO:
+
+- Test cases for easy verification:
+    - write test cases for the eval code
+    - write broadcasting logic and test it
+
+- "Fake" Batching: The training loop in main.c simulates batching by accumulating gradients over several samples before updating the weights. A true PyTorch-style implementation would collate the batch of inputs into a single, higher-dimensional tensor (e.g., shape [32, 3072]) and perform a single forward and backward pass on the entire batch. The current method is computationally different and much slower, though the gradient accumulation achieves a similar result for SGD.
+
+- Lack of Broadcasting: The tensor operations only work for tensors of identical shapes (e.g., tensor_add). PyTorch supports powerful broadcasting rules that allow operations on tensors with compatible but different shapes. The bias addition in this code only works because the batch size of the forward pass is always 1.
