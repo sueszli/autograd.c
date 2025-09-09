@@ -127,9 +127,7 @@ static void div_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, 
     grad_tensor->data[i] += output_grad->data[i] / broadcast_b->data[i];
 }
 
-static void div_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    grad_tensor->data[i] -= output_grad->data[i] * broadcast_a->data[i] / (broadcast_b->data[i] * broadcast_b->data[i]);
-}
+static void div_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) { grad_tensor->data[i] -= output_grad->data[i] * broadcast_a->data[i] / (broadcast_b->data[i] * broadcast_b->data[i]); }
 
 static void accumulate_gradient(tensor_t *tensor, tensor_t *output_tensor, bool use_broadcasting, tensor_t *broadcast_a, tensor_t *broadcast_b, gradient_accumulator_fn accumulator) {
     if (!tensor->requires_grad)
@@ -320,32 +318,31 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     return result;
 }
 
+//
+// api functions
+//
+
 tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    if (!a || !b)
-        return NULL;
+    assert(a != NULL && b != NULL);
     return perform_elementwise_op(a, b, TENSOR_OP_ADD, use_broadcasting);
 }
 
 tensor_t *tensor_op_sub(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    if (!a || !b)
-        return NULL;
+    assert(a != NULL && b != NULL);
     return perform_elementwise_op(a, b, TENSOR_OP_SUB, use_broadcasting);
 }
 
 tensor_t *tensor_op_mul(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    if (!a || !b)
-        return NULL;
+    assert(a != NULL && b != NULL);
     return perform_elementwise_op(a, b, TENSOR_OP_MUL, use_broadcasting);
 }
 
 tensor_t *tensor_op_div(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    if (!a || !b)
-        return NULL;
+    assert(a != NULL && b != NULL);
     return perform_elementwise_op(a, b, TENSOR_OP_DIV, use_broadcasting);
 }
 
 tensor_t *tensor_op_generic(tensor_t *a, tensor_t *b, tensor_op_t op, bool use_broadcasting) {
-    if (!a || !b)
-        return NULL;
+    assert(a != NULL && b != NULL);
     return perform_elementwise_op(a, b, op, use_broadcasting);
 }
