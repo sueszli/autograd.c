@@ -66,13 +66,13 @@ target_include_directories(utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(GLOB MAIN_SOURCES "src/*.c")
 file(GLOB DATASET_SOURCES "src/datasets/*.c")
-file(GLOB MATH_SOURCES "src/math/*.c")
+file(GLOB EVAL_SOURCES "src/eval/*.c")
 file(GLOB TENSOR_SOURCES "src/tensor/*.c")
 
 add_library(tensor STATIC ${TENSOR_SOURCES})
 target_include_directories(tensor INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(binary ${MAIN_SOURCES} ${DATASET_SOURCES} ${MATH_SOURCES})
+add_executable(binary ${MAIN_SOURCES} ${DATASET_SOURCES} ${EVAL_SOURCES})
 target_link_libraries(binary PRIVATE utils tensor m) # math
 target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 

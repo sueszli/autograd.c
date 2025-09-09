@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "datasets/cifar10.h"
-#include "math/metrics.h"
+#include "eval/metrics.h"
 #include "tensor/autograd.h"
 #include "tensor/tensor.h"
 #include "utils/defer.h"
