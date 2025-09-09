@@ -1,22 +1,12 @@
 #include "ops.h"
 #include "../utils/types.h"
+#include "../utils/defer.h"
 #include "broadcast.h"
 #include "tensor.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
-static bool validate_tensor_shapes(tensor_t *a, tensor_t *b) {
-    if (a->ndim != b->ndim) {
-        return false;
-    }
-    for (i32 i = 0; i < a->ndim; i++) {
-        if (a->shape[i] != b->shape[i]) {
-            return false;
-        }
-    }
-    return true;
-}
 
 static tensor_t *ensure_gradient_tensor(tensor_t *tensor, i32 *shape, i32 ndim) {
     if (tensor->grad == NULL) {
@@ -33,8 +23,10 @@ static void setup_broadcast_tensors(tensor_t *a, tensor_t *b, bool use_broadcast
     *need_free_a = false;
     *need_free_b = false;
 
-    if (use_broadcasting) {
+    if (use_broadcasting && !tensor_shapes_match(a, b)) {
         shape_t broadcast_shape = get_tensor_broadcast_shape(a, b);
+        defer({ shape_free(&broadcast_shape); });
+        
         if (broadcast_shape.shape) {
             *broadcast_a = tensor_broadcast_to(a, broadcast_shape.shape, broadcast_shape.ndim);
             *broadcast_b = tensor_broadcast_to(b, broadcast_shape.shape, broadcast_shape.ndim);
@@ -42,17 +34,10 @@ static void setup_broadcast_tensors(tensor_t *a, tensor_t *b, bool use_broadcast
                 *need_free_a = true;
                 *need_free_b = true;
             }
-            shape_free(&broadcast_shape);
         }
     }
 }
 
-static void cleanup_broadcast_tensors(tensor_t *broadcast_a, tensor_t *broadcast_b, bool need_free_a, bool need_free_b) {
-    if (need_free_a)
-        tensor_destroy(broadcast_a);
-    if (need_free_b)
-        tensor_destroy(broadcast_b);
-}
 
 static void reduce_gradient_if_needed(tensor_t *grad_tensor, tensor_t *original_tensor) {
     if (!grad_tensor || !original_tensor)
@@ -172,11 +157,13 @@ static void mul_backward_broadcast(tensor_t *t) {
     bool need_free_a, need_free_b;
 
     setup_broadcast_tensors(a, b, used_broadcasting, &broadcast_a, &broadcast_b, &need_free_a, &need_free_b);
+    defer({
+        if (need_free_a) tensor_destroy(broadcast_a);
+        if (need_free_b) tensor_destroy(broadcast_b);
+    });
 
     accumulate_gradient(a, t, used_broadcasting, broadcast_a, broadcast_b, mul_gradient_a);
     accumulate_gradient(b, t, used_broadcasting, broadcast_a, broadcast_b, mul_gradient_b);
-
-    cleanup_broadcast_tensors(broadcast_a, broadcast_b, need_free_a, need_free_b);
 }
 
 static void div_backward_broadcast(tensor_t *t) {
@@ -188,11 +175,13 @@ static void div_backward_broadcast(tensor_t *t) {
     bool need_free_a, need_free_b;
 
     setup_broadcast_tensors(a, b, used_broadcasting, &broadcast_a, &broadcast_b, &need_free_a, &need_free_b);
+    defer({
+        if (need_free_a) tensor_destroy(broadcast_a);
+        if (need_free_b) tensor_destroy(broadcast_b);
+    });
 
     accumulate_gradient(a, t, used_broadcasting, broadcast_a, broadcast_b, div_gradient_a);
     accumulate_gradient(b, t, used_broadcasting, broadcast_a, broadcast_b, div_gradient_b);
-
-    cleanup_broadcast_tensors(broadcast_a, broadcast_b, need_free_a, need_free_b);
 }
 
 static tensor_t *create_result_tensor(tensor_t *a, tensor_t *b, tensor_t *result_a, tensor_op_t op, bool use_broadcasting) {
@@ -242,35 +231,22 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
         if (!tensor_can_broadcast(a, b)) {
             return NULL;
         }
-
-        shape_t broadcast_shape = get_tensor_broadcast_shape(a, b);
-        if (!broadcast_shape.shape) {
-            return NULL;
-        }
-
-        result_a = tensor_broadcast_to(a, broadcast_shape.shape, broadcast_shape.ndim);
-        result_b = tensor_broadcast_to(b, broadcast_shape.shape, broadcast_shape.ndim);
-        need_free_a = true;
-        need_free_b = true;
-
-        shape_free(&broadcast_shape);
-
-        if (!result_a || !result_b) {
-            if (need_free_a && result_a)
-                tensor_destroy(result_a);
-            if (need_free_b && result_b)
-                tensor_destroy(result_b);
-            return NULL;
-        }
+        setup_broadcast_tensors(a, b, true, &result_a, &result_b, &need_free_a, &need_free_b);
     } else {
-        if (!validate_tensor_shapes(a, b)) {
+        if (!tensor_shapes_match(a, b)) {
             return NULL;
         }
     }
 
+    defer({
+        if (need_free_a) tensor_destroy(result_a);
+        if (need_free_b) tensor_destroy(result_b);
+    });
+
     u64 size = tensor_size(result_a);
     f32 *new_data = (f32 *)malloc(size * sizeof(f32));
     assert(new_data != NULL);
+    defer({ free(new_data); });
 
     switch (op) {
     case TENSOR_OP_ADD:
@@ -291,11 +267,6 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     case TENSOR_OP_DIV:
         for (u64 i = 0; i < size; i++) {
             if (result_b->data[i] == 0.0f) {
-                free(new_data);
-                if (need_free_a)
-                    tensor_destroy(result_a);
-                if (need_free_b)
-                    tensor_destroy(result_b);
                 return NULL;
             }
             new_data[i] = result_a->data[i] / result_b->data[i];
@@ -308,12 +279,6 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     tensor_t *result = create_result_tensor(a, b, result_a, op, use_broadcasting);
 
     memcpy(result->data, new_data, size * sizeof(f32));
-    free(new_data);
-
-    if (need_free_a)
-        tensor_destroy(result_a);
-    if (need_free_b)
-        tensor_destroy(result_b);
 
     return result;
 }
@@ -323,23 +288,19 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
 // 
 
 tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    assert(a != NULL && b != NULL);
-    return perform_elementwise_op(a, b, TENSOR_OP_ADD, use_broadcasting);
+    return tensor_op_generic(a, b, TENSOR_OP_ADD, use_broadcasting);
 }
 
 tensor_t *tensor_op_sub(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    assert(a != NULL && b != NULL);
-    return perform_elementwise_op(a, b, TENSOR_OP_SUB, use_broadcasting);
+    return tensor_op_generic(a, b, TENSOR_OP_SUB, use_broadcasting);
 }
 
 tensor_t *tensor_op_mul(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    assert(a != NULL && b != NULL);
-    return perform_elementwise_op(a, b, TENSOR_OP_MUL, use_broadcasting);
+    return tensor_op_generic(a, b, TENSOR_OP_MUL, use_broadcasting);
 }
 
 tensor_t *tensor_op_div(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    assert(a != NULL && b != NULL);
-    return perform_elementwise_op(a, b, TENSOR_OP_DIV, use_broadcasting);
+    return tensor_op_generic(a, b, TENSOR_OP_DIV, use_broadcasting);
 }
 
 tensor_t *tensor_op_generic(tensor_t *a, tensor_t *b, tensor_op_t op, bool use_broadcasting) {

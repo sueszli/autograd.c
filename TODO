@@ -1,8 +1,6 @@
-TODO:
+todo:
 
-- extend with small tested modules
-    - src/tensor/ops.c/h (can use broadcasting, but with a boolean flag for performance reasons)
-
+- study ops.c/h
 - study autograd.c and tensor.c
 
 issues:
@@ -14,4 +12,3 @@ issues:
 finally:
 
 - implement a python binding just for predictions
-
