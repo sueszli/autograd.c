@@ -25,8 +25,8 @@
 //
 
 #include "broadcast.h"
-#include "../utils/types.h"
 #include "../utils/defer.h"
+#include "../utils/types.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -150,10 +150,8 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
     // Fill the broadcasted data
     i32 *target_indices = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     i32 *source_indices = (i32 *)malloc((u64)tensor->ndim * sizeof(i32));
-    defer({
-        free(source_indices);
-        free(target_indices);
-    });
+    defer({ free(target_indices); });
+    defer({ free(source_indices); });
 
     for (u64 i = 0; i < target_size; i++) {
         // Convert linear index to multi-dimensional indices for target
