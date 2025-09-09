@@ -102,6 +102,10 @@ if(BUILD_TESTS)
             target_sources(${TEST_EXECUTABLE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/eval/metrics.c ${CMAKE_CURRENT_SOURCE_DIR}/src/datasets/cifar10.c)
         endif()
         
+        if (TEST_NAME STREQUAL "test_broadcast")
+            target_link_libraries(${TEST_EXECUTABLE} PRIVATE tensor m)
+        endif()
+        
         if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND NOT DISABLE_ASAN)
             target_compile_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)
             target_link_options(${TEST_EXECUTABLE} PRIVATE -fsanitize=address)

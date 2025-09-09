@@ -11,6 +11,8 @@
         "stdlib.h": "c",
         "tensor.h": "c",
         "autograd.h": "c",
-        "defer.h": "c"
+        "defer.h": "c",
+        "stddef.h": "c",
+        "ucontext.h": "c"
     }
 }

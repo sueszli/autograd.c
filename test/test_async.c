@@ -10,7 +10,7 @@ static atomic_bool flags[10] = {false};
 
 void setUp(void) {
     atomic_store(&test_counter, 0);
-    for (int i = 0; i < 10; i++) {
+    for (i32 i = 0; i < 10; i++) {
         atomic_store(&flags[i], false);
     }
 }
@@ -34,7 +34,7 @@ void interaction_task_1(void) {
 
 void interaction_task_2(void) { atomic_store(&flags[0], true); }
 
-void recursive_task(int depth) {
+void recursive_task(i32 depth) {
     if (depth > 0) {
         recursive_task(depth - 1);
     }
@@ -52,8 +52,8 @@ void test_async_spawn_single_thread(void) {
 }
 
 void test_async_spawn_multiple_threads(void) {
-    const int num_threads = 5;
-    for (int i = 0; i < num_threads; i++) {
+    const i32 num_threads = 5;
+    for (i32 i = 0; i < num_threads; i++) {
         async_spawn(simple_task);
     }
     async_run_all();

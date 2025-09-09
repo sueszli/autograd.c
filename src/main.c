@@ -18,19 +18,19 @@
 #define HIDDEN_SIZE 64
 #define OUTPUT_SIZE 10
 #define LEARNING_RATE 0.001f
-#define EPOCHS 2
+#define EPOCHS 1
 #define BATCH_SIZE 32
 
 typedef struct {
     Tensor **items;
-    int capacity;
-    int count;
+    i32 capacity;
+    i32 count;
 } TensorList;
 
 void list_add(TensorList *list, Tensor *t) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->items = realloc(list->items, (size_t)list->capacity * sizeof(Tensor *));
+        list->items = realloc(list->items, (u64)list->capacity * sizeof(Tensor *));
     }
     list->items[list->count++] = t;
 }
@@ -39,12 +39,12 @@ TensorList *list_create() {
     TensorList *list = malloc(sizeof(TensorList));
     list->capacity = 16;
     list->count = 0;
-    list->items = malloc((size_t)list->capacity * sizeof(Tensor *));
+    list->items = malloc((u64)list->capacity * sizeof(Tensor *));
     return list;
 }
 
 void list_destroy_tensors(TensorList *list) {
-    for (int i = 0; i < list->count; i++) {
+    for (i32 i = 0; i < list->count; i++) {
         tensor_destroy(list->items[i]);
     }
     free(list->items);
@@ -67,18 +67,18 @@ f32 random_weight(void) {
     return (f32)r * inv_rand_max - 1.0f;
 }
 
-void init_layer(layer_t *layer, int input_size, int output_size) {
-    int w_shape[] = {input_size, output_size};
-    float *w_data = malloc((size_t)input_size * (size_t)output_size * sizeof(float));
+void init_layer(layer_t *layer, i32 input_size, i32 output_size) {
+    i32 w_shape[] = {input_size, output_size};
+    f32 *w_data = malloc((u64)input_size * (u64)output_size * sizeof(f32));
     f32 xavier_multiplier = sqrtf(2.0f / (f32)(input_size + output_size)) * 0.1f;
-    for (int i = 0; i < input_size * output_size; i++) {
+    for (i32 i = 0; i < input_size * output_size; i++) {
         w_data[i] = random_weight() * xavier_multiplier;
     }
     layer->weights = tensor_create(w_data, w_shape, 2, true);
     free(w_data);
 
-    int b_shape[] = {1, output_size};
-    float *b_data = calloc((size_t)output_size, sizeof(float));
+    i32 b_shape[] = {1, output_size};
+    f32 *b_data = calloc((u64)output_size, sizeof(f32));
     layer->bias = tensor_create(b_data, b_shape, 2, true);
     free(b_data);
 }
@@ -106,7 +106,7 @@ void free_network(neural_network_t *network) {
     free(network);
 }
 
-void normalize_input(u8 *input, float *output, u32 size) {
+void normalize_input(u8 *input, f32 *output, u32 size) {
     const f32 inv_255 = 1.0f / 255.0f;
     for (u32 i = 0; i < size; i++) {
         output[i] = (f32)input[i] * inv_255;
@@ -130,10 +130,10 @@ Tensor *forward_pass(neural_network_t *network, Tensor *input, TensorList *graph
 }
 
 cifar10_class_t predict(neural_network_t *network, sample_t *sample) {
-    float *normalized_input = malloc(INPUT_SIZE * sizeof(float));
+    f32 *normalized_input = malloc(INPUT_SIZE * sizeof(f32));
     normalize_input(sample->data, normalized_input, INPUT_SIZE);
 
-    int input_shape[] = {1, INPUT_SIZE};
+    i32 input_shape[] = {1, INPUT_SIZE};
     Tensor *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
     free(normalized_input);
 
@@ -185,7 +185,7 @@ f32 evaluate_accuracy(neural_network_t *network, sample_t *samples, u64 count) {
 void train_network(neural_network_t *network, sample_t *train_samples, sample_t *test_samples) {
     printf("Starting training...\n");
     u32 total_batches = (NUM_TRAIN_SAMPLES + BATCH_SIZE - 1) / BATCH_SIZE;
-    float *normalized_input = malloc(INPUT_SIZE * sizeof(float));
+    f32 *normalized_input = malloc(INPUT_SIZE * sizeof(f32));
 
     for (u32 epoch = 0; epoch < EPOCHS; epoch++) {
         printf("\nEpoch %u/%u:\n", epoch + 1, EPOCHS);
@@ -206,7 +206,7 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
 
             for (u64 j = i; j < batch_end; j++) {
                 normalize_input(train_samples[j].data, normalized_input, INPUT_SIZE);
-                int input_shape[] = {1, INPUT_SIZE};
+                i32 input_shape[] = {1, INPUT_SIZE};
                 Tensor *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
 
                 Tensor *output = forward_pass(network, input_tensor, graph);
@@ -221,13 +221,13 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
 
             // Update weights with averaged gradients
             f32 lr_over_batch = LEARNING_RATE / (f32)actual_batch_size;
-            for (size_t k = 0; k < tensor_size(network->hidden_layer.weights); ++k)
+            for (u64 k = 0; k < tensor_size(network->hidden_layer.weights); ++k)
                 network->hidden_layer.weights->data[k] -= lr_over_batch * network->hidden_layer.weights->grad->data[k];
-            for (size_t k = 0; k < tensor_size(network->hidden_layer.bias); ++k)
+            for (u64 k = 0; k < tensor_size(network->hidden_layer.bias); ++k)
                 network->hidden_layer.bias->data[k] -= lr_over_batch * network->hidden_layer.bias->grad->data[k];
-            for (size_t k = 0; k < tensor_size(network->output_layer.weights); ++k)
+            for (u64 k = 0; k < tensor_size(network->output_layer.weights); ++k)
                 network->output_layer.weights->data[k] -= lr_over_batch * network->output_layer.weights->grad->data[k];
-            for (size_t k = 0; k < tensor_size(network->output_layer.bias); ++k)
+            for (u64 k = 0; k < tensor_size(network->output_layer.bias); ++k)
                 network->output_layer.bias->data[k] -= lr_over_batch * network->output_layer.bias->grad->data[k];
 
             list_destroy_tensors(graph);
