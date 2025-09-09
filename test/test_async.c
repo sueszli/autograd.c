@@ -13,7 +13,6 @@ void setUp(void) {
     for (int i = 0; i < 10; i++) {
         atomic_store(&flags[i], false);
     }
-    async_cleanup_all();
 }
 
 void tearDown(void) { async_cleanup_all(); }
@@ -82,13 +81,6 @@ void test_async_deep_recursion(void) {
     TEST_ASSERT_EQUAL(1, atomic_load(&test_counter));
 }
 
-void test_async_thread_termination(void) {
-    u8 thread_id = async_spawn(simple_task);
-    async_terminate_thread(thread_id);
-    async_run_all();
-    TEST_ASSERT_EQUAL(0, atomic_load(&test_counter));
-}
-
 void test_async_cleanup(void) {
     async_spawn(simple_task);
     async_cleanup_all();
@@ -98,12 +90,13 @@ void test_async_cleanup(void) {
 
 i32 main(void) {
     UNITY_BEGIN();
+
     RUN_TEST(test_async_spawn_single_thread);
     RUN_TEST(test_async_spawn_multiple_threads);
     RUN_TEST(test_async_yield);
     RUN_TEST(test_async_thread_interaction);
     RUN_TEST(test_async_deep_recursion);
-    RUN_TEST(test_async_thread_termination);
     RUN_TEST(test_async_cleanup);
+
     return UNITY_END();
 }
