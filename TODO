@@ -1,11 +1,11 @@
 TODO:
 
-- extend with small tested modules
-    - broadcasting - study code, optimize code quality
+- study broadcasting.c
 
-study autograd.c/h and tensor.c/h
-shape_t can be reused in tensor_t
-see if you can refactor some of the ops and maths into ops.c/h
+- extend with small tested modules
+    - try to move some ops to ops.c/h that use broadcasting (e.g. tensor_add) and drop them from tensor.c/h
+
+- study autograd.c and tensor.c
 
 issues:
 
