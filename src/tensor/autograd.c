@@ -1,4 +1,5 @@
 #include "autograd.h"
+#include "../utils/types.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,20 +13,20 @@ typedef struct TopoNode {
 // A list of nodes
 typedef struct NodeList {
     TopoNode **nodes;
-    int count;
-    int capacity;
+    i32 count;
+    i32 capacity;
 } NodeList;
 
 void nodelist_add(NodeList *list, TopoNode *node) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->nodes = realloc(list->nodes, (size_t)list->capacity * sizeof(TopoNode *));
+        list->nodes = realloc(list->nodes, (u64)list->capacity * sizeof(TopoNode *));
     }
     list->nodes[list->count++] = node;
 }
 
 void find_all_tensors(NodeList *all_nodes, Tensor *current) {
-    for (int i = 0; i < all_nodes->count; i++) {
+    for (i32 i = 0; i < all_nodes->count; i++) {
         if (all_nodes->nodes[i]->tensor == current)
             return;
     }
@@ -37,7 +38,7 @@ void find_all_tensors(NodeList *all_nodes, Tensor *current) {
     if (current->grad_fn == cross_entropy_backward) {
         find_all_tensors(all_nodes, (Tensor *)current->ctx[0]);
     } else if (current->ctx) {
-        for (int i = 0; i < current->ctx_size; i++) {
+        for (i32 i = 0; i < current->ctx_size; i++) {
             find_all_tensors(all_nodes, (Tensor *)current->ctx[i]);
         }
     }
@@ -45,7 +46,7 @@ void find_all_tensors(NodeList *all_nodes, Tensor *current) {
 
 void build_topo_sort(NodeList *sorted, NodeList *all_nodes, Tensor *t) {
     TopoNode *node = NULL;
-    for (int i = 0; i < all_nodes->count; i++) {
+    for (i32 i = 0; i < all_nodes->count; i++) {
         if (all_nodes->nodes[i]->tensor == t) {
             node = all_nodes->nodes[i];
             break;
@@ -59,7 +60,7 @@ void build_topo_sort(NodeList *sorted, NodeList *all_nodes, Tensor *t) {
     if (t->grad_fn == cross_entropy_backward) {
         build_topo_sort(sorted, all_nodes, (Tensor *)t->ctx[0]);
     } else if (t->ctx) {
-        for (int i = 0; i < t->ctx_size; i++) {
+        for (i32 i = 0; i < t->ctx_size; i++) {
             build_topo_sort(sorted, all_nodes, (Tensor *)t->ctx[i]);
         }
     }
@@ -75,33 +76,33 @@ void tensor_backward(Tensor *t) {
     NodeList *all_nodes = malloc(sizeof(NodeList));
     all_nodes->capacity = 16;
     all_nodes->count = 0;
-    all_nodes->nodes = malloc((size_t)all_nodes->capacity * sizeof(TopoNode *));
+    all_nodes->nodes = malloc((u64)all_nodes->capacity * sizeof(TopoNode *));
     find_all_tensors(all_nodes, t);
 
     NodeList *sorted = malloc(sizeof(NodeList));
     sorted->capacity = all_nodes->count;
     sorted->count = 0;
-    sorted->nodes = malloc((size_t)sorted->capacity * sizeof(TopoNode *));
+    sorted->nodes = malloc((u64)sorted->capacity * sizeof(TopoNode *));
     build_topo_sort(sorted, all_nodes, t);
 
     if (t->grad == NULL) {
-        size_t size = tensor_size(t);
-        float *grad_data = (float *)malloc(size * sizeof(float));
-        for (size_t i = 0; i < size; i++) {
+        u64 size = tensor_size(t);
+        f32 *grad_data = (f32 *)malloc(size * sizeof(f32));
+        for (u64 i = 0; i < size; i++) {
             grad_data[i] = 1.0f;
         }
         t->grad = tensor_create(grad_data, t->shape, t->ndim, false);
         free(grad_data);
     }
 
-    for (int i = sorted->count - 1; i >= 0; i--) {
+    for (i32 i = sorted->count - 1; i >= 0; i--) {
         Tensor *current = sorted->nodes[i]->tensor;
         if (current->grad_fn) {
             current->grad_fn(current);
         }
     }
 
-    for (int i = 0; i < all_nodes->count; i++) {
+    for (i32 i = 0; i < all_nodes->count; i++) {
         free(all_nodes->nodes[i]);
     }
     free(all_nodes->nodes);

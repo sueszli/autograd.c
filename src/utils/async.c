@@ -15,7 +15,7 @@
 
 struct async_thread {
     ucontext_t context; // cpu register, stack pointer
-    char *stack;        // stack memory
+    u8 *stack;          // stack memory
     fn_ptr func;        // function to execute
     async_thread_state_t state;
     u8 id;
@@ -28,15 +28,15 @@ static u8 thread_count = 0;
 static u8 current_thread = 0;
 static ucontext_t main_context;
 
-static char *allocate_stack(size_t size) {
+static u8 *allocate_stack(u64 size) {
     // with execute permissions, ASan doesn't complain about stack use when context switching
     void *stack = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(stack != MAP_FAILED);
     memset(stack, 0, size);
-    return (char *)stack;
+    return (u8 *)stack;
 }
 
-static void free_stack(char *stack, size_t size) {
+static void free_stack(u8 *stack, u64 size) {
     if (!stack) {
         return;
     }
