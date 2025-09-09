@@ -1,5 +1,4 @@
 #include "autograd.h"
-#include "tensor_internals.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
