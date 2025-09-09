@@ -155,20 +155,39 @@ static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
     return indices;
 }
 
+// broadcast a tensor to a new shape
+//
+// example:
+//
+// source tensor (2x1):        target shape (2x3):
+// ┌───┐                       ┌───────────┐
+// │ 5 │    - broadcast to →   │ 5   5   5 │
+// │ 7 │                       │ 7   7   7 │
+// └───┘                       └───────────┘
+//
+// iteration | target [row,col] | source [row,col] | source linear | value copied
+// ----------|------------------|------------------|---------------|-------------
+//     0     |     [0,0]        |     [0,0]        |       0       |      5
+//     1     |     [0,1]        |     [0,0]        |       0       |      5
+//     2     |     [0,2]        |     [0,0]        |       0       |      5
+//     3     |     [1,0]        |     [1,0]        |       1       |      7
+//     4     |     [1,1]        |     [1,0]        |       1       |      7
+//     5     |     [1,2]        |     [1,0]        |       1       |      7
+//
 tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
     if (!tensor_can_broadcast_to_shape(tensor, target_shape, target_ndim)) {
         return NULL;
     }
 
-    // malloc target
+    // malloc target tensor (to write into)
     i32 *shape_copy = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     for (i32 i = 0; i < target_ndim; i++) {
         shape_copy[i] = target_shape[i];
     }
-    tensor_t *result = tensor_create(NULL, shape_copy, target_ndim, tensor->requires_grad);
+    tensor_t *target = tensor_create(NULL, shape_copy, target_ndim, tensor->requires_grad);
     free(shape_copy);
 
-    // malloc source indices
+    // malloc source index array
     i32 *source_indices = (i32 *)malloc((u64)tensor->ndim * sizeof(i32));
     defer({ free(source_indices); });
 
@@ -180,9 +199,11 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
     }
     for (u64 i = 0; i < target_size; i++) {
 
+        // get target coordinates
         i32 *target_indices = get_multi_dim_idx(i, target_shape, target_ndim);
         assert(target_indices != NULL);
 
+        // get source coordinates (expressed as an array of indices)
         for (i32 j = 0; j < tensor->ndim; j++) {
             i32 target_idx = target_ndim - tensor->ndim + j;
             if (target_idx >= 0) {
@@ -194,10 +215,10 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
 
         // copy
         u64 source_idx = get_linear_idx(source_indices, tensor->shape, tensor->ndim);
-        result->data[i] = tensor->data[source_idx];
+        target->data[i] = tensor->data[source_idx];
 
         free(target_indices);
     }
 
-    return result;
+    return target;
 }
