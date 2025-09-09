@@ -221,3 +221,54 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
 
     return target;
 }
+
+bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
+    if (!a || !b) {
+        return false;
+    }
+
+    if (a->ndim != b->ndim) {
+        return false;
+    }
+
+    for (i32 i = 0; i < a->ndim; i++) {
+        if (a->shape[i] != b->shape[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void tensor_broadcast_inplace(tensor_t **a, tensor_t **b) {
+    if (!a || !*a || !b || !*b) {
+        return;
+    }
+
+    if (!tensor_can_broadcast(*a, *b)) {
+        return;
+    }
+
+    if (tensor_shapes_match(*a, *b)) {
+        return;
+    }
+
+    shape_t broadcast_shape = get_tensor_broadcast_shape(*a, *b);
+    if (!broadcast_shape.shape) {
+        return;
+    }
+    defer({ shape_free(&broadcast_shape); });
+
+    tensor_t *new_a = tensor_broadcast_to(*a, broadcast_shape.shape, broadcast_shape.ndim);
+    tensor_t *new_b = tensor_broadcast_to(*b, broadcast_shape.shape, broadcast_shape.ndim);
+
+    if (new_a && new_b) {
+        tensor_destroy(*a);
+        tensor_destroy(*b);
+        *a = new_a;
+        *b = new_b;
+    } else {
+        if (new_a) tensor_destroy(new_a);
+        if (new_b) tensor_destroy(new_b);
+    }
+}

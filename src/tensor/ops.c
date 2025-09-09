@@ -318,9 +318,9 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     return result;
 }
 
-//
+// 
 // api functions
-//
+// 
 
 tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting) {
     assert(a != NULL && b != NULL);
