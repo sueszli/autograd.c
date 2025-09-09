@@ -75,7 +75,8 @@ void load_train_samples_to_buffer(train_samples_t samples) {
     }
 }
 
-const char *get_class_name(u8 class_id) {
+const char *get_class_name(cifar10_class_t class_id) {
     assert(class_id < NUM_CLASSES);
+    static const char *CIFAR10_CLASSES[NUM_CLASSES] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
     return CIFAR10_CLASSES[class_id];
 }
