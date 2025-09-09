@@ -30,7 +30,7 @@ typedef struct {
 void list_add(TensorList *list, Tensor *t) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->items = realloc(list->items, list->capacity * sizeof(Tensor *));
+        list->items = realloc(list->items, (size_t)list->capacity * sizeof(Tensor *));
     }
     list->items[list->count++] = t;
 }
@@ -39,7 +39,7 @@ TensorList *list_create() {
     TensorList *list = malloc(sizeof(TensorList));
     list->capacity = 16;
     list->count = 0;
-    list->items = malloc(list->capacity * sizeof(Tensor *));
+    list->items = malloc((size_t)list->capacity * sizeof(Tensor *));
     return list;
 }
 
@@ -78,7 +78,7 @@ void init_layer(layer_t *layer, int input_size, int output_size) {
     free(w_data);
 
     int b_shape[] = {1, output_size};
-    float *b_data = calloc(output_size, sizeof(float));
+    float *b_data = calloc((size_t)output_size, sizeof(float));
     layer->bias = tensor_create(b_data, b_shape, 2, true);
     free(b_data);
 }
@@ -202,7 +202,7 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
 
             f32 batch_loss = 0.0f;
             TensorList *graph = list_create();
-            u32 actual_batch_size = batch_end - i;
+            u32 actual_batch_size = (u32)(batch_end - i);
 
             for (u64 j = i; j < batch_end; j++) {
                 normalize_input(train_samples[j].data, normalized_input, INPUT_SIZE);
