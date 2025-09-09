@@ -6,7 +6,7 @@
 
 // A node in the graph for topological sort
 typedef struct TopoNode {
-    Tensor *tensor;
+    tensor_t *tensor;
     bool visited;
 } TopoNode;
 
@@ -25,7 +25,7 @@ void nodelist_add(NodeList *list, TopoNode *node) {
     list->nodes[list->count++] = node;
 }
 
-void find_all_tensors(NodeList *all_nodes, Tensor *current) {
+void find_all_tensors(NodeList *all_nodes, tensor_t *current) {
     for (i32 i = 0; i < all_nodes->count; i++) {
         if (all_nodes->nodes[i]->tensor == current)
             return;
@@ -36,15 +36,15 @@ void find_all_tensors(NodeList *all_nodes, Tensor *current) {
     nodelist_add(all_nodes, new_node);
 
     if (current->grad_fn == cross_entropy_backward) {
-        find_all_tensors(all_nodes, (Tensor *)current->ctx[0]);
+        find_all_tensors(all_nodes, (tensor_t *)current->ctx[0]);
     } else if (current->ctx) {
         for (i32 i = 0; i < current->ctx_size; i++) {
-            find_all_tensors(all_nodes, (Tensor *)current->ctx[i]);
+            find_all_tensors(all_nodes, (tensor_t *)current->ctx[i]);
         }
     }
 }
 
-void build_topo_sort(NodeList *sorted, NodeList *all_nodes, Tensor *t) {
+void build_topo_sort(NodeList *sorted, NodeList *all_nodes, tensor_t *t) {
     TopoNode *node = NULL;
     for (i32 i = 0; i < all_nodes->count; i++) {
         if (all_nodes->nodes[i]->tensor == t) {
@@ -58,16 +58,16 @@ void build_topo_sort(NodeList *sorted, NodeList *all_nodes, Tensor *t) {
     node->visited = true;
 
     if (t->grad_fn == cross_entropy_backward) {
-        build_topo_sort(sorted, all_nodes, (Tensor *)t->ctx[0]);
+        build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[0]);
     } else if (t->ctx) {
         for (i32 i = 0; i < t->ctx_size; i++) {
-            build_topo_sort(sorted, all_nodes, (Tensor *)t->ctx[i]);
+            build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[i]);
         }
     }
     nodelist_add(sorted, node);
 }
 
-void tensor_backward(Tensor *t) {
+void tensor_backward(tensor_t *t) {
     if (!t->requires_grad) {
         printf("Cannot call backward on a tensor that does not require grad\n");
         return;
@@ -96,7 +96,7 @@ void tensor_backward(Tensor *t) {
     }
 
     for (i32 i = sorted->count - 1; i >= 0; i--) {
-        Tensor *current = sorted->nodes[i]->tensor;
+        tensor_t *current = sorted->nodes[i]->tensor;
         if (current->grad_fn) {
             current->grad_fn(current);
         }

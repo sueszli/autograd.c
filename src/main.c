@@ -22,28 +22,28 @@
 #define BATCH_SIZE 32
 
 typedef struct {
-    Tensor **items;
+    tensor_t **items;
     i32 capacity;
     i32 count;
-} TensorList;
+} tensor_list_t;
 
-void list_add(TensorList *list, Tensor *t) {
+void list_add(tensor_list_t *list, tensor_t *t) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->items = realloc(list->items, (u64)list->capacity * sizeof(Tensor *));
+        list->items = realloc(list->items, (u64)list->capacity * sizeof(tensor_t *));
     }
     list->items[list->count++] = t;
 }
 
-TensorList *list_create() {
-    TensorList *list = malloc(sizeof(TensorList));
+tensor_list_t *list_create() {
+    tensor_list_t *list = malloc(sizeof(tensor_list_t));
     list->capacity = 16;
     list->count = 0;
-    list->items = malloc((u64)list->capacity * sizeof(Tensor *));
+    list->items = malloc((u64)list->capacity * sizeof(tensor_t *));
     return list;
 }
 
-void list_destroy_tensors(TensorList *list) {
+void list_destroy_tensors(tensor_list_t *list) {
     for (i32 i = 0; i < list->count; i++) {
         tensor_destroy(list->items[i]);
     }
@@ -52,8 +52,8 @@ void list_destroy_tensors(TensorList *list) {
 }
 
 typedef struct {
-    Tensor *weights;
-    Tensor *bias;
+    tensor_t *weights;
+    tensor_t *bias;
 } layer_t;
 
 typedef struct {
@@ -113,17 +113,17 @@ void normalize_input(u8 *input, f32 *output, u32 size) {
     }
 }
 
-Tensor *forward_pass(neural_network_t *network, Tensor *input, TensorList *graph) {
-    Tensor *hidden1 = tensor_matmul(input, network->hidden_layer.weights);
+tensor_t *forward_pass(neural_network_t *network, tensor_t *input, tensor_list_t *graph) {
+    tensor_t *hidden1 = tensor_matmul(input, network->hidden_layer.weights);
     list_add(graph, hidden1);
-    Tensor *hidden2 = tensor_add(hidden1, network->hidden_layer.bias);
+    tensor_t *hidden2 = tensor_add(hidden1, network->hidden_layer.bias);
     list_add(graph, hidden2);
-    Tensor *hidden3 = tensor_relu(hidden2);
+    tensor_t *hidden3 = tensor_relu(hidden2);
     list_add(graph, hidden3);
 
-    Tensor *output1 = tensor_matmul(hidden3, network->output_layer.weights);
+    tensor_t *output1 = tensor_matmul(hidden3, network->output_layer.weights);
     list_add(graph, output1);
-    Tensor *output2 = tensor_add(output1, network->output_layer.bias);
+    tensor_t *output2 = tensor_add(output1, network->output_layer.bias);
     list_add(graph, output2);
 
     return output2;
@@ -134,11 +134,11 @@ cifar10_class_t predict(neural_network_t *network, sample_t *sample) {
     normalize_input(sample->data, normalized_input, INPUT_SIZE);
 
     i32 input_shape[] = {1, INPUT_SIZE};
-    Tensor *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
+    tensor_t *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
     free(normalized_input);
 
-    TensorList *graph = list_create();
-    Tensor *output = forward_pass(network, input_tensor, graph);
+    tensor_list_t *graph = list_create();
+    tensor_t *output = forward_pass(network, input_tensor, graph);
 
     cifar10_class_t predicted = 0;
     f32 max_prob = output->data[0];
@@ -201,16 +201,16 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
             tensor_zero_grad(network->output_layer.bias);
 
             f32 batch_loss = 0.0f;
-            TensorList *graph = list_create();
+            tensor_list_t *graph = list_create();
             u32 actual_batch_size = (u32)(batch_end - i);
 
             for (u64 j = i; j < batch_end; j++) {
                 normalize_input(train_samples[j].data, normalized_input, INPUT_SIZE);
                 i32 input_shape[] = {1, INPUT_SIZE};
-                Tensor *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
+                tensor_t *input_tensor = tensor_create(normalized_input, input_shape, 2, false);
 
-                Tensor *output = forward_pass(network, input_tensor, graph);
-                Tensor *loss = tensor_cross_entropy(output, train_samples[j].label);
+                tensor_t *output = forward_pass(network, input_tensor, graph);
+                tensor_t *loss = tensor_cross_entropy(output, train_samples[j].label);
                 batch_loss += loss->data[0];
 
                 tensor_backward(loss);
