@@ -168,7 +168,11 @@ void print_confusion_matrix(const cifar10_class_t *true_labels, const cifar10_cl
     for (cifar10_class_t i = 0; i < NUM_CLASSES; i++) {
         printf("│ %-4s ┆", short_names[i]);
         for (cifar10_class_t j = 0; j < NUM_CLASSES; j++) {
-            printf(" %-4u ┆", confusion_matrix[i][j]);
+            if (j == NUM_CLASSES - 1) {
+                printf(" %-4u │", confusion_matrix[i][j]);
+            } else {
+                printf(" %-4u ┆", confusion_matrix[i][j]);
+            }
         }
         printf("\n");
     }

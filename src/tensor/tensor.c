@@ -1,6 +1,5 @@
 #include "tensor.h"
 #include "autograd.h"
-#include "tensor_internals.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

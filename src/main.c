@@ -10,7 +10,7 @@
 #include "datasets/cifar10.h"
 #include "math/metrics.h"
 #include "tensor/autograd.h"
-#include "tensor/tensor.h" // <-------- new stuff to explore!!
+#include "tensor/tensor.h"
 #include "utils/defer.h"
 #include "utils/tqdm.h"
 #include "utils/types.h"

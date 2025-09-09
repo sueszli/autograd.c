@@ -31,3 +31,5 @@ Tensor *tensor_relu(Tensor *a);
 Tensor *tensor_softmax(Tensor *a);
 Tensor *tensor_cross_entropy(Tensor *a, int target_idx);
 Tensor *tensor_transpose(Tensor *a);
+
+void cross_entropy_backward(Tensor *t);
