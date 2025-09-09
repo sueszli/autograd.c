@@ -1,12 +1,11 @@
 #include "ops.h"
-#include "../utils/types.h"
 #include "../utils/defer.h"
+#include "../utils/types.h"
 #include "broadcast.h"
 #include "tensor.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 static tensor_t *ensure_gradient_tensor(tensor_t *tensor, i32 *shape, i32 ndim) {
     if (tensor->grad == NULL) {
@@ -26,7 +25,7 @@ static void setup_broadcast_tensors(tensor_t *a, tensor_t *b, bool use_broadcast
     if (use_broadcasting && !tensor_shapes_match(a, b)) {
         shape_t broadcast_shape = get_tensor_broadcast_shape(a, b);
         defer({ shape_free(&broadcast_shape); });
-        
+
         if (broadcast_shape.shape) {
             *broadcast_a = tensor_broadcast_to(a, broadcast_shape.shape, broadcast_shape.ndim);
             *broadcast_b = tensor_broadcast_to(b, broadcast_shape.shape, broadcast_shape.ndim);
@@ -37,7 +36,6 @@ static void setup_broadcast_tensors(tensor_t *a, tensor_t *b, bool use_broadcast
         }
     }
 }
-
 
 static void reduce_gradient_if_needed(tensor_t *grad_tensor, tensor_t *original_tensor) {
     if (!grad_tensor || !original_tensor)
@@ -78,40 +76,12 @@ static void reduce_gradient_if_needed(tensor_t *grad_tensor, tensor_t *original_
 }
 
 typedef void (*gradient_accumulator_fn)(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b);
-
-static void add_gradient(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    (void)broadcast_b;
-    grad_tensor->data[i] += output_grad->data[i];
-}
-
-static void sub_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    (void)broadcast_b;
-    grad_tensor->data[i] += output_grad->data[i];
-}
-
-static void sub_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    (void)broadcast_b;
-    grad_tensor->data[i] -= output_grad->data[i];
-}
-
-static void mul_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    grad_tensor->data[i] += output_grad->data[i] * broadcast_b->data[i];
-}
-
-static void mul_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_b;
-    grad_tensor->data[i] += output_grad->data[i] * broadcast_a->data[i];
-}
-
-static void div_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) {
-    (void)broadcast_a;
-    grad_tensor->data[i] += output_grad->data[i] / broadcast_b->data[i];
-}
-
+static void add_gradient(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a __attribute__((unused)), tensor_t *broadcast_b __attribute__((unused))) { grad_tensor->data[i] += output_grad->data[i]; }
+static void sub_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a __attribute__((unused)), tensor_t *broadcast_b __attribute__((unused))) { grad_tensor->data[i] += output_grad->data[i]; }
+static void sub_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a __attribute__((unused)), tensor_t *broadcast_b __attribute__((unused))) { grad_tensor->data[i] -= output_grad->data[i]; }
+static void mul_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a __attribute__((unused)), tensor_t *broadcast_b) { grad_tensor->data[i] += output_grad->data[i] * broadcast_b->data[i]; }
+static void mul_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b __attribute__((unused))) { grad_tensor->data[i] += output_grad->data[i] * broadcast_a->data[i]; }
+static void div_gradient_a(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a __attribute__((unused)), tensor_t *broadcast_b) { grad_tensor->data[i] += output_grad->data[i] / broadcast_b->data[i]; }
 static void div_gradient_b(u64 i, tensor_t *grad_tensor, tensor_t *output_grad, tensor_t *broadcast_a, tensor_t *broadcast_b) { grad_tensor->data[i] -= output_grad->data[i] * broadcast_a->data[i] / (broadcast_b->data[i] * broadcast_b->data[i]); }
 
 static void accumulate_gradient(tensor_t *tensor, tensor_t *output_tensor, bool use_broadcasting, tensor_t *broadcast_a, tensor_t *broadcast_b, gradient_accumulator_fn accumulator) {
@@ -158,8 +128,10 @@ static void mul_backward_broadcast(tensor_t *t) {
 
     setup_broadcast_tensors(a, b, used_broadcasting, &broadcast_a, &broadcast_b, &need_free_a, &need_free_b);
     defer({
-        if (need_free_a) tensor_destroy(broadcast_a);
-        if (need_free_b) tensor_destroy(broadcast_b);
+        if (need_free_a)
+            tensor_destroy(broadcast_a);
+        if (need_free_b)
+            tensor_destroy(broadcast_b);
     });
 
     accumulate_gradient(a, t, used_broadcasting, broadcast_a, broadcast_b, mul_gradient_a);
@@ -176,8 +148,10 @@ static void div_backward_broadcast(tensor_t *t) {
 
     setup_broadcast_tensors(a, b, used_broadcasting, &broadcast_a, &broadcast_b, &need_free_a, &need_free_b);
     defer({
-        if (need_free_a) tensor_destroy(broadcast_a);
-        if (need_free_b) tensor_destroy(broadcast_b);
+        if (need_free_a)
+            tensor_destroy(broadcast_a);
+        if (need_free_b)
+            tensor_destroy(broadcast_b);
     });
 
     accumulate_gradient(a, t, used_broadcasting, broadcast_a, broadcast_b, div_gradient_a);
@@ -239,8 +213,10 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     }
 
     defer({
-        if (need_free_a) tensor_destroy(result_a);
-        if (need_free_b) tensor_destroy(result_b);
+        if (need_free_a)
+            tensor_destroy(result_a);
+        if (need_free_b)
+            tensor_destroy(result_b);
     });
 
     u64 size = tensor_size(result_a);
@@ -283,25 +259,17 @@ static tensor_t *perform_elementwise_op(tensor_t *a, tensor_t *b, tensor_op_t op
     return result;
 }
 
-// 
+//
 // api functions
-// 
+//
 
-tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    return tensor_op_generic(a, b, TENSOR_OP_ADD, use_broadcasting);
-}
+tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting) { return tensor_op_generic(a, b, TENSOR_OP_ADD, use_broadcasting); }
 
-tensor_t *tensor_op_sub(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    return tensor_op_generic(a, b, TENSOR_OP_SUB, use_broadcasting);
-}
+tensor_t *tensor_op_sub(tensor_t *a, tensor_t *b, bool use_broadcasting) { return tensor_op_generic(a, b, TENSOR_OP_SUB, use_broadcasting); }
 
-tensor_t *tensor_op_mul(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    return tensor_op_generic(a, b, TENSOR_OP_MUL, use_broadcasting);
-}
+tensor_t *tensor_op_mul(tensor_t *a, tensor_t *b, bool use_broadcasting) { return tensor_op_generic(a, b, TENSOR_OP_MUL, use_broadcasting); }
 
-tensor_t *tensor_op_div(tensor_t *a, tensor_t *b, bool use_broadcasting) {
-    return tensor_op_generic(a, b, TENSOR_OP_DIV, use_broadcasting);
-}
+tensor_t *tensor_op_div(tensor_t *a, tensor_t *b, bool use_broadcasting) { return tensor_op_generic(a, b, TENSOR_OP_DIV, use_broadcasting); }
 
 tensor_t *tensor_op_generic(tensor_t *a, tensor_t *b, tensor_op_t op, bool use_broadcasting) {
     assert(a != NULL && b != NULL);
