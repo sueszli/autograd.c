@@ -93,8 +93,6 @@ void add_backward(Tensor *t) {
             }
             a->grad->data[i] += t->grad->data[i];
         }
-        if (a->grad_fn)
-            a->grad_fn(a);
     }
     if (b->requires_grad) {
         for (size_t i = 0; i < tensor_size(b); i++) {
@@ -104,8 +102,6 @@ void add_backward(Tensor *t) {
             }
             b->grad->data[i] += t->grad->data[i];
         }
-        if (b->grad_fn)
-            b->grad_fn(b);
     }
 }
 
@@ -152,8 +148,6 @@ void mul_backward(Tensor *t) {
             }
             a->grad->data[i] += b->data[i] * t->grad->data[i];
         }
-        if (a->grad_fn)
-            a->grad_fn(a);
     }
     if (b->requires_grad) {
         for (size_t i = 0; i < tensor_size(b); i++) {
@@ -163,8 +157,6 @@ void mul_backward(Tensor *t) {
             }
             b->grad->data[i] += a->data[i] * t->grad->data[i];
         }
-        if (b->grad_fn)
-            b->grad_fn(b);
     }
 }
 
@@ -209,8 +201,6 @@ void relu_backward(Tensor *t) {
             }
             a->grad->data[i] += (a->data[i] > 0) * t->grad->data[i];
         }
-        if (a->grad_fn)
-            a->grad_fn(a);
     }
 }
 
@@ -270,8 +260,6 @@ void matmul_backward(Tensor *t) {
         }
         tensor_destroy(b_t);
         tensor_destroy(da);
-        if (a->grad_fn)
-            a->grad_fn(a);
     }
 
     if (b->requires_grad) {
@@ -286,8 +274,6 @@ void matmul_backward(Tensor *t) {
         }
         tensor_destroy(a_t);
         tensor_destroy(db);
-        if (b->grad_fn)
-            b->grad_fn(b);
     }
 }
 
@@ -387,10 +373,6 @@ void cross_entropy_backward(Tensor *t) {
             a->grad->data[i] += grad * t->grad->data[0];
         }
         free(softmax_out);
-
-        if (a->grad_fn) {
-            a->grad_fn(a);
-        }
     }
     free(t->ctx[1]); // free the malloced int pointer
 }

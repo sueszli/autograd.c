@@ -15,12 +15,11 @@
 #include "utils/tqdm.h"
 #include "utils/types.h"
 
-#define INPUT_SIZE NUM_PIXELS
 #define HIDDEN_SIZE 64
 #define OUTPUT_SIZE 10
 #define LEARNING_RATE 0.001f
 #define EPOCHS 2
-#define BATCH_SIZE 1
+#define BATCH_SIZE 32
 
 typedef struct {
     Tensor **items;
@@ -203,6 +202,7 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
 
             f32 batch_loss = 0.0f;
             TensorList *graph = list_create();
+            u32 actual_batch_size = batch_end - i;
 
             for (u64 j = i; j < batch_end; j++) {
                 normalize_input(train_samples[j].data, normalized_input, INPUT_SIZE);
@@ -219,19 +219,20 @@ void train_network(neural_network_t *network, sample_t *train_samples, sample_t 
                 tensor_destroy(loss);
             }
 
-            // update weights
+            // Update weights with averaged gradients
+            f32 lr_over_batch = LEARNING_RATE / (f32)actual_batch_size;
             for (size_t k = 0; k < tensor_size(network->hidden_layer.weights); ++k)
-                network->hidden_layer.weights->data[k] -= LEARNING_RATE * network->hidden_layer.weights->grad->data[k];
+                network->hidden_layer.weights->data[k] -= lr_over_batch * network->hidden_layer.weights->grad->data[k];
             for (size_t k = 0; k < tensor_size(network->hidden_layer.bias); ++k)
-                network->hidden_layer.bias->data[k] -= LEARNING_RATE * network->hidden_layer.bias->grad->data[k];
+                network->hidden_layer.bias->data[k] -= lr_over_batch * network->hidden_layer.bias->grad->data[k];
             for (size_t k = 0; k < tensor_size(network->output_layer.weights); ++k)
-                network->output_layer.weights->data[k] -= LEARNING_RATE * network->output_layer.weights->grad->data[k];
+                network->output_layer.weights->data[k] -= lr_over_batch * network->output_layer.weights->grad->data[k];
             for (size_t k = 0; k < tensor_size(network->output_layer.bias); ++k)
-                network->output_layer.bias->data[k] -= LEARNING_RATE * network->output_layer.bias->grad->data[k];
+                network->output_layer.bias->data[k] -= lr_over_batch * network->output_layer.bias->grad->data[k];
 
             list_destroy_tensors(graph);
 
-            batch_loss /= (f32)(batch_end - i);
+            batch_loss /= (f32)actual_batch_size;
             total_loss += batch_loss;
             batch_count++;
 
