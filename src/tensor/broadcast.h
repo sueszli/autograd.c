@@ -1,6 +1,6 @@
 /*
  * broadcasting means expanding the smaller tensor to match the larger one.
- * we follow the numpy broadcasting rules and return NULL on failure.
+ * we follow the numpy/pytorch broadcasting convention.
  *
  * example: adding a 2x1 tensor to a 1x3 tensor results in a 2x3 tensor
  *
