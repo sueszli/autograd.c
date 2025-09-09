@@ -4,12 +4,7 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-typedef enum {
-    TENSOR_OP_ADD,
-    TENSOR_OP_SUB,
-    TENSOR_OP_MUL,
-    TENSOR_OP_DIV
-} tensor_op_t;
+typedef enum { TENSOR_OP_ADD, TENSOR_OP_SUB, TENSOR_OP_MUL, TENSOR_OP_DIV } tensor_op_t;
 
 tensor_t *tensor_op_add(tensor_t *a, tensor_t *b, bool use_broadcasting);
 tensor_t *tensor_op_sub(tensor_t *a, tensor_t *b, bool use_broadcasting);
