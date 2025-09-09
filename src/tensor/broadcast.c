@@ -160,33 +160,29 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
         return NULL;
     }
 
-    // Calculate total size of target tensor
-    u64 target_size = 1;
-    for (i32 i = 0; i < target_ndim; i++) {
-        target_size *= (u64)target_shape[i];
-    }
-
-    // Create result tensor
+    // malloc target
     i32 *shape_copy = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     for (i32 i = 0; i < target_ndim; i++) {
         shape_copy[i] = target_shape[i];
     }
     tensor_t *result = tensor_create(NULL, shape_copy, target_ndim, tensor->requires_grad);
-    free(shape_copy); // Free the temporary copy since tensor_create makes its own copy
+    free(shape_copy);
 
-    // Fill the broadcasted data
+    // malloc source indices
     i32 *source_indices = (i32 *)malloc((u64)tensor->ndim * sizeof(i32));
     defer({ free(source_indices); });
 
+    // copy data from source to target
+    // by iterating in linear index space of target
+    u64 target_size = 1;
+    for (i32 i = 0; i < target_ndim; i++) {
+        target_size *= (u64)target_shape[i];
+    }
     for (u64 i = 0; i < target_size; i++) {
-        // Convert linear index to multi-dimensional indices for target
-        i32 *target_indices = get_multi_dim_idx(i, target_shape, target_ndim);
-        if (!target_indices) {
-            tensor_destroy(result);
-            return NULL;
-        }
 
-        // Map target indices to source indices
+        i32 *target_indices = get_multi_dim_idx(i, target_shape, target_ndim);
+        assert(target_indices != NULL);
+
         for (i32 j = 0; j < tensor->ndim; j++) {
             i32 target_idx = target_ndim - tensor->ndim + j;
             if (target_idx >= 0) {
@@ -196,7 +192,7 @@ tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i
             }
         }
 
-        // Calculate source index and copy data
+        // copy
         u64 source_idx = get_linear_idx(source_indices, tensor->shape, tensor->ndim);
         result->data[i] = tensor->data[source_idx];
 
