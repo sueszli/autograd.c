@@ -1,3 +1,29 @@
+// 
+// broadcasting means expanding the smaller tensor to match the larger one.
+// we follow the numpy/pytorch broadcasting convention.
+// 
+// example: adding a 2x1 tensor to a 1x3 tensor results in a 2x3 tensor
+// 
+//    A (2x1)       B (1x3)      Result (2x3)
+//    ┌─────┐    ┌──────────┐    ┌──────────┐
+//    │  1  │ +  │ 10 20 30 │ =  │ 11 21 31 │
+//    │  4  │    └──────────┘    │ 14 24 34 │
+//    └─────┘                    └──────────┘
+// 
+// steps:
+//                       ┌─────┐   ┌───────────┐
+//    (1) A is expanded: │  1  │ → │ 1   1   1 │ (repeat across columns)
+//                       │  4  │   │ 4   4   4 │
+//                       └─────┘   └───────────┘
+// 
+//                       ┌──────────┐   ┌──────────┐
+//    (2) B is expanded: │ 10 20 30 │ → │ 10 20 30 │ (repeat across rows)
+//                       └──────────┘   │ 10 20 30 │
+//                                      └──────────┘
+// 
+//    (3) operation is performed element-wise
+// 
+
 #include "broadcast.h"
 #include "../utils/types.h"
 #include <stdio.h>
@@ -50,7 +76,7 @@ i32 *get_tensor_broadcast_shape(const Tensor *a, const Tensor *b, i32 *result_nd
     }
 
     *result_ndim = a->ndim > b->ndim ? a->ndim : b->ndim;
-    i32 *result_shape = (i32 *)malloc((size_t)*result_ndim * sizeof(i32));
+    i32 *result_shape = (i32 *)malloc((u64)*result_ndim * sizeof(i32));
 
     for (i32 i = 0; i < *result_ndim; i++) {
         i32 dim_a = (i < a->ndim) ? a->shape[a->ndim - 1 - i] : 1;
@@ -105,7 +131,7 @@ Tensor *tensor_broadcast_to(const Tensor *tensor, const i32 *target_shape, i32 t
     }
 
     // Create result tensor
-    i32 *shape_copy = (i32 *)malloc((size_t)target_ndim * sizeof(i32));
+    i32 *shape_copy = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     for (i32 i = 0; i < target_ndim; i++) {
         shape_copy[i] = target_shape[i];
     }
@@ -113,8 +139,8 @@ Tensor *tensor_broadcast_to(const Tensor *tensor, const i32 *target_shape, i32 t
     free(shape_copy); // Free the temporary copy since tensor_create makes its own copy
 
     // Fill the broadcasted data
-    i32 *target_indices = (i32 *)malloc((size_t)target_ndim * sizeof(i32));
-    i32 *source_indices = (i32 *)malloc((size_t)tensor->ndim * sizeof(i32));
+    i32 *target_indices = (i32 *)malloc((u64)target_ndim * sizeof(i32));
+    i32 *source_indices = (i32 *)malloc((u64)tensor->ndim * sizeof(i32));
 
     for (u64 i = 0; i < target_size; i++) {
         // Convert linear index to multi-dimensional indices for target
