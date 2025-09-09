@@ -268,7 +268,9 @@ void tensor_broadcast_inplace(tensor_t **a, tensor_t **b) {
         *a = new_a;
         *b = new_b;
     } else {
-        if (new_a) tensor_destroy(new_a);
-        if (new_b) tensor_destroy(new_b);
+        if (new_a)
+            tensor_destroy(new_a);
+        if (new_b)
+            tensor_destroy(new_b);
     }
 }

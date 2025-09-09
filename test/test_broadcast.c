@@ -673,8 +673,10 @@ void test_tensor_shapes_match_partial_different(void) {
     i32 shape_b[] = {2, 3, 5};
     f32 data_a[24], data_b[30];
 
-    for (i32 i = 0; i < 24; i++) data_a[i] = (f32)i;
-    for (i32 i = 0; i < 30; i++) data_b[i] = (f32)i;
+    for (i32 i = 0; i < 24; i++)
+        data_a[i] = (f32)i;
+    for (i32 i = 0; i < 30; i++)
+        data_b[i] = (f32)i;
 
     tensor_t *a = tensor_create(data_a, shape_a, 3, false);
     tensor_t *b = tensor_create(data_b, shape_b, 3, false);
