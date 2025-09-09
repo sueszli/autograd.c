@@ -248,20 +248,20 @@ void test_tensor_op_gradient_computation(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_null_inputs(void) {
-    i32 shape[] = {2, 2};
-    f32 data[] = {1, 2, 3, 4};
-    tensor_t *tensor = tensor_create(data, shape, 2, false);
+void test_tensor_op_input_validation(void) {
+    i32 shape_a[] = {2, 3};
+    i32 shape_b[] = {2, 4};
+    f32 data_a[] = {1, 2, 3, 4, 5, 6};
+    f32 data_b[] = {1, 1, 1, 1, 2, 2, 2, 2};
 
-    TEST_ASSERT_NULL(tensor_op_add(NULL, tensor, false));
-    TEST_ASSERT_NULL(tensor_op_add(tensor, NULL, false));
-    TEST_ASSERT_NULL(tensor_op_add(NULL, NULL, false));
+    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
+    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    TEST_ASSERT_NULL(tensor_op_mul(NULL, tensor, true));
-    TEST_ASSERT_NULL(tensor_op_sub(tensor, NULL, true));
-    TEST_ASSERT_NULL(tensor_op_div(NULL, NULL, true));
+    tensor_t *result = tensor_op_add(a, b, false);
+    TEST_ASSERT_NULL(result);
 
-    tensor_destroy(tensor);
+    tensor_destroy(a);
+    tensor_destroy(b);
 }
 
 void test_tensor_op_complex_broadcasting(void) {
@@ -650,7 +650,7 @@ void test_tensor_op_gradient_accumulation(void) {
 
     result1->grad = tensor_create(NULL, result1->shape, result1->ndim, false);
     result2->grad = tensor_create(NULL, result2->shape, result2->ndim, false);
-    
+
     for (i32 i = 0; i < 2; i++) {
         result1->grad->data[i] = 1.0f;
         result2->grad->data[i] = 1.0f;
@@ -736,7 +736,7 @@ void test_tensor_op_division_precision(void) {
     TEST_ASSERT_NOT_NULL(result);
 
     for (i32 i = 0; i < 9; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f/3.0f, result->data[i]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f / 3.0f, result->data[i]);
     }
 
     tensor_destroy(a);
@@ -780,7 +780,7 @@ void test_tensor_op_broadcasting_scalar_multiple_dims(void) {
     i32 shape_tensor[] = {2, 3, 4};
     i32 shape_scalar[] = {1, 1, 1};
     f32 scalar_data[] = {2.0f};
-    
+
     f32 *tensor_data = (f32 *)malloc(24 * sizeof(f32));
     for (i32 i = 0; i < 24; i++) {
         tensor_data[i] = (f32)(i + 1);
@@ -819,7 +819,7 @@ i32 main(void) {
     RUN_TEST(test_tensor_op_scalar_broadcasting);
     RUN_TEST(test_tensor_op_generic_function);
     RUN_TEST(test_tensor_op_gradient_computation);
-    RUN_TEST(test_tensor_op_null_inputs);
+    RUN_TEST(test_tensor_op_input_validation);
     RUN_TEST(test_tensor_op_complex_broadcasting);
     RUN_TEST(test_tensor_op_edge_cases);
     RUN_TEST(test_tensor_op_large_tensors);
