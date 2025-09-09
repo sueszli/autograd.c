@@ -23,7 +23,6 @@
 //
 //    (3) operation is performed element-wise
 //
-
 #include "broadcast.h"
 #include "../utils/defer.h"
 #include "../utils/types.h"
@@ -159,11 +158,11 @@ static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
 //
 // example:
 //
-// source tensor (2x1):        target shape (2x3):
-// ┌───┐                       ┌───────────┐
-// │ 5 │    - broadcast to →   │ 5   5   5 │
-// │ 7 │                       │ 7   7   7 │
-// └───┘                       └───────────┘
+//      source tensor (2x1):        target shape (2x3):
+//      ┌───┐                       ┌───────────┐
+//      │ 5 │    - broadcast to →   │ 5   5   5 │
+//      │ 7 │                       │ 7   7   7 │
+//      └───┘                       └───────────┘
 //
 // iteration | target [row,col] | source [row,col] | source linear | value copied
 // ----------|------------------|------------------|---------------|-------------
