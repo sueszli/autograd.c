@@ -102,7 +102,7 @@ if(BUILD_TESTS)
             target_sources(${TEST_EXECUTABLE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/eval/metrics.c ${CMAKE_CURRENT_SOURCE_DIR}/src/datasets/cifar10.c)
         endif()
         
-        if (TEST_NAME STREQUAL "test_broadcast")
+        if (TEST_NAME STREQUAL "test_broadcast" OR TEST_NAME STREQUAL "test_ops")
             target_link_libraries(${TEST_EXECUTABLE} PRIVATE tensor m)
         endif()
         
