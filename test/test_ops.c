@@ -9,7 +9,7 @@ void setUp(void) {}
 
 void tearDown(void) {}
 
-void test_tensor_op_add_same_shape_no_broadcast(void) {
+void test_tensor_add_same_shape(void) {
     i32 shape[] = {2, 3};
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
     f32 data_b[] = {1, 1, 1, 2, 2, 2};
@@ -18,7 +18,7 @@ void test_tensor_op_add_same_shape_no_broadcast(void) {
     tensor_t *a = tensor_create(data_a, shape, 2, false);
     tensor_t *b = tensor_create(data_b, shape, 2, false);
 
-    tensor_t *result = tensor_op_add(a, b, false);
+    tensor_t *result = tensor_add(a, b);
 
     TEST_ASSERT_NOT_NULL(result);
     TEST_ASSERT_EQUAL(2, result->ndim);
@@ -34,7 +34,7 @@ void test_tensor_op_add_same_shape_no_broadcast(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_add_with_broadcasting(void) {
+void test_tensor_add_with_broadcasting(void) {
     i32 shape_a[] = {2, 3};
     i32 shape_b[] = {1, 3};
     f32 data_a[] = {1, 2, 3, 4, 5, 6};
@@ -44,7 +44,7 @@ void test_tensor_op_add_with_broadcasting(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, false);
     tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    tensor_t *result = tensor_op_add(a, b, true);
+    tensor_t *result = tensor_add(a, b);
 
     TEST_ASSERT_NOT_NULL(result);
     TEST_ASSERT_EQUAL(2, result->ndim);
@@ -60,7 +60,7 @@ void test_tensor_op_add_with_broadcasting(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_sub_same_shape(void) {
+void test_tensor_sub_same_shape(void) {
     i32 shape[] = {2, 2};
     f32 data_a[] = {5, 6, 7, 8};
     f32 data_b[] = {1, 2, 3, 4};
@@ -69,7 +69,7 @@ void test_tensor_op_sub_same_shape(void) {
     tensor_t *a = tensor_create(data_a, shape, 2, false);
     tensor_t *b = tensor_create(data_b, shape, 2, false);
 
-    tensor_t *result = tensor_op_sub(a, b, false);
+    tensor_t *result = tensor_sub(a, b);
 
     TEST_ASSERT_NOT_NULL(result);
     for (i32 i = 0; i < 4; i++) {
@@ -81,7 +81,7 @@ void test_tensor_op_sub_same_shape(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_mul_with_broadcasting(void) {
+void test_tensor_mul_with_broadcasting(void) {
     i32 shape_a[] = {2, 1};
     i32 shape_b[] = {1, 3};
     f32 data_a[] = {2, 3};
@@ -91,7 +91,7 @@ void test_tensor_op_mul_with_broadcasting(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, false);
     tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    tensor_t *result = tensor_op_mul(a, b, true);
+    tensor_t *result = tensor_mul(a, b);
 
     TEST_ASSERT_NOT_NULL(result);
     TEST_ASSERT_EQUAL(2, result->ndim);
@@ -107,7 +107,7 @@ void test_tensor_op_mul_with_broadcasting(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_div_same_shape(void) {
+void test_tensor_div_same_shape(void) {
     i32 shape[] = {2, 2};
     f32 data_a[] = {8, 12, 16, 20};
     f32 data_b[] = {2, 3, 4, 5};
@@ -116,7 +116,7 @@ void test_tensor_op_div_same_shape(void) {
     tensor_t *a = tensor_create(data_a, shape, 2, false);
     tensor_t *b = tensor_create(data_b, shape, 2, false);
 
-    tensor_t *result = tensor_op_div(a, b, false);
+    tensor_t *result = tensor_div(a, b);
 
     TEST_ASSERT_NOT_NULL(result);
     for (i32 i = 0; i < 4; i++) {
@@ -128,7 +128,7 @@ void test_tensor_op_div_same_shape(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_scalar_broadcasting(void) {
+void test_tensor_scalar_broadcasting(void) {
     i32 shape_tensor[] = {2, 3};
     i32 shape_scalar[] = {1};
     f32 data_tensor[] = {1, 2, 3, 4, 5, 6};
@@ -139,13 +139,13 @@ void test_tensor_op_scalar_broadcasting(void) {
     tensor_t *tensor = tensor_create(data_tensor, shape_tensor, 2, false);
     tensor_t *scalar = tensor_create(data_scalar, shape_scalar, 1, false);
 
-    tensor_t *result_add = tensor_op_add(tensor, scalar, true);
+    tensor_t *result_add = tensor_add(tensor, scalar);
     TEST_ASSERT_NOT_NULL(result_add);
     for (i32 i = 0; i < 6; i++) {
         TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_add[i], result_add->data[i]);
     }
 
-    tensor_t *result_mul = tensor_op_mul(tensor, scalar, true);
+    tensor_t *result_mul = tensor_mul(tensor, scalar);
     TEST_ASSERT_NOT_NULL(result_mul);
     for (i32 i = 0; i < 6; i++) {
         TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_mul[i], result_mul->data[i]);
@@ -157,31 +157,7 @@ void test_tensor_op_scalar_broadcasting(void) {
     tensor_destroy(result_mul);
 }
 
-void test_tensor_op_generic_function(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {1, 2, 3, 4};
-    f32 data_b[] = {5, 6, 7, 8};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *result_add = tensor_op_generic(a, b, TENSOR_OP_ADD, false);
-    TEST_ASSERT_NOT_NULL(result_add);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 6.0f, result_add->data[0]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 8.0f, result_add->data[1]);
-
-    tensor_t *result_mul = tensor_op_generic(a, b, TENSOR_OP_MUL, false);
-    TEST_ASSERT_NOT_NULL(result_mul);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 5.0f, result_mul->data[0]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 12.0f, result_mul->data[1]);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result_add);
-    tensor_destroy(result_mul);
-}
-
-void test_tensor_op_gradient_computation(void) {
+void test_tensor_add_gradient(void) {
     i32 shape[] = {2, 2};
     f32 data_a[] = {1, 2, 3, 4};
     f32 data_b[] = {2, 3, 4, 5};
@@ -189,7 +165,7 @@ void test_tensor_op_gradient_computation(void) {
     tensor_t *a = tensor_create(data_a, shape, 2, true);
     tensor_t *b = tensor_create(data_b, shape, 2, true);
 
-    tensor_t *result = tensor_op_add(a, b, false);
+    tensor_t *result = tensor_add(a, b);
     TEST_ASSERT_NOT_NULL(result);
     TEST_ASSERT_TRUE(result->requires_grad);
     TEST_ASSERT_NOT_NULL(result->grad_fn);
@@ -213,43 +189,7 @@ void test_tensor_op_gradient_computation(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_complex_broadcasting(void) {
-    i32 shape_a[] = {2, 1, 3};
-    i32 shape_b[] = {4, 3};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6};
-    f32 data_b[] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4};
-
-    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
-    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
-
-    tensor_t *result = tensor_op_add(a, b, true);
-
-    TEST_ASSERT_NOT_NULL(result);
-    TEST_ASSERT_EQUAL(3, result->ndim);
-    TEST_ASSERT_EQUAL(2, result->shape[0]);
-    TEST_ASSERT_EQUAL(4, result->shape[1]);
-    TEST_ASSERT_EQUAL(3, result->shape[2]);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_edge_cases(void) {
-    i32 shape_single[] = {1};
-    f32 data_single[] = {5.0f};
-
-    tensor_t *single = tensor_create(data_single, shape_single, 1, false);
-
-    tensor_t *result = tensor_op_add(single, single, false);
-    TEST_ASSERT_NOT_NULL(result);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 10.0f, result->data[0]);
-
-    tensor_destroy(single);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_add_broadcast_grad(void) {
+void test_tensor_add_broadcast_grad(void) {
     i32 shape_a[] = {2, 1};
     i32 shape_b[] = {1, 3};
     f32 data_a[] = {1, 2};
@@ -258,7 +198,7 @@ void test_tensor_op_add_broadcast_grad(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, true);
     tensor_t *b = tensor_create(data_b, shape_b, 2, true);
 
-    tensor_t *result = tensor_op_add(a, b, true);
+    tensor_t *result = tensor_add(a, b);
     result->grad = tensor_create(NULL, result->shape, result->ndim, false);
     for (i32 i = 0; i < 6; i++) {
         result->grad->data[i] = 1.0f;
@@ -286,7 +226,7 @@ void test_tensor_op_add_broadcast_grad(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_div_broadcast_grad(void) {
+void test_tensor_div_broadcast_grad(void) {
     i32 shape_a[] = {2, 1};
     i32 shape_b[] = {1};
     f32 data_a[] = {10, 20};
@@ -295,7 +235,7 @@ void test_tensor_op_div_broadcast_grad(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, true);
     tensor_t *b = tensor_create(data_b, shape_b, 1, true);
 
-    tensor_t *result = tensor_op_div(a, b, true);
+    tensor_t *result = tensor_div(a, b);
     result->grad = tensor_create(NULL, result->shape, result->ndim, false);
     for (i32 i = 0; i < 2; i++) {
         result->grad->data[i] = 1.0f;
@@ -323,18 +263,15 @@ void test_tensor_op_div_broadcast_grad(void) {
 i32 main(void) {
     UNITY_BEGIN();
 
-    RUN_TEST(test_tensor_op_add_same_shape_no_broadcast);
-    RUN_TEST(test_tensor_op_add_with_broadcasting);
-    RUN_TEST(test_tensor_op_sub_same_shape);
-    RUN_TEST(test_tensor_op_mul_with_broadcasting);
-    RUN_TEST(test_tensor_op_div_same_shape);
-    RUN_TEST(test_tensor_op_scalar_broadcasting);
-    RUN_TEST(test_tensor_op_generic_function);
-    RUN_TEST(test_tensor_op_gradient_computation);
-    RUN_TEST(test_tensor_op_complex_broadcasting);
-    RUN_TEST(test_tensor_op_edge_cases);
-    RUN_TEST(test_tensor_op_add_broadcast_grad);
-    RUN_TEST(test_tensor_op_div_broadcast_grad);
+    RUN_TEST(test_tensor_add_same_shape);
+    RUN_TEST(test_tensor_add_with_broadcasting);
+    RUN_TEST(test_tensor_sub_same_shape);
+    RUN_TEST(test_tensor_mul_with_broadcasting);
+    RUN_TEST(test_tensor_div_same_shape);
+    RUN_TEST(test_tensor_scalar_broadcasting);
+    RUN_TEST(test_tensor_add_gradient);
+    RUN_TEST(test_tensor_add_broadcast_grad);
+    RUN_TEST(test_tensor_div_broadcast_grad);
 
     return UNITY_END();
 }

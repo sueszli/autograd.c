@@ -22,11 +22,10 @@ struct tensor_t {
 tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad);
 void tensor_destroy(tensor_t *t);
 
-void tensor_pri32(const tensor_t *t);
+void tensor_print(const tensor_t *t);
 void tensor_zero_grad(tensor_t *t);
 u64 tensor_size(const tensor_t *t);
-tensor_t *tensor_add(tensor_t *a, tensor_t *b);
-tensor_t *tensor_mul(tensor_t *a, tensor_t *b);
+
 tensor_t *tensor_matmul(tensor_t *a, tensor_t *b);
 tensor_t *tensor_relu(tensor_t *a);
 tensor_t *tensor_softmax(tensor_t *a);
