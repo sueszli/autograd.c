@@ -27,9 +27,14 @@
 #include "../utils/defer.h"
 #include "../utils/types.h"
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static inline i32 imax(i32 a, i32 b) { return (a > b) ? a : b; }
+
+static inline i32 get_dim(const tensor_t *tensor, i32 i) { return (i < tensor->ndim) ? tensor->shape[tensor->ndim - 1 - i] : 1; }
 
 void shape_free(shape_t *s) {
     if (s && s->shape) {
@@ -63,11 +68,11 @@ bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b) {
         return false;
     }
 
-    i32 max_ndim = a->ndim > b->ndim ? a->ndim : b->ndim;
+    i32 max_ndim = imax(a->ndim, b->ndim);
 
     for (i32 i = 0; i < max_ndim; i++) {
-        i32 dim_a = (i < a->ndim) ? a->shape[a->ndim - 1 - i] : 1;
-        i32 dim_b = (i < b->ndim) ? b->shape[b->ndim - 1 - i] : 1;
+        i32 dim_a = get_dim(a, i);
+        i32 dim_b = get_dim(b, i);
 
         if (dim_a != dim_b && dim_a != 1 && dim_b != 1) {
             return false;
@@ -83,7 +88,7 @@ bool tensor_can_broadcast_to_shape(const tensor_t *tensor, const i32 *target_sha
     }
 
     for (i32 i = 0; i < target_ndim; i++) {
-        i32 tensor_dim = (i < tensor->ndim) ? tensor->shape[tensor->ndim - 1 - i] : 1;
+        i32 tensor_dim = get_dim(tensor, i);
         i32 target_dim = target_shape[target_ndim - 1 - i];
 
         if (tensor_dim != target_dim && tensor_dim != 1) {
@@ -101,14 +106,14 @@ shape_t get_tensor_broadcast_shape(const tensor_t *a, const tensor_t *b) {
         return result;
     }
 
-    result.ndim = a->ndim > b->ndim ? a->ndim : b->ndim;
+    result.ndim = imax(a->ndim, b->ndim);
     result.shape = (i32 *)malloc((u64)result.ndim * sizeof(i32));
 
     for (i32 i = 0; i < result.ndim; i++) {
-        i32 dim_a = (i < a->ndim) ? a->shape[a->ndim - 1 - i] : 1;
-        i32 dim_b = (i < b->ndim) ? b->shape[b->ndim - 1 - i] : 1;
+        i32 dim_a = get_dim(a, i);
+        i32 dim_b = get_dim(b, i);
 
-        result.shape[result.ndim - 1 - i] = dim_a > dim_b ? dim_a : dim_b;
+        result.shape[result.ndim - 1 - i] = imax(dim_a, dim_b);
     }
 
     return result;
@@ -241,15 +246,7 @@ bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
 }
 
 void tensor_broadcast_inplace(tensor_t **a, tensor_t **b) {
-    if (!a || !*a || !b || !*b) {
-        return;
-    }
-
-    if (!tensor_can_broadcast(*a, *b)) {
-        return;
-    }
-
-    if (tensor_shapes_match(*a, *b)) {
+    if (!a || !*a || !b || !*b || !tensor_can_broadcast(*a, *b) || tensor_shapes_match(*a, *b)) {
         return;
     }
 
@@ -267,10 +264,12 @@ void tensor_broadcast_inplace(tensor_t **a, tensor_t **b) {
         tensor_destroy(*b);
         *a = new_a;
         *b = new_b;
-    } else {
-        if (new_a)
-            tensor_destroy(new_a);
-        if (new_b)
-            tensor_destroy(new_b);
+        return;
+    }
+    if (new_a) {
+        tensor_destroy(new_a);
+    }
+    if (new_b) {
+        tensor_destroy(new_b);
     }
 }
