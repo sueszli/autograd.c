@@ -1,6 +1,7 @@
 todo:
 
 - study ops.c/h
+    - there is no reason to expose `tensor_op_generic`
 - study autograd.c and tensor.c
 
 issues:
