@@ -1,6 +1,11 @@
 todo:
 
+make sure main.c runs
+make sure all tests run
+
 - study ops.c/h
+    - move `shapes_match` to broadcast.c/h - expose it through api, test it rigourously
+    - add all the missing operations in a modern neural net
 - study tensor.c/h and autograd.c/h
 
 issues:

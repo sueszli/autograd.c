@@ -1,4 +1,5 @@
 #include "autograd.h"
+#include "ops.h"
 #include "../utils/types.h"
 #include <stdbool.h>
 #include <stdio.h>

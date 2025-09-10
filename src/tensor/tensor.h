@@ -26,10 +26,4 @@ void tensor_print(const tensor_t *t);
 void tensor_zero_grad(tensor_t *t);
 u64 tensor_size(const tensor_t *t);
 
-tensor_t *tensor_matmul(tensor_t *a, tensor_t *b);
-tensor_t *tensor_relu(tensor_t *a);
-tensor_t *tensor_softmax(tensor_t *a);
-tensor_t *tensor_cross_entropy(tensor_t *a, i32 target_idx);
 tensor_t *tensor_transpose(tensor_t *a);
-
-void cross_entropy_backward(tensor_t *t);
