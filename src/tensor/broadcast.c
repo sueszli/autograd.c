@@ -32,8 +32,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// missing integer function from math.h
 static inline i32 imax(i32 a, i32 b) { return (a > b) ? a : b; }
 
+// get dimension from the right, treat dimensions as 1
 static inline i32 get_dim(const tensor_t *tensor, i32 i) { return (i < tensor->ndim) ? tensor->shape[tensor->ndim - 1 - i] : 1; }
 
 void shape_free(shape_t *s) {
