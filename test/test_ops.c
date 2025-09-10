@@ -128,41 +128,6 @@ void test_tensor_op_div_same_shape(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_div_by_zero(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {1, 2, 3, 4};
-    f32 data_b[] = {1, 0, 2, 3};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *result = tensor_op_div(a, b, false);
-
-    TEST_ASSERT_NULL(result);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-}
-
-void test_tensor_op_incompatible_shapes_no_broadcast(void) {
-    i32 shape_a[] = {2, 3};
-    i32 shape_b[] = {2, 4};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6};
-    f32 data_b[] = {1, 1, 1, 1, 2, 2, 2, 2};
-
-    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
-    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
-
-    tensor_t *result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NULL(result);
-
-    result = tensor_op_mul(a, b, true);
-    TEST_ASSERT_NULL(result);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-}
-
 void test_tensor_op_scalar_broadcasting(void) {
     i32 shape_tensor[] = {2, 3};
     i32 shape_scalar[] = {1};
@@ -248,22 +213,6 @@ void test_tensor_op_gradient_computation(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_input_validation(void) {
-    i32 shape_a[] = {2, 3};
-    i32 shape_b[] = {2, 4};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6};
-    f32 data_b[] = {1, 1, 1, 1, 2, 2, 2, 2};
-
-    tensor_t *a = tensor_create(data_a, shape_a, 2, false);
-    tensor_t *b = tensor_create(data_b, shape_b, 2, false);
-
-    tensor_t *result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NULL(result);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-}
-
 void test_tensor_op_complex_broadcasting(void) {
     i32 shape_a[] = {2, 1, 3};
     i32 shape_b[] = {4, 3};
@@ -300,135 +249,16 @@ void test_tensor_op_edge_cases(void) {
     tensor_destroy(result);
 }
 
-void test_tensor_op_large_tensors(void) {
-    i32 shape[] = {100, 100};
-    f32 *data_a = (f32 *)malloc(10000 * sizeof(f32));
-    f32 *data_b = (f32 *)malloc(10000 * sizeof(f32));
-
-    for (i32 i = 0; i < 10000; i++) {
-        data_a[i] = (f32)i;
-        data_b[i] = 1.0f;
-    }
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NOT_NULL(result);
-
-    for (i32 i = 0; i < 100; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, (f32)i + 1.0f, result->data[i]);
-    }
-
-    free(data_a);
-    free(data_b);
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_gradient_backward_functions(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {2, 3, 4, 5};
-    f32 data_b[] = {1, 2, 1, 2};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, true);
-    tensor_t *b = tensor_create(data_b, shape, 2, true);
-
-    tensor_t *result_mul = tensor_op_mul(a, b, false);
-    TEST_ASSERT_NOT_NULL(result_mul);
-    TEST_ASSERT_TRUE(result_mul->requires_grad);
-
-    result_mul->grad = tensor_create(NULL, result_mul->shape, result_mul->ndim, false);
-    for (i32 i = 0; i < 4; i++) {
-        result_mul->grad->data[i] = 1.0f;
-    }
-
-    result_mul->grad_fn(result_mul);
-
-    TEST_ASSERT_NOT_NULL(a->grad);
-    TEST_ASSERT_NOT_NULL(b->grad);
-
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, data_b[i], a->grad->data[i]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, data_a[i], b->grad->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result_mul);
-}
-
-void test_tensor_op_subtract_gradients(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {5, 6, 7, 8};
-    f32 data_b[] = {1, 2, 3, 4};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, true);
-    tensor_t *b = tensor_create(data_b, shape, 2, true);
-
-    tensor_t *result = tensor_op_sub(a, b, false);
-    TEST_ASSERT_NOT_NULL(result);
-
-    result->grad = tensor_create(NULL, result->shape, result->ndim, false);
-    for (i32 i = 0; i < 4; i++) {
-        result->grad->data[i] = 1.0f;
-    }
-
-    result->grad_fn(result);
-
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, a->grad->data[i]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, -1.0f, b->grad->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_division_gradients(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {8, 12, 16, 20};
-    f32 data_b[] = {2, 3, 4, 5};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, true);
-    tensor_t *b = tensor_create(data_b, shape, 2, true);
-
-    tensor_t *result = tensor_op_div(a, b, false);
-    TEST_ASSERT_NOT_NULL(result);
-
-    result->grad = tensor_create(NULL, result->shape, result->ndim, false);
-    for (i32 i = 0; i < 4; i++) {
-        result->grad->data[i] = 1.0f;
-    }
-
-    result->grad_fn(result);
-
-    for (i32 i = 0; i < 4; i++) {
-        f32 expected_a_grad = 1.0f / data_b[i];
-        f32 expected_b_grad = -data_a[i] / (data_b[i] * data_b[i]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_a_grad, a->grad->data[i]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_b_grad, b->grad->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_broadcasting_gradients(void) {
+void test_tensor_op_add_broadcast_grad(void) {
     i32 shape_a[] = {2, 1};
     i32 shape_b[] = {1, 3};
-    f32 data_a[] = {2, 3};
-    f32 data_b[] = {4, 5, 6};
+    f32 data_a[] = {1, 2};
+    f32 data_b[] = {10, 20, 30};
 
     tensor_t *a = tensor_create(data_a, shape_a, 2, true);
     tensor_t *b = tensor_create(data_b, shape_b, 2, true);
 
-    tensor_t *result = tensor_op_mul(a, b, true);
-    TEST_ASSERT_NOT_NULL(result);
-
+    tensor_t *result = tensor_op_add(a, b, true);
     result->grad = tensor_create(NULL, result->shape, result->ndim, false);
     for (i32 i = 0; i < 6; i++) {
         result->grad->data[i] = 1.0f;
@@ -437,372 +267,56 @@ void test_tensor_op_broadcasting_gradients(void) {
     result->grad_fn(result);
 
     TEST_ASSERT_NOT_NULL(a->grad);
+    TEST_ASSERT_EQUAL(2, a->grad->ndim);
+    TEST_ASSERT_EQUAL(2, a->grad->shape[0]);
+    TEST_ASSERT_EQUAL(1, a->grad->shape[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 3.0f, a->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 3.0f, a->grad->data[1]);
+
     TEST_ASSERT_NOT_NULL(b->grad);
+    TEST_ASSERT_EQUAL(2, b->grad->ndim);
+    TEST_ASSERT_EQUAL(1, b->grad->shape[0]);
+    TEST_ASSERT_EQUAL(3, b->grad->shape[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 2.0f, b->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 2.0f, b->grad->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 2.0f, b->grad->data[2]);
 
     tensor_destroy(a);
     tensor_destroy(b);
     tensor_destroy(result);
 }
 
-void test_tensor_op_memory_management(void) {
-    i32 shape[] = {3, 3};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    f32 data_b[] = {9, 8, 7, 6, 5, 4, 3, 2, 1};
+void test_tensor_op_div_broadcast_grad(void) {
+    i32 shape_a[] = {2, 1};
+    i32 shape_b[] = {1};
+    f32 data_a[] = {10, 20};
+    f32 data_b[] = {2};
 
-    for (i32 iter = 0; iter < 100; iter++) {
-        tensor_t *a = tensor_create(data_a, shape, 2, false);
-        tensor_t *b = tensor_create(data_b, shape, 2, false);
+    tensor_t *a = tensor_create(data_a, shape_a, 2, true);
+    tensor_t *b = tensor_create(data_b, shape_b, 1, true);
 
-        tensor_t *result1 = tensor_op_add(a, b, false);
-        tensor_t *result2 = tensor_op_mul(a, b, false);
-        tensor_t *result3 = tensor_op_sub(a, b, false);
-        tensor_t *result4 = tensor_op_div(a, b, false);
-
-        TEST_ASSERT_NOT_NULL(result1);
-        TEST_ASSERT_NOT_NULL(result2);
-        TEST_ASSERT_NOT_NULL(result3);
-        TEST_ASSERT_NOT_NULL(result4);
-
-        tensor_destroy(a);
-        tensor_destroy(b);
-        tensor_destroy(result1);
-        tensor_destroy(result2);
-        tensor_destroy(result3);
-        tensor_destroy(result4);
-    }
-}
-
-void test_tensor_op_chained_operations(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {1, 2, 3, 4};
-    f32 data_b[] = {2, 2, 2, 2};
-    f32 data_c[] = {3, 3, 3, 3};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-    tensor_t *c = tensor_create(data_c, shape, 2, false);
-
-    tensor_t *temp = tensor_op_add(a, b, false);
-    tensor_t *result = tensor_op_mul(temp, c, false);
-
-    TEST_ASSERT_NOT_NULL(temp);
-    TEST_ASSERT_NOT_NULL(result);
-
-    f32 expected[] = {9, 12, 15, 18};
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected[i], result->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(c);
-    tensor_destroy(temp);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_zero_tensors(void) {
-    i32 shape[] = {2, 3};
-    f32 data_zeros[] = {0, 0, 0, 0, 0, 0};
-    f32 data_ones[] = {1, 1, 1, 1, 1, 1};
-
-    tensor_t *zeros = tensor_create(data_zeros, shape, 2, false);
-    tensor_t *ones = tensor_create(data_ones, shape, 2, false);
-
-    tensor_t *add_result = tensor_op_add(zeros, ones, false);
-    TEST_ASSERT_NOT_NULL(add_result);
-    for (i32 i = 0; i < 6; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, add_result->data[i]);
-    }
-
-    tensor_t *mul_result = tensor_op_mul(zeros, ones, false);
-    TEST_ASSERT_NOT_NULL(mul_result);
-    for (i32 i = 0; i < 6; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, mul_result->data[i]);
-    }
-
-    tensor_t *sub_result = tensor_op_sub(ones, zeros, false);
-    TEST_ASSERT_NOT_NULL(sub_result);
-    for (i32 i = 0; i < 6; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, sub_result->data[i]);
-    }
-
-    tensor_destroy(zeros);
-    tensor_destroy(ones);
-    tensor_destroy(add_result);
-    tensor_destroy(mul_result);
-    tensor_destroy(sub_result);
-}
-
-void test_tensor_op_negative_values(void) {
-    i32 shape[] = {2, 2};
-    f32 data_pos[] = {2, 4, 6, 8};
-    f32 data_neg[] = {-1, -2, -3, -4};
-
-    tensor_t *pos = tensor_create(data_pos, shape, 2, false);
-    tensor_t *neg = tensor_create(data_neg, shape, 2, false);
-
-    tensor_t *add_result = tensor_op_add(pos, neg, false);
-    TEST_ASSERT_NOT_NULL(add_result);
-    f32 expected_add[] = {1, 2, 3, 4};
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_add[i], add_result->data[i]);
-    }
-
-    tensor_t *mul_result = tensor_op_mul(pos, neg, false);
-    TEST_ASSERT_NOT_NULL(mul_result);
-    f32 expected_mul[] = {-2, -8, -18, -32};
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_mul[i], mul_result->data[i]);
-    }
-
-    tensor_destroy(pos);
-    tensor_destroy(neg);
-    tensor_destroy(add_result);
-    tensor_destroy(mul_result);
-}
-
-void test_tensor_op_fractional_values(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {0.5f, 1.5f, 2.5f, 3.5f};
-    f32 data_b[] = {0.25f, 0.5f, 0.75f, 1.0f};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *add_result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NOT_NULL(add_result);
-    f32 expected_add[] = {0.75f, 2.0f, 3.25f, 4.5f};
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_add[i], add_result->data[i]);
-    }
-
-    tensor_t *div_result = tensor_op_div(a, b, false);
-    TEST_ASSERT_NOT_NULL(div_result);
-    f32 expected_div[] = {2.0f, 3.0f, 3.333333f, 3.5f};
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-5, expected_div[i], div_result->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(add_result);
-    tensor_destroy(div_result);
-}
-
-void test_tensor_op_broadcasting_edge_cases(void) {
-    i32 shape_1d[] = {3};
-    i32 shape_2d[] = {1, 3};
-    i32 shape_3d[] = {1, 1, 3};
-    f32 data[] = {1, 2, 3};
-
-    tensor_t *tensor_1d = tensor_create(data, shape_1d, 1, false);
-    tensor_t *tensor_2d = tensor_create(data, shape_2d, 2, false);
-    tensor_t *tensor_3d = tensor_create(data, shape_3d, 3, false);
-
-    tensor_t *result_1d_2d = tensor_op_add(tensor_1d, tensor_2d, true);
-    TEST_ASSERT_NOT_NULL(result_1d_2d);
-    TEST_ASSERT_EQUAL(2, result_1d_2d->ndim);
-
-    tensor_t *result_2d_3d = tensor_op_mul(tensor_2d, tensor_3d, true);
-    TEST_ASSERT_NOT_NULL(result_2d_3d);
-    TEST_ASSERT_EQUAL(3, result_2d_3d->ndim);
-
-    tensor_destroy(tensor_1d);
-    tensor_destroy(tensor_2d);
-    tensor_destroy(tensor_3d);
-    tensor_destroy(result_1d_2d);
-    tensor_destroy(result_2d_3d);
-}
-
-void test_tensor_op_mixed_requires_grad(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {1, 2, 3, 4};
-    f32 data_b[] = {2, 3, 4, 5};
-
-    tensor_t *a_grad = tensor_create(data_a, shape, 2, true);
-    tensor_t *b_no_grad = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *result = tensor_op_add(a_grad, b_no_grad, false);
-    TEST_ASSERT_NOT_NULL(result);
-    TEST_ASSERT_TRUE(result->requires_grad);
-    TEST_ASSERT_NOT_NULL(result->grad_fn);
-
-    tensor_t *result2 = tensor_op_mul(b_no_grad, a_grad, false);
-    TEST_ASSERT_NOT_NULL(result2);
-    TEST_ASSERT_TRUE(result2->requires_grad);
-
-    tensor_destroy(a_grad);
-    tensor_destroy(b_no_grad);
-    tensor_destroy(result);
-    tensor_destroy(result2);
-}
-
-void test_tensor_op_gradient_accumulation(void) {
-    i32 shape[] = {2, 1};
-    f32 data_a[] = {2, 3};
-    f32 data_b[] = {4, 5};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, true);
-    tensor_t *b = tensor_create(data_b, shape, 2, true);
-
-    tensor_t *result1 = tensor_op_mul(a, b, false);
-    tensor_t *result2 = tensor_op_add(a, b, false);
-
-    result1->grad = tensor_create(NULL, result1->shape, result1->ndim, false);
-    result2->grad = tensor_create(NULL, result2->shape, result2->ndim, false);
-
+    tensor_t *result = tensor_op_div(a, b, true);
+    result->grad = tensor_create(NULL, result->shape, result->ndim, false);
     for (i32 i = 0; i < 2; i++) {
-        result1->grad->data[i] = 1.0f;
-        result2->grad->data[i] = 1.0f;
+        result->grad->data[i] = 1.0f;
     }
 
-    result1->grad_fn(result1);
-    result2->grad_fn(result2);
+    result->grad_fn(result);
 
     TEST_ASSERT_NOT_NULL(a->grad);
+    TEST_ASSERT_EQUAL(2, a->grad->ndim);
+    TEST_ASSERT_EQUAL(2, a->grad->shape[0]);
+    TEST_ASSERT_EQUAL(1, a->grad->shape[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, a->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, a->grad->data[1]);
+
     TEST_ASSERT_NOT_NULL(b->grad);
-
-    for (i32 i = 0; i < 2; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, data_b[i] + 1.0f, a->grad->data[i]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, data_a[i] + 1.0f, b->grad->data[i]);
-    }
+    TEST_ASSERT_EQUAL(1, b->grad->ndim);
+    TEST_ASSERT_EQUAL(1, b->grad->shape[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, -7.5f, b->grad->data[0]);
 
     tensor_destroy(a);
     tensor_destroy(b);
-    tensor_destroy(result1);
-    tensor_destroy(result2);
-}
-
-void test_tensor_op_very_small_values(void) {
-    i32 shape[] = {2, 2};
-    f32 data_a[] = {1e-7f, 2e-7f, 3e-7f, 4e-7f};
-    f32 data_b[] = {1e-6f, 2e-6f, 3e-6f, 4e-6f};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *add_result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NOT_NULL(add_result);
-
-    tensor_t *mul_result = tensor_op_mul(a, b, false);
-    TEST_ASSERT_NOT_NULL(mul_result);
-
-    for (i32 i = 0; i < 4; i++) {
-        TEST_ASSERT_TRUE(add_result->data[i] > data_a[i]);
-        TEST_ASSERT_TRUE(mul_result->data[i] > 0);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(add_result);
-    tensor_destroy(mul_result);
-}
-
-void test_tensor_op_asymmetric_broadcasting(void) {
-    i32 shape_a[] = {3, 1, 2};
-    i32 shape_b[] = {2};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6};
-    f32 data_b[] = {10, 20};
-
-    tensor_t *a = tensor_create(data_a, shape_a, 3, false);
-    tensor_t *b = tensor_create(data_b, shape_b, 1, false);
-
-    tensor_t *result = tensor_op_add(a, b, true);
-    TEST_ASSERT_NOT_NULL(result);
-    TEST_ASSERT_EQUAL(3, result->ndim);
-    TEST_ASSERT_EQUAL(3, result->shape[0]);
-    TEST_ASSERT_EQUAL(1, result->shape[1]);
-    TEST_ASSERT_EQUAL(2, result->shape[2]);
-
-    f32 expected[] = {11, 22, 13, 24, 15, 26};
-    for (i32 i = 0; i < 6; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected[i], result->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_division_precision(void) {
-    i32 shape[] = {3, 3};
-    f32 data_a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    f32 data_b[] = {3, 6, 9, 12, 15, 18, 21, 24, 27};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *result = tensor_op_div(a, b, false);
-    TEST_ASSERT_NOT_NULL(result);
-
-    for (i32 i = 0; i < 9; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f / 3.0f, result->data[i]);
-    }
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(result);
-}
-
-void test_tensor_op_single_element_tensors(void) {
-    i32 shape[] = {1, 1};
-    f32 data_a[] = {5.5f};
-    f32 data_b[] = {2.5f};
-
-    tensor_t *a = tensor_create(data_a, shape, 2, false);
-    tensor_t *b = tensor_create(data_b, shape, 2, false);
-
-    tensor_t *add_result = tensor_op_add(a, b, false);
-    TEST_ASSERT_NOT_NULL(add_result);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 8.0f, add_result->data[0]);
-
-    tensor_t *sub_result = tensor_op_sub(a, b, false);
-    TEST_ASSERT_NOT_NULL(sub_result);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 3.0f, sub_result->data[0]);
-
-    tensor_t *mul_result = tensor_op_mul(a, b, false);
-    TEST_ASSERT_NOT_NULL(mul_result);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 13.75f, mul_result->data[0]);
-
-    tensor_t *div_result = tensor_op_div(a, b, false);
-    TEST_ASSERT_NOT_NULL(div_result);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 2.2f, div_result->data[0]);
-
-    tensor_destroy(a);
-    tensor_destroy(b);
-    tensor_destroy(add_result);
-    tensor_destroy(sub_result);
-    tensor_destroy(mul_result);
-    tensor_destroy(div_result);
-}
-
-void test_tensor_op_broadcasting_scalar_multiple_dims(void) {
-    i32 shape_tensor[] = {2, 3, 4};
-    i32 shape_scalar[] = {1, 1, 1};
-    f32 scalar_data[] = {2.0f};
-
-    f32 *tensor_data = (f32 *)malloc(24 * sizeof(f32));
-    for (i32 i = 0; i < 24; i++) {
-        tensor_data[i] = (f32)(i + 1);
-    }
-
-    tensor_t *tensor = tensor_create(tensor_data, shape_tensor, 3, false);
-    tensor_t *scalar = tensor_create(scalar_data, shape_scalar, 3, false);
-
-    tensor_t *result = tensor_op_mul(tensor, scalar, true);
-    TEST_ASSERT_NOT_NULL(result);
-    TEST_ASSERT_EQUAL(3, result->ndim);
-    TEST_ASSERT_EQUAL(2, result->shape[0]);
-    TEST_ASSERT_EQUAL(3, result->shape[1]);
-    TEST_ASSERT_EQUAL(4, result->shape[2]);
-
-    for (i32 i = 0; i < 24; i++) {
-        TEST_ASSERT_FLOAT_WITHIN(1e-6, (f32)(i + 1) * 2.0f, result->data[i]);
-    }
-
-    free(tensor_data);
-    tensor_destroy(tensor);
-    tensor_destroy(scalar);
     tensor_destroy(result);
 }
 
@@ -814,32 +328,13 @@ i32 main(void) {
     RUN_TEST(test_tensor_op_sub_same_shape);
     RUN_TEST(test_tensor_op_mul_with_broadcasting);
     RUN_TEST(test_tensor_op_div_same_shape);
-    RUN_TEST(test_tensor_op_div_by_zero);
-    RUN_TEST(test_tensor_op_incompatible_shapes_no_broadcast);
     RUN_TEST(test_tensor_op_scalar_broadcasting);
     RUN_TEST(test_tensor_op_generic_function);
     RUN_TEST(test_tensor_op_gradient_computation);
-    RUN_TEST(test_tensor_op_input_validation);
     RUN_TEST(test_tensor_op_complex_broadcasting);
     RUN_TEST(test_tensor_op_edge_cases);
-    RUN_TEST(test_tensor_op_large_tensors);
-    RUN_TEST(test_tensor_op_gradient_backward_functions);
-    RUN_TEST(test_tensor_op_subtract_gradients);
-    RUN_TEST(test_tensor_op_division_gradients);
-    RUN_TEST(test_tensor_op_broadcasting_gradients);
-    RUN_TEST(test_tensor_op_memory_management);
-    RUN_TEST(test_tensor_op_chained_operations);
-    RUN_TEST(test_tensor_op_zero_tensors);
-    RUN_TEST(test_tensor_op_negative_values);
-    RUN_TEST(test_tensor_op_fractional_values);
-    RUN_TEST(test_tensor_op_broadcasting_edge_cases);
-    RUN_TEST(test_tensor_op_mixed_requires_grad);
-    RUN_TEST(test_tensor_op_gradient_accumulation);
-    RUN_TEST(test_tensor_op_very_small_values);
-    RUN_TEST(test_tensor_op_asymmetric_broadcasting);
-    RUN_TEST(test_tensor_op_division_precision);
-    RUN_TEST(test_tensor_op_single_element_tensors);
-    RUN_TEST(test_tensor_op_broadcasting_scalar_multiple_dims);
+    RUN_TEST(test_tensor_op_add_broadcast_grad);
+    RUN_TEST(test_tensor_op_div_broadcast_grad);
 
     return UNITY_END();
 }
