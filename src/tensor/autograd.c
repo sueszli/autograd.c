@@ -1,6 +1,6 @@
 #include "autograd.h"
-#include "ops.h"
 #include "../utils/types.h"
+#include "ops.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
