@@ -4,10 +4,10 @@
 #include "broadcast.h"
 #include "tensor.h"
 #include <assert.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 typedef enum {
     TENSOR_OP_ADD,
