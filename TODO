@@ -1,5 +1,8 @@
 todo:
 
+
+- study `tensor_reduce` in broadcast.c/h
+
 - study ops.c/h, add all the missing operations in a modern neural net, write test cases and run `make test`
 
 - study tensor.c/h and autograd.c/h
