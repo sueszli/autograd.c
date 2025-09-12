@@ -158,7 +158,7 @@ static tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_s
     return target;
 }
 
-static bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
+bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
     assert(a != NULL && b != NULL);
     if (a->ndim != b->ndim)
         return false;
@@ -186,4 +186,62 @@ broadcasted_tensors_t tensor_broadcast(tensor_t *a, tensor_t *b) {
     tensor_t *b_b = tensor_broadcast_to(b, broadcast_shape, broadcast_ndim);
 
     return (broadcasted_tensors_t){b_a, b_b};
+}
+
+tensor_t *tensor_reduce(const tensor_t *broadcasted_grad, const tensor_t *target_tensor) {
+    assert(broadcasted_grad != NULL && target_tensor != NULL);
+
+    if (tensor_shapes_match(broadcasted_grad, target_tensor)) {
+        i32 *shape_copy = (i32 *)malloc((u64)target_tensor->ndim * sizeof(i32));
+        assert(shape_copy != NULL);
+        memcpy(shape_copy, target_tensor->shape, (u64)target_tensor->ndim * sizeof(i32));
+
+        tensor_t *result = tensor_create(NULL, shape_copy, target_tensor->ndim, false);
+        free(shape_copy);
+
+        u64 size = tensor_size(target_tensor);
+        memcpy(result->data, broadcasted_grad->data, size * sizeof(f32));
+        return result;
+    }
+
+    u64 target_size = tensor_size(target_tensor);
+    u64 broadcasted_size = tensor_size(broadcasted_grad);
+
+    i32 *target_shape_copy = (i32 *)malloc((u64)target_tensor->ndim * sizeof(i32));
+    assert(target_shape_copy != NULL);
+    memcpy(target_shape_copy, target_tensor->shape, (u64)target_tensor->ndim * sizeof(i32));
+
+    tensor_t *result = tensor_create(NULL, target_shape_copy, target_tensor->ndim, false);
+    free(target_shape_copy);
+
+    for (u64 i = 0; i < target_size; i++) {
+        result->data[i] = 0.0f;
+    }
+
+    i32 *broadcasted_indices = (i32 *)malloc((u64)broadcasted_grad->ndim * sizeof(i32));
+    i32 *target_indices = (i32 *)malloc((u64)target_tensor->ndim * sizeof(i32));
+    assert(broadcasted_indices != NULL && target_indices != NULL);
+    defer({
+        free(broadcasted_indices);
+        free(target_indices);
+    });
+
+    for (u64 idx = 0; idx < broadcasted_size; idx++) {
+        i32 *multi_dim_idx = get_multi_dim_idx(idx, broadcasted_grad->shape, broadcasted_grad->ndim);
+        defer({ free(multi_dim_idx); });
+
+        for (i32 i = 0; i < target_tensor->ndim; i++) {
+            i32 broadcast_dim_idx = broadcasted_grad->ndim - target_tensor->ndim + i;
+            if (broadcast_dim_idx >= 0) {
+                target_indices[i] = target_tensor->shape[i] == 1 ? 0 : multi_dim_idx[broadcast_dim_idx];
+            } else {
+                target_indices[i] = 0;
+            }
+        }
+
+        u64 target_idx = get_linear_idx(target_indices, target_tensor->shape, target_tensor->ndim);
+        result->data[target_idx] += broadcasted_grad->data[idx];
+    }
+
+    return result;
 }

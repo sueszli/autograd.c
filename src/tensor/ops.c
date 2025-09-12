@@ -16,65 +16,34 @@ typedef enum {
     TENSOR_OP_DIV,
 } tensor_op_type_t;
 
-static bool shapes_match(const tensor_t *a, const tensor_t *b) {
-    if (a->ndim != b->ndim) {
-        return false;
-    }
-    for (i32 i = 0; i < a->ndim; i++) {
-        if (a->shape[i] != b->shape[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static void reduce_gradient_if_needed(tensor_t *grad, const tensor_t *original_tensor) {
-    if (shapes_match(grad, original_tensor)) {
-        return;
-    }
-
-    u64 grad_size = tensor_size(grad);
-    u64 original_size = tensor_size(original_tensor);
-    f32 *reduced_data = (f32 *)calloc(original_size, sizeof(f32));
-    assert(reduced_data != NULL);
-
-    for (u64 i = 0; i < grad_size; i++) {
-        reduced_data[i % original_size] += grad->data[i];
-    }
-
-    free(grad->data);
-    grad->data = reduced_data;
-
-    free(grad->shape);
-    grad->shape = (i32 *)malloc((size_t)original_tensor->ndim * sizeof(i32));
-    assert(grad->shape != NULL);
-    memcpy(grad->shape, original_tensor->shape, (size_t)original_tensor->ndim * sizeof(i32));
-    grad->ndim = original_tensor->ndim;
-}
-
 static void accumulate_gradient(tensor_t *tensor, tensor_t *grad_update, bool needs_broadcasting) {
     if (!tensor->requires_grad) {
         return;
     }
 
+    tensor_t *reduced_grad = grad_update;
+    if (needs_broadcasting) {
+        reduced_grad = tensor_reduce(grad_update, tensor);
+    }
+
     if (tensor->grad == NULL) {
-        tensor->grad = tensor_create(NULL, grad_update->shape, grad_update->ndim, false);
+        tensor->grad = tensor_create(NULL, reduced_grad->shape, reduced_grad->ndim, false);
         tensor_zero_grad(tensor);
     }
 
-    for (u64 i = 0; i < tensor_size(grad_update); i++) {
-        tensor->grad->data[i] += grad_update->data[i];
+    for (u64 i = 0; i < tensor_size(reduced_grad); i++) {
+        tensor->grad->data[i] += reduced_grad->data[i];
     }
 
     if (needs_broadcasting) {
-        reduce_gradient_if_needed(tensor->grad, tensor);
+        tensor_destroy(reduced_grad);
     }
 }
 
 static tensor_t *tensor_op_execution(tensor_t *a, tensor_t *b, tensor_op_type_t op_type) {
     assert(a != NULL && b != NULL);
 
-    bool needs_broadcasting = !shapes_match(a, b);
+    bool needs_broadcasting = !tensor_shapes_match(a, b);
     tensor_t *op_a = a;
     tensor_t *op_b = b;
 
@@ -199,7 +168,7 @@ static tensor_t *tensor_op(tensor_t *a, tensor_t *b, tensor_op_type_t op_type) {
         assert(result->ctx != NULL);
         result->ctx[0] = a;
         result->ctx[1] = b;
-        bool needs_broadcasting = !shapes_match(a, b);
+        bool needs_broadcasting = !tensor_shapes_match(a, b);
         result->ctx[2] = (void *)(intptr_t)needs_broadcasting;
         result->ctx_size = 3;
 
