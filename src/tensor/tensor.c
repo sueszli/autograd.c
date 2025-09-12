@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Function to calculate the total number of elements in a tensor
 u64 tensor_size(const tensor_t *t) {
     if (t == NULL)
         return 0;
@@ -15,7 +14,6 @@ u64 tensor_size(const tensor_t *t) {
     return size;
 }
 
-// Create a new tensor
 tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad) {
     tensor_t *t = (tensor_t *)malloc(sizeof(tensor_t));
     t->shape = (i32 *)malloc((u64)ndim * sizeof(i32));
@@ -41,7 +39,6 @@ tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad) {
     return t;
 }
 
-// Destroy a tensor and its data
 void tensor_destroy(tensor_t *t) {
     if (t == NULL)
         return;
@@ -93,7 +90,7 @@ tensor_t *tensor_transpose(tensor_t *a) {
 
     tensor_t *result = tensor_create(new_data, new_shape, 2, a->requires_grad);
     free(new_data);
-    result->requires_grad = false; // Transpose backward is not implemented for simplicity
+    result->requires_grad = false; // transpose backward is not implemented for simplicity
 
     return result;
 }

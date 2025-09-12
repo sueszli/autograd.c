@@ -5,13 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// A node in the graph for topological sort
 typedef struct TopoNode {
     tensor_t *tensor;
     bool visited;
 } TopoNode;
 
-// A list of nodes
 typedef struct NodeList {
     TopoNode **nodes;
     i32 count;
@@ -37,10 +35,14 @@ void find_all_tensors(NodeList *all_nodes, tensor_t *current) {
     nodelist_add(all_nodes, new_node);
 
     if (current->grad_fn == cross_entropy_backward) {
-        find_all_tensors(all_nodes, (tensor_t *)current->ctx[0]);
+        if (current->ctx && current->ctx[0]) {
+            find_all_tensors(all_nodes, (tensor_t *)current->ctx[0]);
+        }
     } else if (current->ctx) {
         for (i32 i = 0; i < current->ctx_size; i++) {
-            find_all_tensors(all_nodes, (tensor_t *)current->ctx[i]);
+            if (current->ctx[i]) {
+                find_all_tensors(all_nodes, (tensor_t *)current->ctx[i]);
+            }
         }
     }
 }
@@ -59,10 +61,14 @@ void build_topo_sort(NodeList *sorted, NodeList *all_nodes, tensor_t *t) {
     node->visited = true;
 
     if (t->grad_fn == cross_entropy_backward) {
-        build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[0]);
+        if (t->ctx && t->ctx[0]) {
+            build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[0]);
+        }
     } else if (t->ctx) {
         for (i32 i = 0; i < t->ctx_size; i++) {
-            build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[i]);
+            if (t->ctx[i]) {
+                build_topo_sort(sorted, all_nodes, (tensor_t *)t->ctx[i]);
+            }
         }
     }
     nodelist_add(sorted, node);
