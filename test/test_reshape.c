@@ -1,4 +1,4 @@
-#include "../src/tensor/broadcast.h"
+#include "../src/tensor/reshape.h"
 #include "../src/tensor/tensor.h"
 #include "../src/utils/types.h"
 #include <math.h>
@@ -17,7 +17,7 @@ void test_tensor_broadcast_same_shape(void) {
     tensor_t *a = tensor_create(data_a, shape, 2, false);
     tensor_t *b = tensor_create(data_b, shape, 2, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(a, b);
+    tensor_pair_t result = tensor_broadcast(a, b);
 
     TEST_ASSERT_EQUAL_PTR(a, result.a);
     TEST_ASSERT_EQUAL_PTR(b, result.b);
@@ -35,7 +35,7 @@ void test_tensor_broadcast_scalar_and_tensor(void) {
     tensor_t *scalar = tensor_create(data_scalar, shape_scalar, 1, false);
     tensor_t *tensor = tensor_create(data_tensor, shape_tensor, 2, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(scalar, tensor);
+    tensor_pair_t result = tensor_broadcast(scalar, tensor);
 
     TEST_ASSERT_NOT_EQUAL(scalar, result.a);
     TEST_ASSERT_NOT_EQUAL(tensor, result.b);
@@ -68,7 +68,7 @@ void test_tensor_broadcast_different_dimensions(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 3, false);
     tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(a, b);
+    tensor_pair_t result = tensor_broadcast(a, b);
 
     TEST_ASSERT_EQUAL(3, result.a->ndim);
     TEST_ASSERT_EQUAL(2, result.a->shape[0]);
@@ -95,7 +95,7 @@ void test_tensor_broadcast_already_broadcasted(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, false);
     tensor_t *b = tensor_create(data_b, shape_b, 2, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(a, b);
+    tensor_pair_t result = tensor_broadcast(a, b);
 
     TEST_ASSERT_EQUAL_PTR(a, result.a);
     TEST_ASSERT_EQUAL_PTR(b, result.b);
@@ -113,7 +113,7 @@ void test_tensor_broadcast_1d_to_3d(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 1, false);
     tensor_t *b = tensor_create(data_b, shape_b, 3, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(a, b);
+    tensor_pair_t result = tensor_broadcast(a, b);
 
     TEST_ASSERT_EQUAL(3, result.a->ndim);
     TEST_ASSERT_EQUAL(2, result.a->shape[0]);
@@ -140,7 +140,7 @@ void test_tensor_broadcast_to_higher_dimension(void) {
     tensor_t *a = tensor_create(data_a, shape_a, 2, false);
     tensor_t *b = tensor_create(data_b, shape_b, 4, false);
 
-    broadcasted_tensors_t result = tensor_broadcast(a, b);
+    tensor_pair_t result = tensor_broadcast(a, b);
 
     TEST_ASSERT_EQUAL(4, result.a->ndim);
     TEST_ASSERT_EQUAL(1, result.a->shape[0]);
@@ -296,6 +296,165 @@ void test_tensor_reduce_broadcast_complex(void) {
     tensor_destroy(result);
 }
 
+void test_tensor_reshape(void) {
+    i32 shape[] = {2, 3};
+    f32 data[] = {1, 2, 3, 4, 5, 6};
+    tensor_t *a = tensor_create(data, shape, 2, false);
+
+    i32 new_shape[] = {6};
+    tensor_t *b = tensor_reshape(a, new_shape, 1);
+
+    TEST_ASSERT_EQUAL(1, b->ndim);
+    TEST_ASSERT_EQUAL(6, b->shape[0]);
+    TEST_ASSERT_NOT_EQUAL(a->data, b->data);
+    for (u64 i = 0; i < tensor_size(a); i++) {
+        TEST_ASSERT_EQUAL(a->data[i], b->data[i]);
+    }
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_reshape_view(void) {
+    i32 shape[] = {2, 3};
+    f32 data[] = {1, 2, 3, 4, 5, 6};
+    tensor_t *a = tensor_create(data, shape, 2, false);
+
+    i32 new_shape[] = {3, 2};
+    tensor_t *b = tensor_reshape(a, new_shape, 2);
+
+    i32 new_shape2[] = {6};
+    tensor_t *c = tensor_reshape(b, new_shape2, 1);
+
+    TEST_ASSERT_NOT_EQUAL(a->data, b->data);
+    TEST_ASSERT_NOT_EQUAL(a->data, c->data);
+    TEST_ASSERT_NOT_EQUAL(b->data, c->data);
+    for (u64 i = 0; i < tensor_size(a); i++) {
+        TEST_ASSERT_EQUAL(a->data[i], b->data[i]);
+        TEST_ASSERT_EQUAL(a->data[i], c->data[i]);
+    }
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+    tensor_destroy(c);
+}
+
+void test_tensor_reshape_to_scalar(void) {
+    i32 shape[] = {1, 1, 1};
+    f32 data[] = {42.0f};
+    tensor_t *a = tensor_create(data, shape, 3, false);
+
+    i32 new_shape[] = {1};
+    tensor_t *b = tensor_reshape(a, new_shape, 1);
+
+    TEST_ASSERT_EQUAL(1, b->ndim);
+    TEST_ASSERT_EQUAL(1, b->shape[0]);
+    TEST_ASSERT_NOT_EQUAL(a->data, b->data);
+    TEST_ASSERT_EQUAL(a->data[0], b->data[0]);
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_reshape_from_scalar(void) {
+    i32 shape[] = {1};
+    f32 data[] = {42.0f};
+    tensor_t *a = tensor_create(data, shape, 1, false);
+
+    i32 new_shape[] = {1, 1, 1, 1};
+    tensor_t *b = tensor_reshape(a, new_shape, 4);
+
+    TEST_ASSERT_EQUAL(4, b->ndim);
+    TEST_ASSERT_EQUAL(1, b->shape[0]);
+    TEST_ASSERT_EQUAL(1, b->shape[1]);
+    TEST_ASSERT_EQUAL(1, b->shape[2]);
+    TEST_ASSERT_EQUAL(1, b->shape[3]);
+    TEST_ASSERT_NOT_EQUAL(a->data, b->data);
+    TEST_ASSERT_EQUAL(a->data[0], b->data[0]);
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_reduce_to_scalar(void) {
+    i32 broadcasted_shape[] = {2, 3, 4};
+    i32 target_shape[] = {1};
+    f32 broadcasted_data[24];
+    for (int i = 0; i < 24; i++)
+        broadcasted_data[i] = i + 1;
+    f32 target_data[] = {0};
+
+    tensor_t *broadcasted = tensor_create(broadcasted_data, broadcasted_shape, 3, false);
+    tensor_t *target = tensor_create(target_data, target_shape, 1, false);
+
+    tensor_t *result = tensor_reduce(broadcasted, target);
+
+    TEST_ASSERT_EQUAL(1, result->ndim);
+    TEST_ASSERT_EQUAL(1, result->shape[0]);
+    f32 expected_sum = 0;
+    for (int i = 0; i < 24; i++)
+        expected_sum += broadcasted_data[i];
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_sum, result->data[0]);
+
+    tensor_destroy(broadcasted);
+    tensor_destroy(target);
+    tensor_destroy(result);
+}
+
+void test_tensor_reshape_with_minus_one(void) {
+    i32 shape[] = {2, 3, 4};
+    f32 data[24];
+    for (int i = 0; i < 24; i++)
+        data[i] = (f32)i;
+    tensor_t *a = tensor_create(data, shape, 3, false);
+
+    i32 new_shape[] = {6, 4};
+    tensor_t *b = tensor_reshape(a, new_shape, 2);
+
+    TEST_ASSERT_EQUAL(2, b->ndim);
+    TEST_ASSERT_EQUAL(6, b->shape[0]);
+    TEST_ASSERT_EQUAL(4, b->shape[1]);
+    TEST_ASSERT_NOT_EQUAL(a->data, b->data);
+    for (u64 i = 0; i < tensor_size(a); i++) {
+        TEST_ASSERT_EQUAL(a->data[i], b->data[i]);
+    }
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_transpose_2d(void) {
+    i32 shape[] = {2, 3};
+    f32 data[] = {1, 2, 3, 4, 5, 6};
+    tensor_t *a = tensor_create(data, shape, 2, false);
+    tensor_t *b = tensor_transpose(a);
+
+    TEST_ASSERT_EQUAL(2, b->ndim);
+    TEST_ASSERT_EQUAL(3, b->shape[0]);
+    TEST_ASSERT_EQUAL(2, b->shape[1]);
+
+    f32 expected_data[] = {1, 4, 2, 5, 3, 6};
+    for (int i = 0; i < 6; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_data[i], b->data[i]);
+    }
+
+    tensor_destroy(a);
+    tensor_destroy(b);
+}
+
+void test_tensor_transpose_non_2d(void) {
+    i32 shape[] = {2, 3, 4};
+    f32 data[24];
+    for (int i = 0; i < 24; i++)
+        data[i] = (f32)i;
+    tensor_t *a = tensor_create(data, shape, 3, false);
+    tensor_t *b = tensor_transpose(a);
+
+    TEST_ASSERT_NULL(b);
+
+    tensor_destroy(a);
+}
+
 i32 main(void) {
     UNITY_BEGIN();
 
@@ -314,6 +473,16 @@ i32 main(void) {
     RUN_TEST(test_tensor_reduce_broadcast_scalar_to_tensor);
     RUN_TEST(test_tensor_reduce_broadcast_dimension_reduction);
     RUN_TEST(test_tensor_reduce_broadcast_complex);
+
+    RUN_TEST(test_tensor_reshape);
+    RUN_TEST(test_tensor_reshape_view);
+    RUN_TEST(test_tensor_reshape_to_scalar);
+    RUN_TEST(test_tensor_reshape_from_scalar);
+    RUN_TEST(test_tensor_reduce_to_scalar);
+    RUN_TEST(test_tensor_reshape_with_minus_one);
+
+    RUN_TEST(test_tensor_transpose_2d);
+    RUN_TEST(test_tensor_transpose_non_2d);
 
     return UNITY_END();
 }
