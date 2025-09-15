@@ -46,8 +46,7 @@ if(BUILD_TESTS)
     )
 
     set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
-    set(CJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
     set(UNITY_EXTENSION_FIXTURE OFF CACHE BOOL "" FORCE)
     set(UNITY_EXTENSION_MEMORY OFF CACHE BOOL "" FORCE)
@@ -74,7 +73,6 @@ target_include_directories(tensor INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_executable(binary ${MAIN_SOURCES} ${DATASET_SOURCES} ${EVAL_SOURCES})
 target_link_libraries(binary PRIVATE utils tensor m) # math
-target_include_directories(binary PRIVATE ${cjson_SOURCE_DIR})
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND NOT DISABLE_ASAN)
     target_compile_options(binary PRIVATE -fsanitize=address)
@@ -102,7 +100,7 @@ if(BUILD_TESTS)
             target_sources(${TEST_EXECUTABLE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/eval/metrics.c ${CMAKE_CURRENT_SOURCE_DIR}/src/datasets/cifar10.c)
         endif()
         
-        if (TEST_NAME STREQUAL "test_broadcast" OR TEST_NAME STREQUAL "test_ops")
+        if (TEST_NAME STREQUAL "test_reshape" OR TEST_NAME STREQUAL "test_ops")
             target_link_libraries(${TEST_EXECUTABLE} PRIVATE tensor m)
         endif()
         

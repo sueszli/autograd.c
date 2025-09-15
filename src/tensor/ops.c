@@ -1,7 +1,7 @@
 #include "ops.h"
 #include "../utils/defer.h"
 #include "../utils/types.h"
-#include "broadcast.h"
+#include "reshape.h"
 #include "tensor.h"
 #include <assert.h>
 #include <math.h>
@@ -48,7 +48,7 @@ static tensor_t *tensor_op_execution(tensor_t *a, tensor_t *b, tensor_op_type_t 
     tensor_t *op_b = b;
 
     if (needs_broadcasting) {
-        broadcasted_tensors_t broadcasted = tensor_broadcast(a, b);
+        tensor_pair_t broadcasted = tensor_broadcast(a, b);
         op_a = broadcasted.a;
         op_b = broadcasted.b;
     } else {

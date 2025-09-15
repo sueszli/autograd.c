@@ -1,4 +1,4 @@
-#include "broadcast.h"
+#include "reshape.h"
 #include "../utils/defer.h"
 #include "../utils/types.h"
 #include <assert.h>
@@ -16,10 +16,10 @@ static inline i32 get_dim(const tensor_t *tensor, i32 i) {
 
 // example: [3,1,4] and [2,4]
 //
-// position:  2  1  0  ← dimension positions (right-to-left)
+// position:  2  1  0
 //            ↑  ↑  ↑
 // tensor A: [3, 1, 4]
-// tensor B:    [2, 4]  ← B doesn't have position 2
+// tensor B:    [2, 4]
 //
 // (1) compare: A[0] = 4 vs B[0] = 4 ✓
 // (2) compare: A[1] = 1 vs B[1] = 2 ✓ (1 can broadcast)
@@ -93,6 +93,20 @@ static u64 get_linear_idx(const i32 *indices, const i32 *shape, i32 ndim) {
     return index;
 }
 
+// example:
+//
+// ┌─────┬─────┬─────┐
+// │ [0] │ [1] │ [2] │
+// ├─────┼─────┼─────┤
+// │ [3] │ [4] │ [5] │
+// └─────┴─────┴─────┘
+//
+// - linear_index = 5
+// - shape = [2, 3]
+// - ndim = 2
+//
+// result: [1, 2]
+//
 static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
     assert(shape != NULL);
     i32 *indices = (i32 *)malloc((u64)ndim * sizeof(i32));
@@ -102,6 +116,17 @@ static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
         linear_index /= (u64)shape[i];
     }
     return indices;
+}
+
+static void get_reduced_indices(i32 *reduced_indices, const i32 *expanded_indices, const i32 *reduced_shape, i32 reduced_ndim, i32 expanded_ndim) {
+    for (i32 i = 0; i < reduced_ndim; i++) {
+        i32 expanded_idx = expanded_ndim - reduced_ndim + i;
+        if (expanded_idx >= 0) {
+            reduced_indices[i] = reduced_shape[i] == 1 ? 0 : expanded_indices[expanded_idx];
+        } else {
+            reduced_indices[i] = 0;
+        }
+    }
 }
 
 // example:
@@ -121,7 +146,7 @@ static i32 *get_multi_dim_idx(u64 linear_index, const i32 *shape, i32 ndim) {
 //     4     |     [1,1]        |     [1,0]        |       1       |      7
 //     5     |     [1,2]        |     [1,0]        |       1       |      7
 //
-static tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
+static tensor_t *tensor_expand(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
     assert(tensor != NULL && target_shape != NULL);
     assert(tensor_can_broadcast_to_shape(tensor, target_shape, target_ndim));
 
@@ -142,14 +167,7 @@ static tensor_t *tensor_broadcast_to(const tensor_t *tensor, const i32 *target_s
         i32 *target_indices = get_multi_dim_idx(i, target_shape, target_ndim);
         defer({ free(target_indices); });
 
-        for (i32 j = 0; j < tensor->ndim; j++) {
-            i32 target_idx = target_ndim - tensor->ndim + j;
-            if (target_idx >= 0) {
-                source_indices[j] = tensor->shape[j] == 1 ? 0 : target_indices[target_idx];
-            } else {
-                source_indices[j] = 0;
-            }
-        }
+        get_reduced_indices(source_indices, target_indices, tensor->shape, tensor->ndim, target_ndim);
 
         u64 source_idx = get_linear_idx(source_indices, tensor->shape, tensor->ndim);
         target->data[i] = tensor->data[source_idx];
@@ -169,11 +187,30 @@ bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
     return true;
 }
 
-broadcasted_tensors_t tensor_broadcast(tensor_t *a, tensor_t *b) {
+// Broadcasts two tensors to a common shape.
+//
+// example:
+//
+//    tensor a (2x1):      tensor b (3):
+//    ┌───┐                ┌───┬───┬───┐
+//    │ 1 │                │ 4 │ 5 │ 6 │
+//    │ 2 │                └───┴───┴───┘
+//    └───┘
+//
+//             - broadcast both to (2x3) ->
+//
+//    tensor a (2x3):      tensor b (2x3):
+//    ┌───┬───┬───┐        ┌───┬───┬───┐
+//    │ 1 │ 1 │ 1 │        │ 4 │ 5 │ 6 │
+//    ├───┼───┼───┤        ├───┼───┼───┤
+//    │ 2 │ 2 │ 2 │        │ 4 │ 5 │ 6 │
+//    └───┴───┴───┘        └───┴───┴───┘
+//
+tensor_pair_t tensor_broadcast(tensor_t *a, tensor_t *b) {
     assert(a != NULL && b != NULL);
 
     if (tensor_shapes_match(a, b)) {
-        return (broadcasted_tensors_t){a, b};
+        return (tensor_pair_t){a, b};
     }
 
     assert(tensor_can_broadcast(a, b));
@@ -182,12 +219,33 @@ broadcasted_tensors_t tensor_broadcast(tensor_t *a, tensor_t *b) {
     i32 *broadcast_shape = get_broadcast_shape(a, b, &broadcast_ndim);
     defer({ free(broadcast_shape); });
 
-    tensor_t *b_a = tensor_broadcast_to(a, broadcast_shape, broadcast_ndim);
-    tensor_t *b_b = tensor_broadcast_to(b, broadcast_shape, broadcast_ndim);
+    tensor_t *b_a = tensor_expand(a, broadcast_shape, broadcast_ndim);
+    tensor_t *b_b = tensor_expand(b, broadcast_shape, broadcast_ndim);
 
-    return (broadcasted_tensors_t){b_a, b_b};
+    return (tensor_pair_t){b_a, b_b};
 }
 
+// Reduces a broadcasted gradient back to the original tensor's shape.
+// This is used during backpropagation for broadcasted operations.
+//
+// example:
+//
+//   broadcasted_grad (2x3):      target_tensor (2x1):
+//    ┌───┬───┬───┐               ┌───┐
+//    │ 1 │ 2 │ 3 │               │ 0 │
+//    ├───┼───┼───┤               │ 0 │
+//    │ 4 │ 5 │ 6 │               └───┘
+//    └───┴───┴───┘
+//
+//             - reduce grad to (2x1) ->
+//
+//   result (2x1):
+//    ┌───┐
+//    │ 6 │  (1+2+3)
+//    ├───┤
+//    │ 15│  (4+5+6)
+//    └───┘
+//
 tensor_t *tensor_reduce(const tensor_t *broadcasted_grad, const tensor_t *target_tensor) {
     assert(broadcasted_grad != NULL && target_tensor != NULL);
 
@@ -218,30 +276,57 @@ tensor_t *tensor_reduce(const tensor_t *broadcasted_grad, const tensor_t *target
         result->data[i] = 0.0f;
     }
 
-    i32 *broadcasted_indices = (i32 *)malloc((u64)broadcasted_grad->ndim * sizeof(i32));
     i32 *target_indices = (i32 *)malloc((u64)target_tensor->ndim * sizeof(i32));
-    assert(broadcasted_indices != NULL && target_indices != NULL);
-    defer({
-        free(broadcasted_indices);
-        free(target_indices);
-    });
+    assert(target_indices != NULL);
+    defer({ free(target_indices); });
 
     for (u64 idx = 0; idx < broadcasted_size; idx++) {
         i32 *multi_dim_idx = get_multi_dim_idx(idx, broadcasted_grad->shape, broadcasted_grad->ndim);
         defer({ free(multi_dim_idx); });
 
-        for (i32 i = 0; i < target_tensor->ndim; i++) {
-            i32 broadcast_dim_idx = broadcasted_grad->ndim - target_tensor->ndim + i;
-            if (broadcast_dim_idx >= 0) {
-                target_indices[i] = target_tensor->shape[i] == 1 ? 0 : multi_dim_idx[broadcast_dim_idx];
-            } else {
-                target_indices[i] = 0;
-            }
-        }
+        get_reduced_indices(target_indices, multi_dim_idx, target_tensor->shape, target_tensor->ndim, broadcasted_grad->ndim);
 
         u64 target_idx = get_linear_idx(target_indices, target_tensor->shape, target_tensor->ndim);
         result->data[target_idx] += broadcasted_grad->data[idx];
     }
 
     return result;
+}
+
+// example:
+//
+// ┌─────┬─────┬─────┐
+// │ [0] │ [1] │ [2] │
+// ├─────┼─────┼─────┤
+// │ [3] │ [4] │ [5] │   - reshape to (3, 2) ->
+// └─────┴─────┴─────┘
+//   shape: (2, 3)
+//
+// ┌─────┬─────┐
+// │ [0] │ [1] │
+// ├─────┼─────┤
+// │ [2] │ [3] │
+// ├─────┼─────┤
+// │ [4] │ [5] │
+// └─────┴─────┘
+//   shape: (3, 2)
+//
+tensor_t *tensor_reshape(tensor_t *tensor, i32 *new_shape, i32 new_ndim) {
+    assert(tensor != NULL && new_shape != NULL);
+
+    u64 old_size = tensor_size(tensor);
+    u64 new_size = 1;
+    for (i32 i = 0; i < new_ndim; i++) {
+        new_size *= (u64)new_shape[i];
+    }
+    assert(old_size == new_size);
+
+    i32 *shape_copy = (i32 *)malloc((u64)new_ndim * sizeof(i32));
+    assert(shape_copy != NULL);
+    memcpy(shape_copy, new_shape, (u64)new_ndim * sizeof(i32));
+
+    tensor_t *new_tensor = tensor_create(tensor->data, shape_copy, new_ndim, tensor->requires_grad);
+    free(shape_copy);
+
+    return new_tensor;
 }
