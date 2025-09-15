@@ -4,11 +4,6 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-typedef struct {
-    tensor_t *a;
-    tensor_t *b;
-} tensor_pair_t;
-
 tensor_pair_t tensor_broadcast(tensor_t *a, tensor_t *b);
 
 bool tensor_shapes_match(const tensor_t *a, const tensor_t *b);
