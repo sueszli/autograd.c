@@ -19,6 +19,11 @@ struct tensor_t {
     i32 ctx_size;
 };
 
+typedef struct {
+    tensor_t *a;
+    tensor_t *b;
+} tensor_pair_t;
+
 tensor_t *tensor_create(f32 *data, i32 *shape, i32 ndim, bool requires_grad);
 void tensor_destroy(tensor_t *t);
 
