@@ -1,5 +1,9 @@
 todo:
 
+
+- make one normal mode (asan and ub), one valgrind mode, one test mode
+
+
 - this project has gotten unnecessary complicated. try to reduce the loc and num of files/directories
 - do the whole data downloading stuff simply in shell, no need to write a C program for that
 
