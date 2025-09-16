@@ -1,5 +1,7 @@
 todo:
 
+- this project has gotten unnecessary complicated. try to reduce the loc and num of files/directories
+
 - study `tensor_reduce` in reshape.c/h
 
 - study ops.c/h, add all the missing operations in a modern neural net, write test cases and run `make test`
