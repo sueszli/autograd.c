@@ -1,6 +1,7 @@
 todo:
 
 - this project has gotten unnecessary complicated. try to reduce the loc and num of files/directories
+- do the whole data downloading stuff simply in shell, no need to write a C program for that
 
 - study `tensor_reduce` in reshape.c/h
 
