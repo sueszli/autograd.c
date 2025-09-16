@@ -106,10 +106,6 @@ if(BUILD_TESTS)
         target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
 
         # some tests need additional source files
-        if (TEST_NAME STREQUAL "test_metrics")
-            target_link_libraries(${TEST_EXECUTABLE} PRIVATE datasets eval)
-        endif()
-        
         if (TEST_NAME STREQUAL "test_reshape" OR TEST_NAME STREQUAL "test_ops")
             target_link_libraries(${TEST_EXECUTABLE} PRIVATE tensor m)
         endif()
