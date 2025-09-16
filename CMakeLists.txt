@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(autograd LANGUAGES C)
 
 if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU")
-    message(FATAL_ERROR "needs gcc.")
+    message(FATAL_ERROR "requires gcc.")
 endif()
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
