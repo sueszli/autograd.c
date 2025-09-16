@@ -1,7 +1,5 @@
 todo:
 
-- use generic tuple/triple generator macro and call typedef_tuple/triple in tensor.c/h and use it everywhere necessary as a return type (reshape.c)
-
 - study `tensor_reduce` in reshape.c/h
 
 - study ops.c/h, add all the missing operations in a modern neural net, write test cases and run `make test`
