@@ -1,5 +1,6 @@
 todo:
 
+> in ./cmakelists.txt am i correctly using all possible gcc safety features? use AddressSanitizer by default and        everything that is compatible with it.
 
 - make one normal mode (asan and ub), one valgrind mode, one test mode
 
