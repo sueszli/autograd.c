@@ -23,7 +23,7 @@ static inline i32 get_dim(const tensor_t *tensor, i32 i) {
 //
 // (1) compare: A[0] = 4 vs B[0] = 4 ✓
 // (2) compare: A[1] = 1 vs B[1] = 2 ✓ (1 can broadcast)
-// (3) compare: A[2] = 3 vs B[2] = (missing, treated as 1) ✓
+// (3) compare: A[2] = 3 vs B[2] = 1 ✓ (missing are treated as 1, can broadcast)
 // (4) result shape: [3, 2, 4]
 //
 static bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b) {
@@ -39,21 +39,8 @@ static bool tensor_can_broadcast(const tensor_t *a, const tensor_t *b) {
     return true;
 }
 
-static bool tensor_can_broadcast_to_shape(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
-    assert(tensor != NULL && target_shape != NULL);
-    for (i32 i = 0; i < target_ndim; i++) {
-        i32 tensor_dim = get_dim(tensor, i);
-        i32 target_dim = target_shape[target_ndim - 1 - i];
-        if (tensor_dim != target_dim && tensor_dim != 1) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static i32 *get_broadcast_shape(const tensor_t *a, const tensor_t *b, i32 *out_ndim) {
     assert(a != NULL && b != NULL && out_ndim != NULL);
-    assert(tensor_can_broadcast(a, b));
 
     *out_ndim = imax(a->ndim, b->ndim);
     i32 *shape = (i32 *)malloc((u64)*out_ndim * sizeof(i32));
@@ -62,6 +49,7 @@ static i32 *get_broadcast_shape(const tensor_t *a, const tensor_t *b, i32 *out_n
     for (i32 i = 0; i < *out_ndim; i++) {
         i32 dim_a = get_dim(a, i);
         i32 dim_b = get_dim(b, i);
+        assert(dim_a == dim_b || dim_a == 1 || dim_b == 1);
         shape[*out_ndim - 1 - i] = imax(dim_a, dim_b);
     }
 
@@ -148,7 +136,12 @@ static void get_reduced_indices(i32 *reduced_indices, const i32 *expanded_indice
 //
 static tensor_t *tensor_expand(const tensor_t *tensor, const i32 *target_shape, i32 target_ndim) {
     assert(tensor != NULL && target_shape != NULL);
-    assert(tensor_can_broadcast_to_shape(tensor, target_shape, target_ndim));
+
+    for (i32 i = 0; i < target_ndim; i++) {
+        i32 dim_a = get_dim(tensor, i);
+        i32 dim_b = target_shape[target_ndim - 1 - i];
+        assert(dim_a == dim_b || dim_a == 1);
+    }
 
     i32 *shape_copy = (i32 *)malloc((u64)target_ndim * sizeof(i32));
     assert(shape_copy != NULL);
@@ -187,7 +180,7 @@ bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
     return true;
 }
 
-// Broadcasts two tensors to a common shape.
+// broadcasts two tensors to a common shape.
 //
 // example:
 //
@@ -197,7 +190,7 @@ bool tensor_shapes_match(const tensor_t *a, const tensor_t *b) {
 //    │ 2 │                └───┴───┴───┘
 //    └───┘
 //
-//             - broadcast both to (2x3) ->
+//    - broadcast both to (2x3) ->
 //
 //    tensor a (2x3):      tensor b (2x3):
 //    ┌───┬───┬───┐        ┌───┬───┬───┐
@@ -213,8 +206,6 @@ tensor_pair_t tensor_broadcast(tensor_t *a, tensor_t *b) {
         return (tensor_pair_t){a, b};
     }
 
-    assert(tensor_can_broadcast(a, b));
-
     i32 broadcast_ndim;
     i32 *broadcast_shape = get_broadcast_shape(a, b, &broadcast_ndim);
     defer({ free(broadcast_shape); });
@@ -225,8 +216,8 @@ tensor_pair_t tensor_broadcast(tensor_t *a, tensor_t *b) {
     return (tensor_pair_t){b_a, b_b};
 }
 
-// Reduces a broadcasted gradient back to the original tensor's shape.
-// This is used during backpropagation for broadcasted operations.
+// reduces a broadcasted gradient back to the original tensor's shape.
+// this is used during backpropagation for broadcasted operations.
 //
 // example:
 //
@@ -317,7 +308,10 @@ tensor_t *tensor_reshape(tensor_t *tensor, i32 *new_shape, i32 new_ndim) {
     u64 old_size = tensor_size(tensor);
     u64 new_size = 1;
     for (i32 i = 0; i < new_ndim; i++) {
+        assert(new_shape[i] > 0);
+        u64 prev_size = new_size;
         new_size *= (u64)new_shape[i];
+        assert(new_size / (u64)new_shape[i] == prev_size);
     }
     assert(old_size == new_size);
 
