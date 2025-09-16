@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(autograd LANGUAGE C)
+project(autograd LANGUAGES C)
 
-if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU") message(FATAL_ERROR "needs gcc.") endif()
+if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU")
+    message(FATAL_ERROR "needs gcc.")
+endif()
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
@@ -10,99 +12,170 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# Enable all warnings and make them errors
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpedantic -Wconversion -Wsign-conversion")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-align -Wcast-qual -Wdisabled-optimization")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wfloat-equal -Wformat=2 -Wformat-nonliteral")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat-security -Wformat-y2k -Wimport")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Winit-self -Winline -Winvalid-pch")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wlong-long -Wmissing-field-initializers")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-format-attribute -Wmissing-include-dirs")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-noreturn -Wpacked -Wpadded")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wredundant-decls -Wshadow")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstack-protector -Wstrict-aliasing=2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wswitch-default -Wswitch-enum")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wunreachable-code -Wunused -Wunused-parameter")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wvariadic-macros -Wwrite-strings")
+# Set C flags based on build type
+set(CMAKE_C_FLAGS_DEBUG "-O1 -g -fno-omit-frame-pointer")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# GCC-specific warnings (most pedantic possible)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wlogical-op -Wstrict-overflow=5")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wundef -Wjump-misses-init")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdouble-promotion -Wformat-truncation=2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat-overflow=2 -Wstringop-overflow=4")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Walloc-zero -Walloca -Warray-bounds=2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wattribute-alias=2 -Wduplicated-branches")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wduplicated-cond -Wtrampolines")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wfloat-conversion -Wmissing-prototypes")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wnested-externs -Wold-style-definition")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes -Wsuggest-attribute=cold")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wsuggest-attribute=const -Wsuggest-attribute=malloc")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-aggressive-loop-optimizations")
-
-# Sanitizers (compatible combination for maximum detection)
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O1 -g -fno-omit-frame-pointer")
-
-# AddressSanitizer + UndefinedBehaviorSanitizer
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=undefined")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=shift")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=shift-exponent")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=shift-base")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=integer-divide-by-zero")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=unreachable")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=vla-bound")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=null")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=return")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=signed-integer-overflow")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=bounds")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=bounds-strict")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=alignment")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=object-size")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=float-divide-by-zero")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=float-cast-overflow")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=nonnull-attribute")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=returns-nonnull-attribute")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=bool")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=enum")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=pointer-overflow")
-
-# Additional sanitizer options for maximum pedantry
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize-address-use-after-scope")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-sanitize-recover=all")  # Exit on first error
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fstack-check")
-
-# Stack protection
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-clash-protection")
-
-# Link flags for sanitizers
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=undefined")
-
-# Create executable
-add_executable(autograd src/main.c)
-
-# ThreadSanitizer (incompatible with AddressSanitizer)
-add_executable(autograd_tsan src/main.c)
-target_compile_options(autograd_tsan PRIVATE
-    -fsanitize=thread
-    -fno-omit-frame-pointer
-    -g -O1
+# Comprehensive warning flags
+add_compile_options(
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+    -Wcast-align
+    -Wcast-qual
+    -Wdisabled-optimization
+    -Wfloat-equal
+    -Wformat=2
+    -Wformat-nonliteral
+    -Wformat-security
+    -Wformat-y2k
+    -Wimport
+    -Winit-self
+    -Winline
+    -Winvalid-pch
+    -Wlong-long
+    -Wmissing-field-initializers
+    -Wmissing-format-attribute
+    -Wmissing-include-dirs
+    -Wmissing-noreturn
+    -Wpacked
+    -Wpadded
+    -Wpointer-arith
+    -Wredundant-decls
+    -Wshadow
+    -Wstack-protector
+    -Wstrict-aliasing=2
+    -Wswitch-default
+    -Wswitch-enum
+    -Wunreachable-code
+    -Wunused
+    -Wunused-parameter
+    -Wvariadic-macros
+    -Wwrite-strings
+    -Wbad-function-cast
+    -Wc++-compat
+    -Wcast-align=strict
+    -Wdate-time
+    -Wdeclaration-after-statement
+    -Wempty-body
+    -Wignored-qualifiers
+    -Wmaybe-uninitialized
+    -Wmissing-declarations
+    -Wmissing-parameter-type
+    -Wnormalized=nfkc
+    -Woverride-init
+    -Wpointer-sign
+    -Wsequence-point
+    -Wsign-compare
+    -Wtype-limits
+    -Wuninitialized
+    -Wunused-but-set-parameter
+    -Wunused-but-set-variable
+    -Wunused-function
+    -Wunused-label
+    -Wunused-local-typedefs
+    -Wunused-macros
+    -Wunused-result
+    -Wunused-value
+    -Wunused-variable
+    -Wvolatile-register-var
+    -Wmissing-braces
+    -Wmultichar
+    -Wparentheses
+    -Wreturn-type
+    -Wtrigraphs
+    -Wlogical-op
+    -Wstrict-overflow=5
+    -Wundef
+    -Wjump-misses-init
+    -Wdouble-promotion
+    -Wformat-truncation=2
+    -Wformat-overflow=2
+    -Wstringop-overflow=4
+    -Walloc-zero
+    -Walloca
+    -Warray-bounds=2
+    -Wattribute-alias=2
+    -Wduplicated-branches
+    -Wduplicated-cond
+    -Wtrampolines
+    -Wfloat-conversion
+    -Wmissing-prototypes
+    -Wnested-externs
+    -Wold-style-definition
+    -Wstrict-prototypes
+    -Wsuggest-attribute=cold
+    -Wsuggest-attribute=const
+    -Wsuggest-attribute=malloc
+    -Wsuggest-attribute=noreturn
+    -Wsuggest-attribute=pure
+    -Wsuggest-attribute=format
+    -Wstringop-truncation
+    -Wmissing-attributes
+    -Wmultistatement-macros
+    -Wrestrict
+    -Wcast-function-type
+    -Wif-not-aligned
+    -Wpacked-not-aligned
+    -Wsuggest-attribute=malloc
+    -Wattribute-warning
+    -Wno-aggressive-loop-optimizations
+    -Wformat-signedness
+    -Wunused-const-variable
 )
-target_link_options(autograd_tsan PRIVATE -fsanitize=thread)
 
-# LeakSanitizer standalone
-add_executable(autograd_lsan src/main.c)
-target_compile_options(autograd_lsan PRIVATE
+# Stack protection and control flow
+add_compile_options(
+    -fstack-protector-all
+    -fstack-clash-protection
+    -fcf-protection=full
+)
+
+# Sanitizers for Debug build
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(
+        -fsanitize=address
+        -fsanitize=undefined
+        -fsanitize=shift
+        -fsanitize=shift-exponent
+        -fsanitize=shift-base
+        -fsanitize=integer-divide-by-zero
+        -fsanitize=unreachable
+        -fsanitize=vla-bound
+        -fsanitize=null
+        -fsanitize=return
+        -fsanitize=signed-integer-overflow
+        -fsanitize=bounds
+        -fsanitize=bounds-strict
+        -fsanitize=alignment
+        -fsanitize=object-size
+        -fsanitize=float-divide-by-zero
+        -fsanitize=float-cast-overflow
+        -fsanitize=nonnull-attribute
+        -fsanitize=returns-nonnull-attribute
+        -fsanitize=bool
+        -fsanitize=enum
+        -fsanitize=pointer-overflow
+        -fsanitize=builtin
+        -fsanitize=pointer-compare
+        -fsanitize=pointer-subtract
+        -fsanitize-address-use-after-scope
+        -fno-sanitize-recover=all # abort on error
+    )
+    add_link_options(-fsanitize=address -fsanitize=undefined)
+endif()
+
+# Create executable with LeakSanitizer (default)
+add_executable(autograd src/main.c)
+target_compile_options(autograd PRIVATE
     -fsanitize=leak
     -fno-omit-frame-pointer
     -g -O1
 )
-target_link_options(autograd_lsan PRIVATE -fsanitize=leak)
+target_link_options(autograd PRIVATE -fsanitize=leak)
 
-# Print build configuration
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER_ID}")
 message(STATUS "C Flags: ${CMAKE_C_FLAGS}")
