@@ -1,16 +1,64 @@
-cmake_minimum_required(VERSION 3.20)
-project(autograd LANGUAGES C)
+cmake_minimum_required(VERSION 3.27 FATAL_ERROR)
+project(main LANGUAGES C)
 
-if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU")
-    message(FATAL_ERROR "requires gcc.")
+if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.3)
+    message(FATAL_ERROR "GCC is too old: ${CMAKE_C_COMPILER_VERSION}")
 endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 10.0)
+    message(FATAL_ERROR "Clang is too old: ${CMAKE_C_COMPILER_VERSION}")
+endif()
+
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-add_compile_definitions(_FORTIFY_SOURCE=2)
 
-# compilation (source code -> object files)
-add_compile_options(-O1 -g -fno-omit-frame-pointer -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-align -Wcast-qual -Wdisabled-optimization -Wfloat-equal -Wformat=2 -Wformat-nonliteral -Wformat-security -Wformat-y2k -Wimport -Winit-self -Winline -Winvalid-pch -Wlong-long -Wmissing-field-initializers -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wpacked -Wpadded -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wunreachable-code -Wunused -Wunused-parameter -Wvariadic-macros -Wwrite-strings -Wbad-function-cast -Wc++-compat -Wcast-align=strict -Wdate-time -Wdeclaration-after-statement -Wempty-body -Wignored-qualifiers -Wmaybe-uninitialized -Wmissing-declarations -Wmissing-parameter-type -Wnormalized=nfkc -Woverride-init -Wpointer-sign -Wsequence-point -Wsign-compare -Wtype-limits -Wuninitialized -Wunused-but-set-parameter -Wunused-but-set-variable -Wunused-function -Wunused-label -Wunused-local-typedefs -Wunused-macros -Wunused-result -Wunused-value -Wunused-variable -Wvolatile-register-var -Wmissing-braces -Wmultichar -Wparentheses -Wreturn-type -Wtrigraphs -Wlogical-op -Wstrict-overflow=5 -Wundef -Wjump-misses-init -Wdouble-promotion -Wformat-truncation=2 -Wformat-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Walloca -Warray-bounds=2 -Wattribute-alias=2 -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wfloat-conversion -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wstrict-prototypes -Wsuggest-attribute=cold -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure -Wsuggest-attribute=format -Wstringop-truncation -Wmissing-attributes -Wmultistatement-macros -Wrestrict -Wcast-function-type -Wif-not-aligned -Wpacked-not-aligned -Wsuggest-attribute=malloc -Wattribute-warning -Wno-aggressive-loop-optimizations -Wformat-signedness -Wunused-const-variable -fsanitize=address -fsanitize=undefined -fsanitize=shift -fsanitize=shift-exponent -fsanitize=shift-base -fsanitize=integer-divide-by-zero -fsanitize=unreachable -fsanitize=vla-bound -fsanitize=null -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=object-size -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fsanitize=nonnull-attribute -fsanitize=returns-nonnull-attribute -fsanitize=bool -fsanitize=enum -fsanitize=pointer-overflow -fsanitize=builtin -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize-address-use-after-scope -fno-sanitize-recover=all -fstack-protector-all -fstack-clash-protection -fcf-protection=full)
+# 
+# compiler hardening
+# 
+# - https://github.com/pytorch/pytorch/blob/c6392fcc0664483d31fbf78b372fd0726ba8d098/CMakeLists.txt#L1019
 
-# linking (object files -> executable)
-add_executable(autograd src/main.c)
-target_link_options(autograd PRIVATE -fsanitize=address -fsanitize=undefined -fsanitize=shift -fsanitize=shift-exponent -fsanitize=shift-base -fsanitize=integer-divide-by-zero -fsanitize=unreachable -fsanitize=vla-bound -fsanitize=null -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=object-size -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fsanitize=nonnull-attribute -fsanitize=returns-nonnull-attribute -fsanitize=bool -fsanitize=enum -fsanitize=pointer-overflow -fsanitize=builtin -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize-address-use-after-scope -fno-sanitize-recover=all)
+
+
+
+
+
+
+
+# also check gcc version
+
+# 
+# compiler hardening
+# 
+# - https://github.com/airbus-seclab/c-compiler-security
+# - https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html
+# 
+
+# gcc:
+
+# define DEBUG and ensure NDEBUG is not defined
+
+# -O0 -g3 -ggdb
+# -mfunction-return=thunk -mindirect-branch=thunk
+# -fno-omit-frame-pointer
+
+
+
+
+# test mode:
+# -Dprotected=public -Dprivate=public
+# You should also change __attribute__ ((visibility ("hidden"))) to __attribute__ ((visibility ("default"))).
+
+
+
+
+
+# if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU")
+#     message(FATAL_ERROR "requires gcc.")
+# endif()
+
+# # compilation (source code -> object files)
+# add_compile_options(-O1 -g -fno-omit-frame-pointer -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-align -Wcast-qual -Wdisabled-optimization -Wfloat-equal -Wformat=2 -Wformat-nonliteral -Wformat-security -Wformat-y2k -Wimport -Winit-self -Winline -Winvalid-pch -Wlong-long -Wmissing-field-initializers -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wpacked -Wpadded -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wunreachable-code -Wunused -Wunused-parameter -Wvariadic-macros -Wwrite-strings -Wbad-function-cast -Wc++-compat -Wcast-align=strict -Wdate-time -Wdeclaration-after-statement -Wempty-body -Wignored-qualifiers -Wmaybe-uninitialized -Wmissing-declarations -Wmissing-parameter-type -Wnormalized=nfkc -Woverride-init -Wpointer-sign -Wsequence-point -Wsign-compare -Wtype-limits -Wuninitialized -Wunused-but-set-parameter -Wunused-but-set-variable -Wunused-function -Wunused-label -Wunused-local-typedefs -Wunused-macros -Wunused-result -Wunused-value -Wunused-variable -Wvolatile-register-var -Wmissing-braces -Wmultichar -Wparentheses -Wreturn-type -Wtrigraphs -Wlogical-op -Wstrict-overflow=5 -Wundef -Wjump-misses-init -Wdouble-promotion -Wformat-truncation=2 -Wformat-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Walloca -Warray-bounds=2 -Wattribute-alias=2 -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wfloat-conversion -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wstrict-prototypes -Wsuggest-attribute=cold -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure -Wsuggest-attribute=format -Wstringop-truncation -Wmissing-attributes -Wmultistatement-macros -Wrestrict -Wcast-function-type -Wif-not-aligned -Wpacked-not-aligned -Wsuggest-attribute=malloc -Wattribute-warning -Wno-aggressive-loop-optimizations -Wformat-signedness -Wunused-const-variable -fsanitize=address -fsanitize=undefined -fsanitize=shift -fsanitize=shift-exponent -fsanitize=shift-base -fsanitize=integer-divide-by-zero -fsanitize=unreachable -fsanitize=vla-bound -fsanitize=null -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=object-size -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fsanitize=nonnull-attribute -fsanitize=returns-nonnull-attribute -fsanitize=bool -fsanitize=enum -fsanitize=pointer-overflow -fsanitize=builtin -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize-address-use-after-scope -fno-sanitize-recover=all -fstack-protector-all -fstack-clash-protection -fcf-protection=full)
+
+# # linking (object files -> executable)
+# add_executable(autograd src/main.c)
+# target_link_options(autograd PRIVATE -fsanitize=address -fsanitize=undefined -fsanitize=shift -fsanitize=shift-exponent -fsanitize=shift-base -fsanitize=integer-divide-by-zero -fsanitize=unreachable -fsanitize=vla-bound -fsanitize=null -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=object-size -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fsanitize=nonnull-attribute -fsanitize=returns-nonnull-attribute -fsanitize=bool -fsanitize=enum -fsanitize=pointer-overflow -fsanitize=builtin -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize-address-use-after-scope -fno-sanitize-recover=all)

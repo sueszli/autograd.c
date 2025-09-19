@@ -125,7 +125,8 @@ static void get_reduced_indices(i32 *reduced_indices, const i32 *expanded_indice
 //      │ 7 │                       │ 7   7   7 │
 //      └───┘                       └───────────┘
 //
-// iteration | target [row,col] | source [row,col] | source linear | value copied
+// iteration | target [row,col] | source [row,col] | source linear | value
+// copied
 // ----------|------------------|------------------|---------------|-------------
 //     0     |     [0,0]        |     [0,0]        |       0       |      5
 //     1     |     [0,1]        |     [0,0]        |       0       |      5
