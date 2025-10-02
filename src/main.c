@@ -1,4 +1,5 @@
 #include "cifar10.h"
+#include "tqdm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,8 +12,9 @@ int32_t main(void) {
         printf("test sample %d: %s\n", i, label_to_str(test_samples[i].label));
     }
 
-    for (int8_t i = 0; i < 5; i++) {
-        printf("train sample %d: %s\n", i, label_to_str(train_samples[i].label));
+    for (uint64_t i = 0; i < 30; i++) {
+        tqdm((i + 1), 30, "training", NULL);
+        usleep(10000);
     }
 
     return EXIT_SUCCESS;
