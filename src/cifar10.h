@@ -9,18 +9,20 @@
 #define DATA_DIRECTORY "data"
 
 #define NUM_CLASSES 10
+
 typedef enum { AIRPLANE = 0, AUTOMOBILE = 1, BIRD = 2, CAT = 3, DEER = 4, DOG = 5, FROG = 6, HORSE = 7, SHIP = 8, TRUCK = 9 } label_t;
 
 #define INPUT_SIZE (32 * 32 * 3)
+#define NUM_TRAIN_SAMPLES 50000
+#define NUM_TEST_SAMPLES 10000
+
 typedef struct {
     label_t label;
     uint8_t data[INPUT_SIZE];
 } sample_t;
 
-#define NUM_TRAIN_SAMPLES 50000
-#define NUM_TEST_SAMPLES 10000
-typedef sample_t train_samples_t[NUM_TRAIN_SAMPLES];
-typedef sample_t test_samples_t[NUM_TEST_SAMPLES];
+static sample_t test_samples[NUM_TEST_SAMPLES];
+static sample_t train_samples[NUM_TRAIN_SAMPLES];
 
 static inline void load_batch(const char *filepath, sample_t *samples, int32_t count) {
     FILE *f = fopen(filepath, "rb");
@@ -40,33 +42,22 @@ static inline void load_batch(const char *filepath, sample_t *samples, int32_t c
     fclose(f);
 }
 
-//
-// loader functions
-//
-
-static inline void load_train_samples(train_samples_t samples) {
-    assert(samples);
+// automatically load static arrays when header is included, to prevent uninitialized reads
+__attribute__((constructor)) static void load_data(void) {
     const char *batches[] = {"data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin", "data_batch_4.bin", "data_batch_5.bin"};
     int32_t samples_per_batch = NUM_TRAIN_SAMPLES / 5;
     for (int8_t i = 0; i < 5; i++) {
         char path[512];
         int32_t written = snprintf(path, sizeof(path), "%s/%s", DATA_DIRECTORY, batches[i]);
         assert(written > 0 && written < (int16_t)sizeof(path));
-        load_batch(path, samples + i * samples_per_batch, samples_per_batch);
+        load_batch(path, train_samples + i * samples_per_batch, samples_per_batch);
     }
-}
 
-static inline void load_test_samples(test_samples_t samples) {
-    assert(samples);
     char path[512];
     int32_t written = snprintf(path, sizeof(path), "%s/test_batch.bin", DATA_DIRECTORY);
     assert(written > 0 && written < (int16_t)sizeof(path));
-    load_batch(path, samples, NUM_TEST_SAMPLES);
+    load_batch(path, test_samples, NUM_TEST_SAMPLES);
 }
-
-//
-// utils
-//
 
 static inline const char *label_to_str(label_t label) {
     static const char *labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
