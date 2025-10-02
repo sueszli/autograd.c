@@ -19,12 +19,6 @@ typedef struct {
 typedef sample_t train_samples_t[NUM_TRAIN_SAMPLES];
 typedef sample_t test_samples_t[NUM_TEST_SAMPLES];
 
-static inline const char *label_to_str(label_t label) {
-    static const char *labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
-    assert(label < NUM_CLASSES && "invalid label");
-    return labels[label];
-}
-
 static inline void load_batch(const char *filepath, sample_t *samples, int32_t count) {
     FILE *f = fopen(filepath, "rb");
     assert(f && "failed to open batch file");
@@ -61,4 +55,14 @@ static inline void load_test_samples(const char *data_dir, test_samples_t sample
     int32_t written = snprintf(path, sizeof(path), "%s/test_batch.bin", data_dir);
     assert(written > 0 && written < (int16_t)sizeof(path));
     load_batch(path, samples, NUM_TEST_SAMPLES);
+}
+
+//
+// utils
+//
+
+static inline const char *label_to_str(label_t label) {
+    static const char *labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
+    assert(label < NUM_CLASSES && "invalid label");
+    return labels[label];
 }
