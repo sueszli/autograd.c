@@ -1,19 +1,12 @@
 todo:
 
-> in ./cmakelists.txt am i correctly using all possible gcc safety features? use AddressSanitizer by default and        everything that is compatible with it.
-
-- make one normal mode (asan and ub), one valgrind mode, one test mode
-
-
-- this project has gotten unnecessary complicated. try to reduce the loc and num of files/directories
+- start from scratch,  minimize number of loc
 - do the whole data downloading stuff simply in shell, no need to write a C program for that
 
----
+study:
 
 - study `tensor_reduce` in reshape.c/h
-
 - study ops.c/h, add all the missing operations in a modern neural net, write test cases and run `make test`
-
 - study tensor.c/h and autograd.c/h
 
 issues:
