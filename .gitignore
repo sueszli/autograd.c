@@ -1,9 +1,4 @@
-build/
 data/
-
-#
-# github template
-# 
 
 # Prerequisites
 *.d

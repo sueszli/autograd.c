@@ -1,0 +1,13 @@
+# LeakSanitizer suppressions for false positives from macOS system libraries.
+# 
+# This change was merged upstream and has yet to be released in a stable clang/llvm version.
+#
+# See:
+#
+# - https://github.com/llvm/llvm-project/issues/115992
+# - https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer#suppressions
+# - https://github.com/apple-oss-distributions/objc4/blob/f126469408dc82bd3f327217ae678fd0e6e3b37c/runtime/objc-initialize.mm#L287
+# - https://github.com/llvm/llvm-project/pull/117478
+# 
+
+leak:_fetchInitializingClassList

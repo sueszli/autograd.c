@@ -1,4 +1,24 @@
-DOCKER_RUN = docker run --rm -v $(PWD):/workspace main sh -c
+.PHONY: run
+run: fmt lint
+	mkdir -p /tmp/build && cd /tmp/build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=$(PWD)/suppr.txt ./binary
+
+.PHONY: leaks
+leaks:
+	mkdir -p /tmp/leaks-build && cd /tmp/leaks-build && cmake -DDISABLE_ASAN=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu)
+	codesign -s - -f --entitlements entitlements.plist /tmp/leaks-build/binary
+	leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
+
+.PHONY: test
+test:
+	mkdir -p /tmp/test-build && cd /tmp/test-build && cmake -DBUILD_TESTS=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ctest --output-on-failure
+
+.PHONY: run-release
+run-release:
+	mkdir -p /tmp/release-build && cd /tmp/release-build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang -DCMAKE_BUILD_TYPE=Release -DDISABLE_ASAN=ON -DDISABLE_UBSAN=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ./binary
+
+# 
+# utils
+# 
 
 .PHONY: download
 download:
@@ -6,18 +26,11 @@ download:
 	test -f data/cifar-10-binary.tar.gz || wget -O data/cifar-10-binary.tar.gz https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 	tar -xzf data/cifar-10-binary.tar.gz -C data --strip-components=1
 
-.PHONY: build-image
-build-image:
-	docker build -t main .
-
-.PHONY: run
-run:
-	$(DOCKER_RUN) "cd $(mktemp -d) && cmake /workspace && make -j$(nproc) && ./autograd"
+.PHONY: lint
+lint:
+	cppcheck --enable=all --std=c23 --language=c --suppress=missingIncludeSystem --suppress=checkersReport --check-level=exhaustive --inconclusive -I src/ src/
 
 .PHONY: fmt
 fmt:
-	$(DOCKER_RUN) 'find . -name "*.c" -o -name "*.h" | xargs clang-format -i'
-
-.PHONY: clean
-clean:
-	docker rmi main
+	uvx --from cmakelang cmake-format --dangle-parens --line-width 500 -i CMakeLists.txt
+	find . -name "*.c" -o -name "*.h" | xargs clang-format -i
