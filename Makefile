@@ -4,13 +4,13 @@ run: fmt lint
 
 .PHONY: leaks
 leaks:
-	mkdir -p /tmp/leaks-build && cd /tmp/leaks-build && cmake -DDISABLE_ASAN=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu)
+	rm -rf /tmp/leaks-build && mkdir -p /tmp/leaks-build && cd /tmp/leaks-build && cmake -DDISABLE_ASAN=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu)
 	codesign -s - -f --entitlements entitlements.plist /tmp/leaks-build/binary
 	leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
 
 .PHONY: test
 test:
-	mkdir -p /tmp/test-build && cd /tmp/test-build && cmake -DBUILD_TESTS=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ctest --output-on-failure
+	rm -rf /tmp/test-build && mkdir -p /tmp/test-build && cd /tmp/test-build && cmake -DBUILD_TESTS=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ctest --output-on-failure
 
 .PHONY: run-release
 run-release:

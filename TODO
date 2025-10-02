@@ -1,7 +1,6 @@
 todo:
 
-- start from scratch,  minimize number of loc
-- do the whole data downloading stuff simply in shell, no need to write a C program for that
+- start from scratch, minimize number of loc
 
 study:
 
