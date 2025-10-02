@@ -1,12 +1,12 @@
 .PHONY: run
 run: fmt lint
-	mkdir -p /tmp/build && cd /tmp/build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=$(PWD)/suppr.txt ./binary
+	mkdir -p /tmp/build && cd /tmp/build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && cd $(PWD) && ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=$(PWD)/suppr.txt /tmp/build/binary
 
 .PHONY: leaks
 leaks:
 	rm -rf /tmp/leaks-build && mkdir -p /tmp/leaks-build && cd /tmp/leaks-build && cmake -DDISABLE_ASAN=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu)
 	codesign -s - -f --entitlements entitlements.plist /tmp/leaks-build/binary
-	leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
+	cd $(PWD) && leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
 
 .PHONY: test
 test:
@@ -14,7 +14,7 @@ test:
 
 .PHONY: run-release
 run-release:
-	mkdir -p /tmp/release-build && cd /tmp/release-build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang -DCMAKE_BUILD_TYPE=Release -DDISABLE_ASAN=ON -DDISABLE_UBSAN=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ./binary
+	mkdir -p /tmp/release-build && cd /tmp/release-build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang -DCMAKE_BUILD_TYPE=Release -DDISABLE_ASAN=ON -DDISABLE_UBSAN=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && cd $(PWD) && /tmp/release-build/binary
 
 # 
 # utils
