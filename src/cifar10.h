@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define NUM_CLASSES 10
 typedef enum { AIRPLANE = 0, AUTOMOBILE = 1, BIRD = 2, CAT = 3, DEER = 4, DOG = 5, FROG = 6, HORSE = 7, SHIP = 8, TRUCK = 9 } label_t;
@@ -65,4 +66,14 @@ static inline const char *label_to_str(label_t label) {
     static const char *labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
     assert(label < NUM_CLASSES && "invalid label");
     return labels[label];
+}
+
+static inline const char *get_data_path(void) {
+    static char data_path[512];
+    char cwd[512];
+    char *cwd_result = getcwd(cwd, sizeof(cwd));
+    assert(cwd_result);
+    int32_t written = snprintf(data_path, sizeof(data_path), "%s/data", cwd);
+    assert(written > 0 && written < (int16_t)sizeof(data_path));
+    return data_path;
 }
