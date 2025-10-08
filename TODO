@@ -1,16 +1,13 @@
 todo:
 
 - start from scratch, minimize number of loc
-
-study:
-
 - study `tensor_reduce` in reshape.c/h
-- study ops.c/h, add all the missing operations in a modern neural net, write test cases and run `make test`
-- study tensor.c/h and autograd.c/h
 
-issues:
+improvements:
 
-- "Fake" Batching: The training loop in main.c simulates batching by accumulating gradients over several samples before updating the weights. A true PyTorch-style implementation would collate the batch of inputs into a single, higher-dimensional tensor (e.g., shape [32, 3072]) and perform a single forward and backward pass on the entire batch. The current method is computationally different and much slower, though the gradient accumulation achieves a similar result for SGD.
+- implement tensor op basics, computational graph, loss function, etc.
+- improve accuracy, improve performance
+- blas, openmp, mlir, apple metal gpu, pytorch, xsimd, xtensor
 
 finally:
 
