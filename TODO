@@ -1,7 +1,4 @@
-todo:
-
-- start from scratch, minimize number of loc
-- study `tensor_reduce` in reshape.c/h
+- start from scratch, minimize loc
 
 improvements:
 
