@@ -1,5 +1,4 @@
 #pragma once
-#pragma GCC diagnostic ignored "-Wunused-variable"
 
 #include <assert.h>
 #include <stdint.h>
