@@ -6,7 +6,7 @@
 
 #define TQDM_BAR_WIDTH 60
 
-// macro overloading magic to make the prefix and postfix optional (default `to` NULL)
+// macro overloading to make the `prefix` and `postfix` args optional (default to `NULL`)
 #define tqdm(...) TQDM_SELECT(__VA_ARGS__, tqdm_4, tqdm_3, tqdm_2)(__VA_ARGS__)
 #define TQDM_SELECT(_1, _2, _3, _4, NAME, ...) NAME // selects macro based on arg count
 #define tqdm_2(current, total) tqdm_impl(current, total, NULL, NULL)
