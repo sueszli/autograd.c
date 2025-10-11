@@ -44,7 +44,7 @@ static inline void load_batch(const char *filepath, sample_t *samples, int32_t c
 
 // automatically load static arrays when header is included, to prevent uninitialized reads
 __attribute__((constructor)) static void load_data(void) {
-    const char *batches[] = {"data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin", "data_batch_4.bin", "data_batch_5.bin"};
+    static const char *const batches[] = {"data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin", "data_batch_4.bin", "data_batch_5.bin"};
     int32_t samples_per_batch = NUM_TRAIN_SAMPLES / 5;
     for (int8_t i = 0; i < 5; i++) {
         char path[512];
@@ -60,7 +60,7 @@ __attribute__((constructor)) static void load_data(void) {
 }
 
 static inline const char *label_to_str(label_t label) {
-    static const char *labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
+    static const char *const labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
     assert(label < NUM_CLASSES && "invalid label");
     return labels[label];
 }
