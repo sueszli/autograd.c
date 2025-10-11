@@ -22,6 +22,7 @@ run-release:
 
 .PHONY: download
 download:
+	test ! -f data/data_batch_1.bin # check if already downloaded
 	mkdir -p data
 	test -f data/cifar-10-binary.tar.gz || wget -O data/cifar-10-binary.tar.gz https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 	tar -xzf data/cifar-10-binary.tar.gz -C data --strip-components=1
