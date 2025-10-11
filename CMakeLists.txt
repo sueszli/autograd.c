@@ -4,7 +4,7 @@ project(defer LANGUAGES C)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 14.0.0)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 13.0.0)
   message(FATAL_ERROR "GCC is outdated: ${CMAKE_C_COMPILER_VERSION}")
 endif()
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 16.0.0)
@@ -132,7 +132,10 @@ endif()
 # sources
 #
 
+add_library(tensor src/tensor.c)
+
 add_executable(binary src/main.c)
+target_link_libraries(binary PRIVATE tensor)
 
 #
 # tests
@@ -149,7 +152,7 @@ if(BUILD_TESTS)
     set(TEST_EXECUTABLE "${TEST_NAME}_binary")
 
     add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
-    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity)
+    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity tensor)
     target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXECUTABLE})

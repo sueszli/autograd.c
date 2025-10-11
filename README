@@ -8,4 +8,9 @@ $ toilet -f mono12 -w 100 "autograd.c"
   ▀▀▀▀ ▀▀   ▀▀▀▀ ▀▀     ▀▀▀▀     ▀▀▀▀     ▄▀▀▀ ██   ▀▀        ▀▀▀▀ ▀▀    ▀▀▀ ▀▀     ▀▀       ▀▀▀▀▀  
                                           ▀████▀▀                                                   
 
-> work in progress!
+WORK IN PROGRESS
+
+dont use any accelerators
+do everything in c
+
+make tensor fundamentals: https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/01_tensor/01_tensor.py
