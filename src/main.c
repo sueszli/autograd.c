@@ -13,7 +13,7 @@ int32_t main(void) {
     }
 
     for (uint64_t i = 0; i < 30; i++) {
-        tqdm((i + 1), 30, "training", NULL);
+        tqdm((i + 1), 30);
         usleep(10000);
     }
 
