@@ -10,3 +10,5 @@ finally:
 
 - store weights in a compressed format
 - implement a python binding just for predictions
+
+consider using MLIR (Multi-Level Intermediate Representation) and it's backend for Metal Performance Shaders (MPS)
