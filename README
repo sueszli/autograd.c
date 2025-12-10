@@ -17,3 +17,5 @@ use:
 - https://ml-explore.github.io/mlx-c/
 - https://ml-explore.github.io/mlx/build/html/cpp/ops.html
 - https://developer.apple.com/documentation/metalperformanceshaders (metal langauge)
+- https://grep.app/ml-explore/mlx-c/main/examples/example-metal-kernel.c?q=MLX_FLOAT#L55
+
