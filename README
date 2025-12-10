@@ -22,3 +22,7 @@ using `metal` language directly:
 
 - https://developer.apple.com/documentation/metalperformanceshaders
 - https://github.com/JuliaGPU/Metal.jl/blob/main/lib/mps/MPS.jl
+
+using `wgpu`:
+
+- https://github.com/gfx-rs/wgpu-native/blob/trunk/ffi/wgpu.h
