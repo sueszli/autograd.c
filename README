@@ -12,10 +12,13 @@ WORK IN PROGRESS
 
 mlir currently doesn't have an mps dialect.
 
-use:
+using mlx lib:
 
 - https://ml-explore.github.io/mlx-c/
+- https://grep.app/ml-explore/mlx-c/main/examples/
 - https://ml-explore.github.io/mlx/build/html/cpp/ops.html
-- https://developer.apple.com/documentation/metalperformanceshaders (metal langauge)
-- https://grep.app/ml-explore/mlx-c/main/examples/example-metal-kernel.c?q=MLX_FLOAT#L55
 
+using `metal` language directly:
+
+- https://developer.apple.com/documentation/metalperformanceshaders
+- https://github.com/JuliaGPU/Metal.jl/blob/main/lib/mps/MPS.jl
