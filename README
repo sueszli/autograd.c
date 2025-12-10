@@ -12,4 +12,7 @@ WORK IN PROGRESS
 
 mlir currently doesn't have an mps dialect.
 
-use: https://ml-explore.github.io/mlx-c/
+use:
+
+- https://ml-explore.github.io/mlx-c/
+- https://ml-explore.github.io/mlx/build/html/cpp/ops.html
