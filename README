@@ -26,3 +26,15 @@ using `metal` language directly:
 using `wgpu`:
 
 - https://github.com/gfx-rs/wgpu-native/blob/trunk/ffi/wgpu.h
+
+---
+
+Problem: write GPU code once, run at native performance on CUDA, ROCm, Metal.
+
+Two approaches: (1) runtime transpilation (wgpu, MoltenVK, Naga) translates SPIR-V/WGSL to backends at load-time, (2) compile-time lowering (IREE, XLA) uses MLIR to optimize and emit native code.
+
+Why transpilation loses: it’s instruction-level translation without global context. No cross-kernel fusion, no target-specific tiling, no tensor core or simdgroup intrinsics. Real performance gap for compute-heavy workloads.
+
+Why MLIR wins: full-program optimization, analytically computed tile sizes per architecture, emits actual PTX/MSL/SPIR-V with backend-specific features.
+
+Caveat: IREE shines for dense linear algebra patterns. Irregular access patterns still need per-backend kernels. “Rivals handwritten” is true for common ops, not everything.​​​​​​​​​​​​​​​​
