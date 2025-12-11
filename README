@@ -10,35 +10,5 @@ $ toilet -f mono12 -w 100 "autograd.c"
 
 WORK IN PROGRESS
 
-write everything just in a super simple way and in memory
-
----
-
-mlir currently doesn't have an mps dialect.
-
-using mlx lib:
-
-- https://ml-explore.github.io/mlx-c/
-- https://grep.app/ml-explore/mlx-c/main/examples/
-- https://ml-explore.github.io/mlx/build/html/cpp/ops.html
-
-using `metal` language directly:
-
-- https://developer.apple.com/documentation/metalperformanceshaders
-- https://github.com/JuliaGPU/Metal.jl/blob/main/lib/mps/MPS.jl
-
-using `wgpu`:
-
-- https://github.com/gfx-rs/wgpu-native/blob/trunk/ffi/wgpu.h
-
----
-
-Problem: write GPU code once, run at native performance on CUDA, ROCm, Metal.
-
-Two approaches: (1) runtime transpilation (wgpu, MoltenVK, Naga) translates SPIR-V/WGSL to backends at load-time, (2) compile-time lowering (IREE, XLA) uses MLIR to optimize and emit native code.
-
-Why transpilation loses: it’s instruction-level translation without global context. No cross-kernel fusion, no target-specific tiling, no tensor core or simdgroup intrinsics. Real performance gap for compute-heavy workloads.
-
-Why MLIR wins: full-program optimization, analytically computed tile sizes per architecture, emits actual PTX/MSL/SPIR-V with backend-specific features.
-
-Caveat: IREE shines for dense linear algebra patterns. Irregular access patterns still need per-backend kernels. “Rivals handwritten” is true for common ops, not everything.​​​​​​​​​​​​​​​​
+dont use any accelerators
+do everything in c
