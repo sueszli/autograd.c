@@ -10,6 +10,10 @@ $ toilet -f mono12 -w 100 "autograd.c"
 
 WORK IN PROGRESS
 
+write everything just in a super simple way and in memory
+
+---
+
 mlir currently doesn't have an mps dialect.
 
 using mlx lib:
