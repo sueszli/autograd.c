@@ -636,6 +636,7 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
         free(new_shape);
     }
 
+    // buffer for current multidim index
     uint64_t *curr = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
     if (new_ndim > 0) {
         assert(curr != NULL && "calloc failed");
@@ -646,12 +647,11 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
 
         uint64_t base_offset = reduction_multidim_to_linear(t, curr, dim_idx, keepdims);
 
-        // reduce along dim_idx
+        // sum along axis_dim
         float32_t sum = 0.0f;
         uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
         assert(axis_dim <= MAX_TENSOR_SIZE && "axis_dim exceeds maximum tensor size");
         uint64_t axis_stride = t->strides[dim_idx];
-
         for (uint64_t j = 0; j < axis_dim; j++) {
             uint64_t offset = base_offset + j * axis_stride;
             assert(offset < t->size && "offset out of bounds");
@@ -671,9 +671,9 @@ Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
     dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
-    // mutates the returned tensor in place
     Tensor *sum_mut = tensor_sum(t, dim_idx, keepdims);
 
+    // scale sum by 1/n
     uint64_t n = (t->shape) ? t->shape[dim_idx] : 1;
     assert(n > 0 && "division by zero: axis dimension is 0");
     float32_t scale = 1.0f / (float32_t)n;
