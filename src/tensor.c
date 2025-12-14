@@ -576,32 +576,7 @@ static void reduction_shapes_mut(const Tensor *t, int64_t dim_idx, bool keepdims
     }
 }
 
-/*
- * converts multi-dim indices to linear offset,
- * corresponding to the base offset BEFORE reduction along dim_idx.
- *
- * example: reducing along dimension 1 (rows)
- *
- * shape (original):         [2, 3, 4]
- * shape (after reduction):  [2, 4]      // dim_idx=1, keepdims=false
- * strides (original):       [12, 4, 1]
- *
- * target: element at [1, 2] after reduction
- *
- * calculation (iterating through original dimensions):
- *
- *   - original dim 0 (blocks):
- *     - uses multidim[0] = 1
- *     - offset += 1 * strides[0] (12) = 12
- *
- *   - dimension 1 (rows) - was dropped on reduction. skip!
- *
- *   - dimension 2 (cols):
- *     - uses multidim[1] = 2
- *     - offset += 2 * strides[2] (1) = 2
- *
- * result: offset = 12 + 2 = 14.
- */
+// same as multidim_to_linear, but skips the reduced dimension
 static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     if (dim_idx < 0) {
@@ -610,30 +585,20 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t offset = 0;
-    uint64_t curr = 0;                       // dim index in reduced shape
-    for (uint64_t d = 0; d < t->ndim; d++) { // dim index in original shape
+    for (uint64_t d = 0; d < t->ndim; d++) {
         // skip reduced dimension
         if ((int64_t)d == dim_idx) {
             continue;
         }
 
-        // pick where to read strides from
-        uint64_t idx_val = 0;
-        if (multidim) {
-            // if keepdims, result has same ndim, so we use d (the original dimension index)
-            // if !keepdims, result has ndim-1, so we use curr (index in reduced shape)
-            idx_val = multidim[keepdims ? d : curr];
-            if (t->shape) {
-                assert(idx_val < t->shape[d] && "index out of bounds");
-            }
-        }
+        assert(multidim != NULL);
+        // map d (original dim) to index in multidim (reduced shape)
+        uint64_t idx = keepdims ? d : (d > (uint64_t)dim_idx ? d - 1 : d);
+        uint64_t idx_val = multidim[idx];
+        assert(t->shape != NULL);
+        assert(idx_val < t->shape[d] && "index out of bounds");
 
         offset += idx_val * t->strides[d];
-
-        // if reduced dimension is kept, curr is the same as d
-        if (!keepdims) {
-            curr++;
-        }
     }
     assert(offset < t->size && "offset out of bounds");
     return offset;
