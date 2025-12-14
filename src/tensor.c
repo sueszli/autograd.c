@@ -228,7 +228,7 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
 }
 
 /*
- * converts a linear index to multi-dimensional indices.
+ * converts a linear offset to multi-dimensional indices.
  * mutates out_indices array.
  *
  * example:
@@ -236,7 +236,7 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
  * shape:   [2, 3]  (2 rows, 3 cols)
  *
  * memory:  [a, b, c, d, e, f]
- *           0  1  2  3  4  5  <- linear indices
+ *           0  1  2  3  4  5  <- linear offsets
  *
  * logical: [[a, b, c],    row 0
  *           [d, e, f]]    row 1
@@ -268,10 +268,9 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
  *
  * example:
- *   map a coordinate from a broadcasted shape [2, 3]
- *   to a source tensor of shape [1, 3] (e.g. broadcasting bias).
+ *   map a coordinate from a broadcasted shape [2, 3] to a linear offset
  *
- *   source shape: [1, 3]
+ *   shape:   [1, 3]  (1 row, 3 cols)
  *
  *   memory:  [a, b, c]
  *             0  1  2  <- linear offsets
