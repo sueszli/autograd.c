@@ -229,7 +229,7 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
 
 /*
  * converts a linear offset to multi-dimensional indices.
- * mutates out_indices array.
+ * mutates out_multidim array.
  *
  * example:
  *
@@ -503,24 +503,20 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     Tensor *result = tensor_zeros(new_shape, t->ndim, t->requires_grad);
     free(new_shape);
 
-    uint64_t *indices = (uint64_t *)calloc((size_t)t->ndim, sizeof(uint64_t));
-    assert(indices != NULL && "calloc failed");
+    uint64_t *curr = (uint64_t *)calloc((size_t)t->ndim, sizeof(uint64_t));
+    assert(curr != NULL && "calloc failed");
 
     for (uint64_t i = 0; i < result->size; i++) {
-        uint64_t temp_i = i;
-        for (int64_t d = (int64_t)t->ndim - 1; d >= 0; d--) {
-            indices[d] = temp_i % result->shape[d];
-            temp_i /= result->shape[d];
-        }
+        linear_to_multidim_mut(i, result->shape, t->ndim, curr);
 
         uint64_t offset = 0;
         for (uint64_t d = 0; d < t->ndim; d++) {
-            // indices are swapped compared to output at dim0/dim1
-            uint64_t idx_val = indices[d];
+            // multidim indices are swapped compared to output at dim0/dim1
+            uint64_t idx_val = curr[d];
             if (d == dim0) {
-                idx_val = indices[dim1];
+                idx_val = curr[dim1];
             } else if (d == dim1) {
-                idx_val = indices[dim0];
+                idx_val = curr[dim0];
             }
             offset += idx_val * t->strides[d];
         }
@@ -528,7 +524,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 
         result->data[i] = t->data[offset];
     }
-    free(indices);
+    free(curr);
 
     return result;
 }
@@ -620,22 +616,15 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
         free(new_shape);
     }
 
-    uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
+    uint64_t *curr = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
     if (new_ndim > 0) {
-        assert(indices != NULL && "calloc failed");
+        assert(curr != NULL && "calloc failed");
     }
 
     for (uint64_t i = 0; i < result->size; i++) {
-        // Unravel result index
-        if (new_ndim > 0) {
-            uint64_t temp_i = i;
-            for (int64_t d = (int64_t)new_ndim - 1; d >= 0; d--) {
-                indices[d] = temp_i % result->shape[d];
-                temp_i /= result->shape[d];
-            }
-        }
+        linear_to_multidim_mut(i, result->shape, new_ndim, curr);
 
-        uint64_t base_offset = get_reduction_base_offset(t, indices, axis, keepdims);
+        uint64_t base_offset = get_reduction_base_offset(t, curr, axis, keepdims);
 
         // Reduce along axis
         float32_t sum = 0.0f;
@@ -651,8 +640,8 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = sum;
     }
 
-    if (indices) {
-        free(indices);
+    if (curr) {
+        free(curr);
     }
     return result;
 }
@@ -689,21 +678,17 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
         free(new_shape);
     }
 
-    uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
+    uint64_t *curr = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
     if (new_ndim > 0) {
-        assert(indices != NULL && "calloc failed");
+        assert(curr != NULL && "calloc failed");
     }
 
     for (uint64_t i = 0; i < result->size; i++) {
         if (new_ndim > 0) {
-            uint64_t temp_i = i;
-            for (int64_t d = (int64_t)new_ndim - 1; d >= 0; d--) {
-                indices[d] = temp_i % result->shape[d];
-                temp_i /= result->shape[d];
-            }
+            linear_to_multidim_mut(i, result->shape, new_ndim, curr);
         }
 
-        uint64_t base_offset = get_reduction_base_offset(t, indices, axis, keepdims);
+        uint64_t base_offset = get_reduction_base_offset(t, curr, axis, keepdims);
 
         float32_t max_val = -INFINITY;
         uint64_t axis_dim = (t->shape) ? t->shape[axis] : 1;
@@ -724,8 +709,8 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = max_val;
     }
 
-    if (indices) {
-        free(indices);
+    if (curr) {
+        free(curr);
     }
     return result;
 }
