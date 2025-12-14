@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Helper to calculate size from shape
+// helper to get size from shape
 static int calculate_size(const int *shape, int ndim) {
     int size = 1;
     for (int i = 0; i < ndim; i++) {
@@ -13,7 +13,7 @@ static int calculate_size(const int *shape, int ndim) {
     return size;
 }
 
-// Helper to calculate strides
+// helper to calculate strides
 static void calculate_strides(const int *shape, int ndim, int *strides) {
     int stride = 1;
     for (int i = ndim - 1; i >= 0; i--) {
@@ -210,7 +210,6 @@ Tensor *tensor_sub(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_sub)
 Tensor *tensor_mul(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_mul); }
 Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
-// Matrix Multiplication
 Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     if (a->ndim < 1 || b->ndim < 1) {
         fprintf(stderr, "Error: Matmul requires at least 1D tensors.\n");
@@ -567,7 +566,7 @@ void tensor_print(Tensor *t) {
         }
     }
     printf("], size=%d, requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
-    // Printing data would be complex for multi-dim, simplifying for now
+    // TODO: print data nicely for higher dimensions
     if (t->data && t->size <= 20) {
         printf("Data: [");
         for (int i = 0; i < t->size; i++) {

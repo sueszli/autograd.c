@@ -1,3 +1,7 @@
+C Style:
+
+- Use explicit types only (e.g., `int64_t`, `float64_t`), no implicit types (`int`, `float`)
+
 Code Style:
 
 - Guard clauses first, early returns, minimize nesting
