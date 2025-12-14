@@ -104,28 +104,6 @@ void tensor_free(Tensor *t) {
     }
 }
 
-void tensor_print(Tensor *t) {
-    if (!t) {
-        printf("Tensor(NULL)\n");
-        return;
-    }
-    printf("Tensor(shape=[");
-    if (t->shape) {
-        for (int i = 0; i < t->ndim; i++) {
-            printf("%d%s", t->shape[i], i < t->ndim - 1 ? ", " : "");
-        }
-    }
-    printf("], size=%d, requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
-    // Printing data would be complex for multi-dim, simplifying for now
-    if (t->data && t->size <= 20) {
-        printf("Data: [");
-        for (int i = 0; i < t->size; i++) {
-            printf("%f%s", t->data[i], i < t->size - 1 ? ", " : "");
-        }
-        printf("]\n");
-    }
-}
-
 // Broadcasting logic
 // Returns true if shapes can be broadcasted, and populates out_shape and out_ndim
 static bool broadcast_shapes(const int *shape_a, int ndim_a, const int *shape_b, int ndim_b, int *out_shape, int *out_ndim) {
@@ -152,6 +130,10 @@ static bool broadcast_shapes(const int *shape_a, int ndim_a, const int *shape_b,
     }
     return true;
 }
+
+// 
+// arithmetic
+// 
 
 typedef float (*binary_op_t)(float, float);
 
@@ -266,6 +248,10 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     return NULL;
 }
 
+// 
+// shape manipulation
+// 
+
 Tensor *tensor_reshape(const Tensor *t, const int *new_shape, int new_ndim) {
     // Check if new shape size matches
     int new_size = 1;
@@ -367,6 +353,10 @@ Tensor *tensor_transpose(Tensor *t, int dim0, int dim1) {
 
     return result;
 }
+
+// 
+// reductions
+// 
 
 // cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int axis, bool keepdims) {
@@ -559,6 +549,32 @@ Tensor *tensor_max(Tensor *t, int axis, bool keepdims) {
     if (indices)
         free(indices);
     return result;
+}
+
+// 
+// utils
+// 
+
+void tensor_print(Tensor *t) {
+    if (!t) {
+        printf("Tensor(NULL)\n");
+        return;
+    }
+    printf("Tensor(shape=[");
+    if (t->shape) {
+        for (int i = 0; i < t->ndim; i++) {
+            printf("%d%s", t->shape[i], i < t->ndim - 1 ? ", " : "");
+        }
+    }
+    printf("], size=%d, requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
+    // Printing data would be complex for multi-dim, simplifying for now
+    if (t->data && t->size <= 20) {
+        printf("Data: [");
+        for (int i = 0; i < t->size; i++) {
+            printf("%f%s", t->data[i], i < t->size - 1 ? ", " : "");
+        }
+        printf("]\n");
+    }
 }
 
 Tensor *tensor_get(Tensor *t, const int *indices) {
