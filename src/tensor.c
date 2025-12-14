@@ -264,36 +264,34 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
 }
 
 /*
- * Converts multi-dimensional coordinates to a linear memory offset, handling broadcasting.
+ * converts multi-dimensional coordinates to a linear memory offset,
  *
- * This function calculates the offset in the "source" tensor corresponding to a
- * coordinate in a (potentially larger, broadcasted) "target" shape.
+ * example: requesting element at [1, 2] from a tensor
  *
- * Conceptual Model:
- *   We access the source tensor as if it were broadcasted to match the target shape.
- *   If a dimension in the source shape is 1 (or missing, implicitly 1), it is
- *   conceptually stretched. We always read from index 0 along that dimension.
+ * shape:   [2, 3]  (2 rows, 3 cols)
  *
- * Example:
- *   Source: Shape [1, 3] (1 row, 3 cols), Strides [3, 1], Data [A, B, C]
- *   Target: We want to access coordinate [1, 2] (Row 1, Col 2).
+ * memory:  [a, b, c]
  *
- *   Visualizing the Broadcast:
- *     Although the source only has row 0, broadcasting treats it as repeating:
- *       Row 0: [A, B, C]  <-- Real data
- *       Row 1: [A, B, C]  <-- Virtual duplicate
+ * is equivalent to:
+ *          [[a, b, c],   // row 0
+ *           [a, b, c]]   // row 1 (implicit broadcast)
  *
- *   Calculation (Right-aligned dimensions):
+ *          because the first dimension's size is 1, it behaves as if its shape
+ *          were [X, 3] for any X >= 1. implicitly broadcasting.
  *
- *     Dim 0 (Rows): Source size is 1. Target requests row 1.
- *       - Rule: Source dim is 1 => Broadcast! Use index 0.
- *       - Offset += 0 * stride[0] (3) = 0.
+ * calculation (right-aligned dimensions):
  *
- *     Dim 1 (Cols): Source size is 3. Target requests col 2.
- *       - Rule: Source dim > 1 => No broadcast. Use index 2.
- *       - Offset += 2 * stride[1] (1) = 2.
+ *   - dimension 0 (rows):
+ *     - source size is 1. target requests 1.
+ *     - rule: source dimension size is 1 => broadcast! use index 0.
+ *     - offset += 0 * stride[0] (3) = 0
  *
- *   Result: Offset = 2 (Value 'C').
+ *   - dimension 1 (columns):
+ *     - source size is 3. target requests 2.
+ *     - rule: source dimension size > 1 => no broadcast. use index 2.
+ *     - offset += 2 * stride[1] (1) = 2
+ *
+ * result: offset = 2 (value 'C').
  */
 static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
     assert(target != NULL || target_ndim == 0);
@@ -305,7 +303,6 @@ static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim,
     uint64_t offset = 0;
     for (uint64_t d = 0; d < ndim; d++) {
         uint64_t target_dim = d + (target_ndim - ndim); // align right
-        // broadcasting rule: if shape has size 1 in a dimension, always use index 0
         uint64_t idx = (shape[d] == 1) ? 0 : target[target_dim];
         offset += idx * strides[d];
     }
@@ -478,7 +475,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
  *   T:
  *   [[1, 2, 3],
  *    [4, 5, 6]]
- *  
+ *
  *   T.T:
  *   [[1, 4],
  *    [2, 5],
@@ -530,7 +527,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
             if (d == dim0) {
                 idx_val = indices[dim1];
             } else if (d == dim1) {
-                idx_val = indices[dim0];   
+                idx_val = indices[dim0];
             }
             offset += idx_val * t->strides[d];
         }
