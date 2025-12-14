@@ -4,13 +4,13 @@
 #include <stddef.h>
 
 typedef struct Tensor {
-    float *data;
-    int *shape;
-    int *strides;
-    int ndim;
-    int size;
-    bool requires_grad;
-    struct Tensor *grad;
+    float *data;         // flat contiguous array, row-major
+    int *shape;          // array of dimension sizes
+    int *strides;        // array of elements to skip to get to next element in each dimension
+    int ndim;            // rank (ie. 1 for vector, 2 for matrix, etc.)
+    int size;            // total number of elements
+    bool requires_grad;  // whether to track operations for autograd
+    struct Tensor *grad; // accumulated gradient (del loss / del tensor) during backprop
 } Tensor;
 
 // Creation and Destruction
