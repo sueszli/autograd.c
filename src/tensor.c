@@ -533,16 +533,15 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 // reductions
 //
 
-/**
+/*
  * calculates the output shape and ndim for a tensor reduction.
  *
  * example:
- *   input tensor shape: [2, 3]
+ *   input shape:   [2, 3]
  *   reduce dim_idx: 0 (first dimension)
  *
- *   if keepdims = false: output shape: [3]
- *
- *   if keepdims = true: output shape: [1, 3]
+ *   a) keepdims == false -> output shape: [3]
+ *   b) keepdims == true  -> output shape: [1, 3]
  */
 static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
