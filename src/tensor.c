@@ -7,10 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-//
-// bounds and limits
-//
-
 #define MAX_NDIM 32
 #define MAX_TENSOR_SIZE (UINT64_MAX / sizeof(float32_t))
 
@@ -23,7 +19,7 @@ _Static_assert(CACHELINE_SIZE >= sizeof(float32_t), "cacheline_size must be at l
 _Static_assert((CACHELINE_SIZE & (CACHELINE_SIZE - 1)) == 0, "cacheline_size must be power of 2");
 
 static void *safe_aligned_alloc(uint64_t size_bytes) {
-    assert(size_bytes <= MAX_TENSOR_SIZE * sizeof(float32_t) && "size_bytes exceeds maximum tensor size");
+    assert(size_bytes <= MAX_TENSOR_SIZE * sizeof(float32_t));
 
     size_t s_bytes = (size_t)size_bytes;
     if (s_bytes % CACHELINE_SIZE != 0) {
@@ -36,7 +32,7 @@ static void *safe_aligned_alloc(uint64_t size_bytes) {
 }
 
 static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
-    assert(ndim <= MAX_NDIM && "ndim exceeds maximum tensor dimensions");
+    assert(ndim <= MAX_NDIM);
 
     // scalar
     if (ndim == 0) {
@@ -47,10 +43,7 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
     // product of dimensions
     uint64_t size = 1;
     for (uint64_t i = 0; i < ndim; i++) {
-        // check for overflow before multiplication
-        if (shape[i] > 0 && size > MAX_TENSOR_SIZE / shape[i]) {
-            assert(false && "tensor size overflow");
-        }
+        assert(shape[i] == 0 || size <= MAX_TENSOR_SIZE / shape[i]);
         size *= shape[i];
     }
     assert(size <= MAX_TENSOR_SIZE && "tensor size exceeds maximum");
@@ -95,8 +88,7 @@ static uint64_t *get_strides(const uint64_t *shape, uint64_t ndim) {
     uint64_t stride = 1;
     for (int64_t i = (int64_t)ndim - 1; i >= 0; i--) {
         strides[i] = stride;
-        // check for overflow before multiplication
-        if (shape[i] > 0 && stride > UINT64_MAX / shape[i]) {
+        if (shape[i] && stride > UINT64_MAX / shape[i]) {
             free(strides);
             assert(false && "stride calculation overflow");
         }
@@ -130,7 +122,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
         } else {
             t->data[0] = 0.0f;
         }
-        // pair assertion: validate scalar tensor
         assert(t->ndim == 0);
         assert(t->size == 1);
         assert(t->data != NULL);
