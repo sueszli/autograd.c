@@ -266,6 +266,39 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
 
 /*
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
+ *
+ * example:
+ *   map a coordinate from a broadcasted shape [2, 3]
+ *   to a source tensor of shape [1, 3] (e.g. broadcasting bias).
+ *
+ *   source shape: [1, 3]
+ *
+ *   memory:  [a, b, c]
+ *             0  1  2  <- linear offsets
+ *
+ *   logical: [[a, b, c]]  row 0
+ *
+ *   broadcasted view (2x3):
+ *            [[a, b, c],  row 0 (mapped to source row 0)
+ *             [a, b, c]]  row 1 (mapped to source row 0 via broadcasting)
+ *                    ^
+ * 
+ *   target coordinate: [1, 2] selects this element ('c')
+ *
+ *   algorithm (left-to-right):
+ *     ndim_source=2, ndim_target=2
+ *
+ *     d=0 (row): source_shape[0] is 1.
+ *       broadcasting applies (dim == 1).
+ *       use index 0 (ignore target[0]=1).
+ *       offset += 0 * stride[0] (3) = 0.
+ *
+ *     d=1 (col): source_shape[1] is 3.
+ *       no broadcasting.
+ *       use target[1] = 2.
+ *       offset += 2 * stride[1] (1) = 2.
+ *
+ *     result: offset = 2 (value 'c')
  */
 static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
     assert(target != NULL || target_ndim == 0);
@@ -390,7 +423,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
 }
 
 //
-// Shape Manipulation
+// shape manipulation
 //
 
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim) {
@@ -445,16 +478,16 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
 /*
  * transpose swaps two dimensions
  *
- * Example: (2, 3) -> (3, 2)
+ * example: (2, 3) -> (3, 2)
  *
- * T:
- * [[1, 2, 3],
- *  [4, 5, 6]]
- *
- * T.T:
- * [[1, 4],
- *  [2, 5],
- *  [3, 6]]
+ *   T:
+ *   [[1, 2, 3],
+ *    [4, 5, 6]]
+ *  
+ *   T.T:
+ *   [[1, 4],
+ *    [2, 5],
+ *    [3, 6]]
  */
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
@@ -475,7 +508,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(new_shape != NULL && "malloc failed");
     memcpy(new_shape, t->shape, (size_t)t->ndim * sizeof(uint64_t));
 
-    // Swap dimensions in shape
+    // swap dims
     uint64_t temp = new_shape[dim0];
     new_shape[dim0] = new_shape[dim1];
     new_shape[dim1] = temp;
@@ -486,7 +519,6 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     uint64_t *indices = (uint64_t *)calloc((size_t)t->ndim, sizeof(uint64_t));
     assert(indices != NULL && "calloc failed");
 
-    // Iterate over result and map to input
     for (uint64_t i = 0; i < result->size; i++) {
         assert(i < result->size && "loop index out of bounds");
 
@@ -498,13 +530,13 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 
         uint64_t offset = 0;
         for (uint64_t d = 0; d < t->ndim; d++) {
-            // For input, the indices are swapped compared to output at dim0/dim1
+            // indices are swapped compared to output at dim0/dim1
             uint64_t idx_val = indices[d];
-            if (d == dim0)
+            if (d == dim0) {
                 idx_val = indices[dim1];
-            else if (d == dim1)
-                idx_val = indices[dim0];
-
+            } else if (d == dim1) {
+                idx_val = indices[dim0];   
+            }
             offset += idx_val * t->strides[d];
         }
         assert(offset < t->size && "offset out of bounds");
