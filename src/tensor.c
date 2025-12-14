@@ -533,7 +533,19 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 // reductions
 //
 
-// allows negative indexing (like python / numpy)
+/*
+ * resolves negative axis indices to positive ones (like python / numpy).
+ *
+ * example:
+ *
+ * ndim: 3 (shape: [d0, d1, d2])
+ *
+ * axis = -1: (last dimension)
+ *    -1 + 3 = 2  -> refers to d2
+ *
+ * axis = -2: (second to last dimension)
+ *    -2 + 3 = 1  -> refers to d1
+ */
 static int64_t resolve_axis(uint64_t ndim, int64_t axis) {
     if (axis < 0) {
         axis += (int64_t)ndim;
