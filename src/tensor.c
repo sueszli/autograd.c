@@ -53,28 +53,32 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
  *           [d, e, f]]    row 1
  *
  * algorithm (iterate backward through dimensions):
- *     i=1: out_strides[1] = 1   (within a row, move 1 elem)
+ *     i=1: strides[1] = 1   (within a row, move 1 elem)
  *         stride = 1 * 3 = 3
- *     i=0: out_strides[0] = 3   (between rows, move 3 elems)
+ *     i=0: strides[0] = 3   (between rows, move 3 elems)
  *         stride = 3 * 2 = 6
  *
- * result: out_strides = [3, 1]
+ * result: strides = [3, 1]
  *
  * access examples:
  *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
  */
-static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
+static uint64_t *get_strides(const uint64_t *shape, uint64_t ndim) {
     if (ndim == 0) {
-        return;
+        return NULL;
     }
     assert(shape != NULL);
-    assert(out_strides != NULL);
+
+    uint64_t *strides = (uint64_t *)malloc((size_t)ndim * sizeof(uint64_t));
+    assert(strides != NULL && "malloc failed");
 
     uint64_t stride = 1;
     for (int64_t i = (int64_t)ndim - 1; i >= 0; i--) {
-        out_strides[i] = stride;
+        strides[i] = stride;
         stride *= shape[i];
     }
+
+    return strides;
 }
 
 // cppcheck-suppress staticFunction
@@ -106,9 +110,7 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     assert(t->shape != NULL && "malloc failed");
     memcpy(t->shape, shape, (size_t)ndim * sizeof(uint64_t));
 
-    t->strides = (uint64_t *)malloc((size_t)ndim * sizeof(uint64_t));
-    assert(t->strides != NULL && "malloc failed");
-    write_strides(t->shape, ndim, t->strides);
+    t->strides = get_strides(t->shape, ndim);
 
     t->size = get_size(shape, ndim);
 
