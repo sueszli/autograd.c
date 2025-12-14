@@ -227,31 +227,74 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
     return true;
 }
 
-// linear index to multi-dimensional coordinates.
+/*
+ * converts a linear index to multi-dimensional coordinates.
+ *
+ * example:
+ *
+ * shape:   [2, 3]  (2 rows, 3 cols)
+ *
+ * memory:  [a, b, c, d, e, f]
+ *           0  1  2  3  4  5  <- linear indices
+ *
+ * logical: [[a, b, c],    row 0
+ *           [d, e, f]]    row 1
+ *
+ * algorithm (right-to-left):
+ *   given: linear_idx=4
+ *
+ *   d=1 (rightmost/col):  4 % 3 = 1  -> col 1
+ *                         4 / 3 = 1  -> carry to next dimension
+ *
+ *   d=0 (leftmost/row):   1 % 2 = 1  -> row 1
+ *                         1 / 2 = 0  -> done
+ *
+ *   result: [1, 1] -> element 'e'
+ */
 static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *shape, uint64_t ndim, uint64_t *out_indices) {
     assert(shape != NULL || ndim == 0);
     assert(out_indices != NULL || ndim == 0);
     assert(ndim <= MAX_NDIM);
 
-    uint64_t temp = linear_idx;
+    uint64_t carry = linear_idx;
     for (int64_t d = (int64_t)ndim - 1; d >= 0; d--) {
-        out_indices[d] = temp % shape[d];
-        temp /= shape[d];
+        out_indices[d] = carry % shape[d];
+        carry /= shape[d];
     }
 }
 
 /*
- * Converts multi-dimensional coordinates to a linear offset with broadcasting support.
+ * converts multi-dimensional coordinates to a linear offset with broadcasting support.
  *
- * The result_indices are from a broadcasted output shape (result_ndim dimensions).
- * The tensor has potentially fewer dimensions (tensor_ndim).
- * This function maps the result coordinates to the tensor's linear offset.
+ * example:
  *
- * Example:
- *   result_indices=[1,2,3] (from shape [2,3,4])
- *   tensor_shape=[3,1] (will be right-aligned to [_,3,1])
- *   tensor_strides=[1,1]
- *   -> maps to indices [2,0] for the tensor -> offset = 2*1 + 0*1 = 2
+ * result_shape:  [2, 3]  (broadcasted output)
+ * tensor_shape:  [1, 3]  (tensor being broadcasted)
+ * tensor_strides: [3, 1]
+ *
+ * tensor memory:  [a, b, c]
+ *                  0  1  2  <- linear offsets
+ *
+ * tensor logical: [[a, b, c]]    row 0
+ *
+ * result logical: [[a, b, c],    row 0 (broadcasts from tensor row 0)
+ *                  [a, b, c]]    row 1 (broadcasts from tensor row 0)
+ *
+ * algorithm (left-to-right):
+ *   given: result_indices=[1,2], result_ndim=2, tensor_shape=[1,3], tensor_ndim=2
+ *
+ *   d=0 (leftmost/row):   result_dim_idx = 0 + (2-2) = 0
+ *                         tensor_shape[0] = 1  -> use idx = 0 (broadcast!)
+ *                         offset += 0 * 3 = 0
+ *
+ *   d=1 (rightmost/col):  result_dim_idx = 1 + (2-2) = 1
+ *                         tensor_shape[1] = 3  -> use idx = result_indices[1] = 2
+ *                         offset += 2 * 1 = 2
+ *
+ *   result: offset = 2 -> element 'c'
+ *
+ * intuition: right-align dimensions, then use stride formula.
+ *            dimensions with size 1 are "stretched" by always using index 0.
  */
 static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *result_indices, uint64_t result_ndim, const uint64_t *tensor_shape, uint64_t tensor_ndim, const uint64_t *strides) {
     assert(result_indices != NULL || result_ndim == 0);
@@ -290,7 +333,7 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
         assert((uintptr_t)b->data % CACHELINE_SIZE == 0 && "b->data is not properly aligned");
     }
 
-    // prepare output: broadcast, reshape
+    // prepare result tensor
     uint64_t out_shape[MAX_NDIM];
     uint64_t out_ndim;
     if (!broadcast_shapes_mut(a->shape, a->ndim, b->shape, b->ndim, out_shape, &out_ndim)) {
@@ -427,9 +470,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
 }
 
 /*
- * Tensor Transpose
- * ----------------
- * Swaps two dimensions.
+ * transpose swaps two dimensions
  *
  * Example: (2, 3) -> (3, 2)
  *
@@ -441,10 +482,6 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
  * [[1, 4],
  *  [2, 5],
  *  [3, 6]]
- *
- * Logic:
- * New Shape: swap(shape[dim0], shape[dim1])
- * Iterate result indices. Map to input indices by swapping dim0 and dim1.
  */
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
