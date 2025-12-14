@@ -427,7 +427,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     uint64_t new_size = 1;
     int64_t unknown_idx = -1;
 
-    // Validate new shape and handle -1
+    // validate new shape and handle -1
     for (uint64_t i = 0; i < new_ndim; i++) {
         if (new_shape[i] == -1) {
             assert(unknown_idx == -1 && "Only one dimension can be -1");
@@ -455,15 +455,10 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
         }
     }
 
-    // note: resolved_shape values are uint64_t, so they cannot be negative
-
     Tensor *result = tensor_create(t->data, resolved_shape, new_ndim, t->requires_grad);
     free(resolved_shape);
-
-    // pair assertion: verify new tensor size matches original
     assert(result != NULL);
     assert(result->size == t->size);
-
     return result;
 }
 
