@@ -4,7 +4,7 @@ project(defer LANGUAGES C)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 13.0.0)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 14.0.0)
   message(FATAL_ERROR "GCC is outdated: ${CMAKE_C_COMPILER_VERSION}")
 endif()
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 16.0.0)
@@ -132,7 +132,11 @@ endif()
 # sources
 #
 
-add_library(tensor src/tensor.c)
+# work in progress...
+file(GLOB_RECURSE TENSOR_SOURCES src/*.c)
+list(FILTER TENSOR_SOURCES EXCLUDE REGEX "src/main\\.c$")
+
+add_library(tensor ${TENSOR_SOURCES})
 
 add_executable(binary src/main.c)
 target_link_libraries(binary PRIVATE tensor)
