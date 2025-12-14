@@ -3,13 +3,13 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-// ----------------------------------------------------------------------------
-// Layer Type Definitions
-// ----------------------------------------------------------------------------
+//
+// layer type definitions
+//
 
 typedef struct Layer Layer;
 
-// Function pointer types for polymorphism aka "vtable"
+// function pointer types for polymorphism aka "vtable"
 typedef Tensor *(*LayerForwardFunc)(Layer *layer, const Tensor *input, bool training);
 typedef void (*LayerFreeFunc)(Layer *layer);
 typedef void (*LayerParametersFunc)(Layer *layer, Tensor ***out_params, size_t *out_count);
@@ -21,67 +21,67 @@ struct Layer {
     char *name;
 };
 
-// ----------------------------------------------------------------------------
-// Public API Constructors
-// ----------------------------------------------------------------------------
+//
+// public api constructors
+//
 
 /**
- * Creates a Linear (Dense) layer.
+ * creates a linear (dense) layer.
  * y = xW + b
  *
- * @param in_features  Size of each input sample
- * @param out_features Size of each output sample
- * @param bias         If true, learns an additive bias
- * @return             Pointer to new Layer
+ * @param in_features  size of each input sample
+ * @param features_out size of each output sample
+ * @param bias         if true, learns an additive bias
+ * @return             pointer to new layer
  */
 Layer *layer_linear_create(uint64_t in_features, uint64_t features_out, bool bias);
 
 /**
- * Creates a Dropout layer.
- * During training: randomly zeroes elements with probability p.
- * During inference: identity.
+ * creates a dropout layer.
+ * during training: randomly zeroes elements with probability p.
+ * during inference: identity.
  *
- * @param p            Probability of an element to be zeroed. (0 <= p <= 1)
- * @return             Pointer to new Layer
+ * @param p            probability of an element to be zeroed. (0 <= p <= 1)
+ * @return             pointer to new layer
  */
 Layer *layer_dropout_create(float32_t p);
 
 /**
- * Creates a Sequential container layer.
- * Chains layers together: y = layerN(...layer2(layer1(x))...)
+ * creates a sequential container layer.
+ * chains layers together: y = layerN(...layer2(layer1(x))...)
  *
- * @param layers       Array of Layer pointers. Takes ownership of these pointers.
- * @param count        Number of layers
- * @return             Pointer to new Layer
+ * @param layers       array of layer pointers. takes ownership of these pointers.
+ * @param count        number of layers
+ * @return             pointer to new layer
  */
 Layer *layer_sequential_create(Layer **layers, size_t count);
 
-// ----------------------------------------------------------------------------
-// Public API Methods
-// ----------------------------------------------------------------------------
+//
+// public api methods
+//
 
 /**
- * Forward pass through the layer.
+ * forward pass through the layer.
  *
- * @param layer    Layer instance
- * @param input    Input tensor (const)
- * @param training True if training mode (affects Dropout)
- * @return         Output tensor (newly allocated)
+ * @param layer    layer instance
+ * @param input    input tensor (const)
+ * @param training true if training mode (affects dropout)
+ * @return         output tensor (newly allocated)
  */
 Tensor *layer_forward(Layer *layer, const Tensor *input, bool training);
 
 /**
- * Frees the layer and its internal resources (weights, biases, sub-layers).
+ * frees the layer and its internal resources (weights, biases, sub-layers).
  *
- * @param layer Layer instance
+ * @param layer layer instance
  */
 void layer_free(Layer *layer);
 
 /**
- * Retrieves trainable parameters (weights, biases).
+ * retrieves trainable parameters (weights, biases).
  *
- * @param layer      Layer instance
- * @param out_params Output pointer to array of Tensor pointers (caller must not free the tensors, but may need to free the array if it was dynamically allocated - in this API we will return a copy of pointers or reference internal list. Let's specify: caller frees the array, not the Tensors.)
- * @param out_count  Output number of parameters
+ * @param layer      layer instance
+ * @param out_params output pointer to array of tensor pointers (caller must not free the tensors, but may need to free the array if it was dynamically allocated - in this api we will return a copy of pointers or reference internal list. let's specify: caller frees the array, not the tensors.)
+ * @param out_count  output number of parameters
  */
 void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count);
