@@ -1,5 +1,3 @@
-> Based on https://tigerstyle.dev/
-
 C Specific:
 
 - Use explicit types only (e.g., `int64_t`, `float64_t`), no implicit types (`int`, `float`)
@@ -29,8 +27,6 @@ Safety:
 - No undefined behavior; rely on explicit code, not compiler optimizations
 - Bounded execution: set explicit upper limits on all loops, queues, and recursion
 - Fail fast: detect unexpected conditions immediately rather than attempting recovery
-
----
 
 Building and Testing:
 
