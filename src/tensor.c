@@ -40,27 +40,27 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
 }
 
 /*
- * Strides: how many elements to skip in flat memory to move 1 step along each dimension.
- * Converts multi-dim index to linear offset: `offset = sum_i (index[i] * strides[i])`
+ * strides: how many elements to skip in flat memory to move 1 step along each dimension.
+ * converts multi-dim index to linear offset: `offset = sum_i (index[i] * strides[i])`
  *
- * Example:
+ * example:
  *
- * Shape:   [2, 3]  (2 rows, 3 cols)
+ * shape:   [2, 3]  (2 rows, 3 cols)
  *
- * Memory:  [a, b, c, d, e, f]
+ * memory:  [a, b, c, d, e, f]
  *
- * Logical: [[a, b, c],    row 0
+ * logical: [[a, b, c],    row 0
  *           [d, e, f]]    row 1
  *
- * Algorithm (iterate backward through dimensions):
+ * algorithm (iterate backward through dimensions):
  *     i=1: out_strides[1] = 1   (within a row, move 1 elem)
  *         stride = 1 * 3 = 3
  *     i=0: out_strides[0] = 3   (between rows, move 3 elems)
  *         stride = 3 * 2 = 6
  *
- * Result: out_strides = [3, 1]
+ * result: out_strides = [3, 1]
  *
- * Access examples:
+ * access examples:
  *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
 */
 static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
