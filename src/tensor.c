@@ -159,6 +159,7 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     return t;
 }
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) { return tensor_create(NULL, shape, ndim, requires_grad); }
 
 void tensor_free(Tensor *t) {
@@ -361,11 +362,16 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
     return out_tensor;
 }
 
+// cppcheck-suppress unusedFunction
 Tensor *tensor_add(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_add); }
+// cppcheck-suppress unusedFunction
 Tensor *tensor_sub(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_sub); }
+// cppcheck-suppress unusedFunction
 Tensor *tensor_mul(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_mul); }
+// cppcheck-suppress unusedFunction
 Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
+// cppcheck-suppress unusedFunction
 Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     assert(a != NULL);
     assert(b != NULL);
@@ -416,6 +422,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
 // shape manipulation
 //
 
+// cppcheck-suppress unusedFunction
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim) {
     assert(t != NULL);
     assert(new_shape != NULL);
@@ -474,6 +481,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
  *    [2, 5],
  *    [3, 6]]
  */
+// cppcheck-suppress unusedFunction
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -619,6 +627,7 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
  *      result: [5, 7, 9]
  */
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -664,6 +673,7 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     return result;
 }
 
+// cppcheck-suppress unusedFunction
 Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
@@ -683,6 +693,7 @@ Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
     return sum_mut;
 }
 
+// cppcheck-suppress unusedFunction
 Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -809,6 +820,7 @@ void tensor_print(Tensor *t) {
 }
 
 // use stride to get offset in flat data array
+// cppcheck-suppress unusedFunction
 Tensor *tensor_get(Tensor *t, const uint64_t *multidim) {
     assert(t != NULL);
     assert(multidim != NULL);
