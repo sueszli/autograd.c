@@ -5,8 +5,15 @@ C Style:
 Code Style:
 
 - Guard clauses first, early returns, minimize nesting
+- Use assert statements in each function to validate inputs and verify outputs where it makes sense
 - Maximize locality: keep related code together, define things near usage
 - Minimize lines of code without sacrificing clarity
+
+Building and Testing:
+
+- Run `make fmt` to format code
+- Run `make test` to run tests and ensure they pass
+- Do NOT run `make run` as it requires downloading large data files
 - Prefer lambdas and inline logic over tiny single-use functions
 - Functions should do one coherent thing but not be artificially split
 
