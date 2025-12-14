@@ -576,7 +576,7 @@ static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepd
     }
 }
 
-static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indices, int64_t dim_idx, bool keepdims) {
+static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     if (dim_idx < 0) {
         dim_idx += (int64_t)t->ndim;
@@ -593,10 +593,10 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indic
         }
 
         uint64_t idx_val = 0;
-        if (indices) {
+        if (multidim) {
             // if keepdims, result has same ndim, so we use d
             // if !keepdims, result has ndim-1, so we use k
-            idx_val = indices[keepdims ? d : k];
+            idx_val = multidim[keepdims ? d : k];
             if (t->shape) {
                 assert(idx_val < t->shape[d] && "index out of bounds");
             }
@@ -809,16 +809,17 @@ void tensor_print(Tensor *t) {
 }
 
 // use stride to get offset in flat data array
-Tensor *tensor_get(Tensor *t, const uint64_t *indices) {
+Tensor *tensor_get(Tensor *t, const uint64_t *multidim) {
     assert(t != NULL);
-    assert(indices != NULL);
+    assert(multidim != NULL);
+
     assert(t->data != NULL || t->size == 0);
 
     uint64_t offset = 0;
     if (t->ndim > 0) {
         for (uint64_t i = 0; i < t->ndim; i++) {
-            assert(indices[i] < t->shape[i] && "idx out of bounds");
-            offset += indices[i] * t->strides[i];
+            assert(multidim[i] < t->shape[i] && "idx out of bounds");
+            offset += multidim[i] * t->strides[i];
         }
     }
     assert(offset < t->size && "offset out of bounds");
