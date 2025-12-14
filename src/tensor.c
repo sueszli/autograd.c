@@ -266,68 +266,68 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
 /*
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
  *
- * @param broadcast_indices  coordinates in the broadcasted view (e.g., [1, 2] for row 1, col 2)
- * @param broadcast_ndim     number of dimensions in the broadcasted view
- * @param physical_shape     actual shape of the physical data in memory
- * @param physical_ndim      number of dimensions in the physical data
- * @param physical_strides   stride array for the physical data (how many elements to skip per dimension)
- * @return                   linear offset into the physical data array
+ * @param target_indices coordinates in the target broadcast shape (e.g., [1, 2])
+ * @param target_ndim    number of dimensions in target shape (must be >= ndim)
+ * @param shape          actual shape of data in memory (size-1 dims broadcast)
+ * @param ndim           number of dimensions in shape (right-aligned with target_ndim)
+ * @param strides        elements to skip per dimension (for linear offset calculation)
+ * @return               linear offset into the data array
  *
  * example: broadcasting a 1D tensor to 2D
  *
- * physical data (actual memory):  [a, b, c]     shape: [3]
+ * actual data in memory:  [a, b, c]     shape: [3]
  *
- * broadcasted view (logical):     [[a, b, c],   shape: [2, 3]
- *                                  [a, b, c]]
+ * target broadcast shape: [[a, b, c],   shape: [2, 3]
+ *                          [a, b, c]]
  *
  * the 1D tensor broadcasts to 2D by repeating across the first dimension.
- * both rows point to the same physical data [a, b, c].
+ * both rows point to the same data [a, b, c].
  *
  * algorithm walkthrough:
  *   query: "give me element at position [1, 2]" (row 1, col 2)
- *   inputs: broadcast_indices=[1,2], broadcast_ndim=2, physical_shape=[3], physical_ndim=1
+ *   inputs: target_indices=[1,2], target_ndim=2, shape=[3], ndim=1
  *
  *   step 1: right-align dimensions (like aligning numbers for addition)
  *
- *           broadcast: [2, 3]   <- 2 dimensions
- *                       v  v
- *           physical:     [3]   <- 1 dimension (aligns to the RIGHT)
+ *           target: [2, 3]   <- 2 dimensions
+ *                    v  v
+ *           shape:     [3]   <- 1 dimension (aligns to the RIGHT)
  *
- *           formula: broadcast_dim = d + (broadcast_ndim - physical_ndim)
- *                                  = d + (2 - 1)
- *                                  = d + 1
+ *           formula: target_dim = d + (target_ndim - ndim)
+ *                               = d + (2 - 1)
+ *                               = d + 1
  *
- *           so physical dim 0 maps to broadcast dim 1 (columns)
+ *           so shape dim 0 maps to target dim 1 (columns)
  *
- *   step 2: iterate over physical dimensions
+ *   step 2: iterate over shape dimensions
  *
- *           d=0 (physical's only dim):
- *              broadcast_dim = 0 + 1 = 1  (maps to column dimension)
- *              physical_shape[0] = 3  (normal dimension, not broadcasting)
- *              idx = broadcast_indices[1] = 2  (use column index)
+ *           d=0 (shape's only dim):
+ *              target_dim = 0 + 1 = 1  (maps to column dimension)
+ *              shape[0] = 3  (normal dimension, not broadcasting)
+ *              idx = target_indices[1] = 2  (use column index)
  *              offset += 2 * 1 = 2
  *
  *   result: offset = 2 -> data[2] = 'c'
  *
- *   note: the row dimension (dim 0) doesn't exist in physical shape, so it's implicitly
+ *   note: the row dimension (dim 0) doesn't exist in shape, so it's implicitly
  *         broadcast (all rows access the same data).
  *
  * key insight: dimensions with size 1 are "frozen" at index 0.
  *              missing dimensions (when ndims differ) are implicitly broadcast.
  */
-static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *broadcast_indices, uint64_t broadcast_ndim, const uint64_t *physical_shape, uint64_t physical_ndim, const uint64_t *physical_strides) {
-    assert(broadcast_indices != NULL || broadcast_ndim == 0);
-    assert(physical_shape != NULL || physical_ndim == 0);
-    assert(physical_strides != NULL || physical_ndim == 0);
-    assert(broadcast_ndim >= physical_ndim);
-    assert(physical_ndim <= MAX_NDIM);
+static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *target_indices, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
+    assert(target_indices != NULL || target_ndim == 0);
+    assert(shape != NULL || ndim == 0);
+    assert(strides != NULL || ndim == 0);
+    assert(target_ndim >= ndim);
+    assert(ndim <= MAX_NDIM);
 
     uint64_t offset = 0;
-    for (uint64_t d = 0; d < physical_ndim; d++) {
-        uint64_t broadcast_dim = d + (broadcast_ndim - physical_ndim); // align right
-        // broadcasting rule: if physical shape has size 1 in a dimension, always use index 0
-        uint64_t idx = (physical_shape[d] == 1) ? 0 : broadcast_indices[broadcast_dim];
-        offset += idx * physical_strides[d];
+    for (uint64_t d = 0; d < ndim; d++) {
+        uint64_t target_dim = d + (target_ndim - ndim); // align right
+        // broadcasting rule: if shape has size 1 in a dimension, always use index 0
+        uint64_t idx = (shape[d] == 1) ? 0 : target_indices[target_dim];
+        offset += idx * strides[d];
     }
     return offset;
 }
@@ -352,36 +352,39 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
         assert((uintptr_t)b->data % CACHELINE_SIZE == 0 && "b->data is not properly aligned");
     }
 
-    // prepare result tensor
     uint64_t out_shape[MAX_NDIM];
     uint64_t out_ndim;
     if (!broadcast_shapes_mut(a->shape, a->ndim, b->shape, b->ndim, out_shape, &out_ndim)) {
         assert(false && "shapes cannot be broadcasted");
     }
     assert(out_ndim <= MAX_NDIM);
-    Tensor *result = tensor_zeros(out_shape, out_ndim, a->requires_grad || b->requires_grad);
-    uint64_t *result_indices = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
-    assert(result_indices != NULL && "calloc failed");
+    Tensor *out_tensor = tensor_zeros(out_shape, out_ndim, a->requires_grad || b->requires_grad);
 
-    // i = linear index in result
-    for (uint64_t i = 0; i < result->size; i++) {
-        linear_to_multidim_indices_mut(i, out_shape, out_ndim, result_indices);
+    // working buffer to store current position in output tensor as multi-dim coordinates.
+    // gets reused on each iteration: linear index i -> multi-dim coords -> offsets in a and b
+    uint64_t *out_indices = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
+    assert(out_indices != NULL && "calloc failed");
 
-        uint64_t offset_a = multidim_to_linear_offset_broadcast(result_indices, out_ndim, a->shape, a->ndim, a->strides);
+    // iterate through every element in the output tensor
+    for (uint64_t i = 0; i < out_tensor->size; i++) {
+        // convert linear index i to multi-dim coordinates
+        linear_to_multidim_indices_mut(i, out_shape, out_ndim, out_indices);
+
+        uint64_t offset_a = multidim_to_linear_offset_broadcast(out_indices, out_ndim, a->shape, a->ndim, a->strides);
         assert(offset_a < a->size && "offset_a out of bounds");
 
-        uint64_t offset_b = multidim_to_linear_offset_broadcast(result_indices, out_ndim, b->shape, b->ndim, b->strides);
+        uint64_t offset_b = multidim_to_linear_offset_broadcast(out_indices, out_ndim, b->shape, b->ndim, b->strides);
         assert(offset_b < b->size && "offset_b out of bounds");
 
-        result->data[i] = op(a->data[offset_a], b->data[offset_b]);
+        out_tensor->data[i] = op(a->data[offset_a], b->data[offset_b]);
     }
 
-    free(result_indices);
+    free(out_indices);
 
-    assert(result != NULL);
-    assert(result->ndim == out_ndim);
-    assert(result->data != NULL || result->size == 0);
-    return result;
+    assert(out_tensor != NULL);
+    assert(out_tensor->ndim == out_ndim);
+    assert(out_tensor->data != NULL || out_tensor->size == 0);
+    return out_tensor;
 }
 
 Tensor *tensor_add(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_add); }
