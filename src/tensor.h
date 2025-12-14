@@ -2,20 +2,24 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+
+typedef float float32_t;
+typedef double float64_t;
 
 typedef struct Tensor {
-    float *data;         // flat contiguous array, row-major
-    int *shape;          // array of dimension sizes
-    int *strides;        // array of elements to skip to get to next element in each dimension
-    int ndim;            // rank (ie. 1 for vector, 2 for matrix, etc.)
-    int size;            // total number of elements
+    float32_t *data;     // flat contiguous array, row-major
+    int64_t *shape;      // array of dimension sizes
+    int64_t *strides;    // array of elements to skip to get to next element in each dimension
+    int64_t ndim;        // rank (ie. 1 for vector, 2 for matrix, etc.)
+    int64_t size;        // total number of elements
     bool requires_grad;  // whether to track operations for autograd
     struct Tensor *grad; // accumulated gradient (del loss / del tensor) during backprop
 } Tensor;
 
 // memory management
-Tensor *tensor_create(const float *data, const int *shape, int ndim, bool requires_grad);
-Tensor *tensor_zeros(const int *shape, int ndim, bool requires_grad);
+Tensor *tensor_create(const float32_t *data, const int64_t *shape, int64_t ndim, bool requires_grad);
+Tensor *tensor_zeros(const int64_t *shape, int64_t ndim, bool requires_grad);
 void tensor_free(Tensor *t);
 
 // arithmetic
@@ -26,14 +30,14 @@ Tensor *tensor_div(Tensor *a, Tensor *b);
 Tensor *tensor_matmul(Tensor *a, Tensor *b);
 
 // shape manipulation
-Tensor *tensor_reshape(const Tensor *t, const int *new_shape, int new_ndim);
-Tensor *tensor_transpose(Tensor *t, int dim0, int dim1);
+Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, int64_t new_ndim);
+Tensor *tensor_transpose(Tensor *t, int64_t dim0, int64_t dim1);
 
 // reductions
-Tensor *tensor_sum(Tensor *t, int axis, bool keepdims);
-Tensor *tensor_mean(Tensor *t, int axis, bool keepdims);
-Tensor *tensor_max(Tensor *t, int axis, bool keepdims);
+Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims);
+Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims);
+Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims);
 
 // utils
 void tensor_print(Tensor *t);
-Tensor *tensor_get(Tensor *t, const int *indices);
+Tensor *tensor_get(Tensor *t, const int64_t *indices);
