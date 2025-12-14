@@ -98,7 +98,6 @@ static uint64_t *strides(const uint64_t *shape, uint64_t ndim) {
     return strides;
 }
 
-// cppcheck-suppress staticFunction
 Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndim, bool requires_grad) {
     assert(ndim <= MAX_NDIM);
     assert(shape != NULL || ndim == 0);
@@ -160,7 +159,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     return t;
 }
 
-// cppcheck-suppress staticFunction
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) { return tensor_create(NULL, shape, ndim, requires_grad); }
 
 void tensor_free(Tensor *t) {
@@ -620,7 +618,7 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
  *      shape:  [3]
  *      result: [5, 7, 9]
  */
-// cppcheck-suppress staticFunction
+
 Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
