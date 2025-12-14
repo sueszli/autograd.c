@@ -40,4 +40,4 @@ Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims);
 
 // utils
 void tensor_print(Tensor *t);
-Tensor *tensor_get(Tensor *t, const uint64_t *indices);
+Tensor *tensor_get(Tensor *t, const uint64_t *multidim);

@@ -582,10 +582,25 @@ static void reduction_shapes_mut(const Tensor *t, int64_t dim_idx, bool keepdims
  *
  * example: reducing along dimension 1 (rows)
  *
- * shape before reduction:   [2, 3, 4]
- * shape after reduction:    [2, 4]      // dim_idx=1, keepdims=false
+ * shape (original):         [2, 3, 4]
+ * shape (after reduction):  [2, 4]      // dim_idx=1, keepdims=false
+ * strides (original):       [12, 4, 1]
  *
  * target: element at [1, 2] after reduction
+ *
+ * calculation (iterating through original dimensions):
+ *
+ *   - original dim 0 (blocks):
+ *     - uses multidim[0] = 1
+ *     - offset += 1 * strides[0] (12) = 12
+ *
+ *   - dimension 1 (rows) - was dropped on reduction. skip!
+ *
+ *   - dimension 2 (cols):
+ *     - uses multidim[1] = 2
+ *     - offset += 2 * strides[2] (1) = 2
+ *
+ * result: offset = 12 + 2 = 14.
  */
 static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
@@ -594,33 +609,34 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
     }
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
-    uint64_t base_offset = 0;
-    uint64_t curr = 0; // idx in `multidim` array (which is result-shaped)
-
-    for (uint64_t d = 0; d < t->ndim; d++) {
+    uint64_t offset = 0;
+    uint64_t curr = 0; // dim index in reduced shape
+    for (uint64_t d = 0; d < t->ndim; d++) { // dim index in original shape
+        // skip reduced dimension
         if ((int64_t)d == dim_idx) {
-            // reduction axis contributes to offset in the inner loop, not base
             continue;
         }
 
+        // pick where to read strides from
         uint64_t idx_val = 0;
         if (multidim) {
             // if keepdims, result has same ndim, so we use d (the original dimension index)
-            // if !keepdims, result has ndim-1, so we use curr (index in result shape)
+            // if !keepdims, result has ndim-1, so we use curr (index in reduced shape)
             idx_val = multidim[keepdims ? d : curr];
             if (t->shape) {
                 assert(idx_val < t->shape[d] && "index out of bounds");
             }
         }
 
-        base_offset += idx_val * t->strides[d];
+        offset += idx_val * t->strides[d];
 
+        // if reduced dimension is kept, curr is the same as d
         if (!keepdims) {
             curr++;
         }
     }
-    assert(base_offset < t->size && "base_offset out of bounds");
-    return base_offset;
+    assert(offset < t->size && "offset out of bounds");
+    return offset;
 }
 
 // cppcheck-suppress staticFunction
