@@ -62,7 +62,7 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
  *
  * access examples:
  *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
-*/
+ */
 static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
     if (ndim == 0) {
         return;
@@ -158,7 +158,7 @@ void tensor_free(Tensor *t) {
 /*
  * aligns dimensions from the right.
  * compatible if dimensions are equal or one of them is 1.
- * 
+ *
  * shape_a: [   3, 1]
  * shape_b: [2, 1, 5]
  *           ^  ^  ^
@@ -318,9 +318,9 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     return result;
 }
 
-// --------------------------------------------------------------------------
+//
 // Shape Manipulation
-// --------------------------------------------------------------------------
+//
 
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim) {
     assert(t != NULL);
@@ -390,8 +390,8 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
         return tensor_create(t->data, t->shape, t->ndim, t->requires_grad);
     }
 
-    assert(dim0 < t->ndim && "Dimension 0 out of bounds");
-    assert(dim1 < t->ndim && "Dimension 1 out of bounds");
+    assert(dim0 < t->ndim && "dimension 0 out of bounds");
+    assert(dim1 < t->ndim && "dimension 1 out of bounds");
 
     uint64_t *new_shape = (uint64_t *)malloc((size_t)t->ndim * sizeof(uint64_t));
     assert(new_shape != NULL && "malloc failed");
@@ -435,16 +435,17 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     return result;
 }
 
-// --------------------------------------------------------------------------
-// Reductions
-// --------------------------------------------------------------------------
+//
+// reductions
+//
 
-static void resolve_axis(uint64_t ndim, int64_t axis, int64_t *out_axis) {
+// allows negative indexing (like python / numpy)
+static int64_t resolve_axis(uint64_t ndim, int64_t axis) {
     if (axis < 0) {
         axis += (int64_t)ndim;
     }
-    assert(axis >= 0 && axis < (int64_t)ndim && "Axis out of bounds");
-    *out_axis = axis;
+    assert(axis >= 0 && axis < (int64_t)ndim && "axis out of bounds");
+    return axis;
 }
 
 static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
@@ -499,19 +500,21 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indic
 // cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
-    resolve_axis(t->ndim, axis, &axis);
+    axis = resolve_axis(t->ndim, axis);
 
     uint64_t *new_shape;
     uint64_t new_ndim;
     calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
-    if (new_shape)
+    if (new_shape) {
         free(new_shape);
+    }
 
     uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
-    if (new_ndim > 0)
+    if (new_ndim > 0) {
         assert(indices != NULL && "calloc failed");
+    }
 
     for (uint64_t i = 0; i < result->size; i++) {
         // Unravel result index
@@ -536,14 +539,15 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = sum;
     }
 
-    if (indices)
+    if (indices) {
         free(indices);
+    }
     return result;
 }
 
 Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
-    resolve_axis(t->ndim, axis, &axis); // Just to validate, tensor_sum does it again but that's fine
+    axis = resolve_axis(t->ndim, axis);
 
     Tensor *sum = tensor_sum(t, axis, keepdims);
 
@@ -559,19 +563,21 @@ Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
 
 Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
-    resolve_axis(t->ndim, axis, &axis);
+    axis = resolve_axis(t->ndim, axis);
 
     uint64_t *new_shape;
     uint64_t new_ndim;
     calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
-    if (new_shape)
+    if (new_shape) {
         free(new_shape);
+    }
 
     uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
-    if (new_ndim > 0)
+    if (new_ndim > 0) {
         assert(indices != NULL && "calloc failed");
+    }
 
     for (uint64_t i = 0; i < result->size; i++) {
         if (new_ndim > 0) {
@@ -600,14 +606,15 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = max_val;
     }
 
-    if (indices)
+    if (indices) {
         free(indices);
+    }
     return result;
 }
 
-// --------------------------------------------------------------------------
+//
 // utils
-// --------------------------------------------------------------------------
+//
 
 static void tensor_print_recursive(Tensor *t, uint64_t dim, uint64_t offset, uint64_t indent) {
     if (dim == t->ndim) {
@@ -661,7 +668,6 @@ void tensor_print(Tensor *t) {
     printf("], size=%" PRIu64 ", requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
 
     if (t->data) {
-        // use explicit fixed width type for constant
         const uint64_t max_size = 1000;
         if (t->size <= max_size) {
             printf("Data: ");
@@ -673,6 +679,7 @@ void tensor_print(Tensor *t) {
     }
 }
 
+// use stride to get offset in flat data array
 Tensor *tensor_get(Tensor *t, const uint64_t *indices) {
     assert(t != NULL);
     assert(indices != NULL);
@@ -680,7 +687,7 @@ Tensor *tensor_get(Tensor *t, const uint64_t *indices) {
     uint64_t offset = 0;
     if (t->ndim > 0) {
         for (uint64_t i = 0; i < t->ndim; i++) {
-            assert(indices[i] < t->shape[i] && "Index out of bounds");
+            assert(indices[i] < t->shape[i] && "idx out of bounds");
             offset += indices[i] * t->strides[i];
         }
     }
