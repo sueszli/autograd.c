@@ -4,6 +4,7 @@
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -14,8 +15,8 @@ static Tensor *create_tensor_from_data(float32_t *data, uint64_t size) {
 }
 
 void test_sigmoid_standard_values(void) {
-    float32_t data[] = {0.0f, 1.0f, -1.0f, 0.5f, -0.5f};
-    Tensor *t = create_tensor_from_data(data, 5);
+    float32_t data[] = {0.0f, 1.0f, -1.0f, 0.5f, -0.5f, 2.0f, -2.0f};
+    Tensor *t = create_tensor_from_data(data, 7);
     Tensor *out = tensor_sigmoid(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[0]);
@@ -23,17 +24,19 @@ void test_sigmoid_standard_values(void) {
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.2689414f, out->data[2]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.6224593f, out->data[3]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.3775407f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.880797f, out->data[5]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.1192029f, out->data[6]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_sigmoid_stability_large_positive(void) {
-    float32_t data[] = {100.0f, 500.0f, 1000.0f, 1e6f};
-    Tensor *t = create_tensor_from_data(data, 4);
+    float32_t data[] = {100.0f, 500.0f, 1000.0f, 1e6f, 50.0f};
+    Tensor *t = create_tensor_from_data(data, 5);
     Tensor *out = tensor_sigmoid(t);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[i]);
     }
 
@@ -42,11 +45,11 @@ void test_sigmoid_stability_large_positive(void) {
 }
 
 void test_sigmoid_stability_large_negative(void) {
-    float32_t data[] = {-100.0f, -500.0f, -1000.0f, -1e6f};
-    Tensor *t = create_tensor_from_data(data, 4);
+    float32_t data[] = {-100.0f, -500.0f, -1000.0f, -1e6f, -50.0f};
+    Tensor *t = create_tensor_from_data(data, 5);
     Tensor *out = tensor_sigmoid(t);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[i]);
     }
 
@@ -68,20 +71,22 @@ void test_sigmoid_nan_inf(void) {
 }
 
 void test_sigmoid_tiny_values(void) {
-    float32_t data[] = {1e-10f, -1e-10f};
-    Tensor *t = create_tensor_from_data(data, 2);
+    float32_t data[] = {1e-10f, -1e-10f, 1e-20f, -1e-20f};
+    Tensor *t = create_tensor_from_data(data, 4);
     Tensor *out = tensor_sigmoid(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[3]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_relu_standard_values(void) {
-    float32_t data[] = {-5.0f, -0.1f, 0.0f, 0.1f, 5.0f};
-    Tensor *t = create_tensor_from_data(data, 5);
+    float32_t data[] = {-5.0f, -0.1f, 0.0f, 0.1f, 5.0f, 10.0f, -10.0f};
+    Tensor *t = create_tensor_from_data(data, 7);
     Tensor *out = tensor_relu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
@@ -89,18 +94,22 @@ void test_relu_standard_values(void) {
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[2]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.1f, out->data[3]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 5.0f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 10.0f, out->data[5]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[6]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_relu_stability(void) {
-    float32_t data[] = {-1e6f, 1e6f};
-    Tensor *t = create_tensor_from_data(data, 2);
+    float32_t data[] = {-1e6f, 1e6f, -1e9f, 1e9f};
+    Tensor *t = create_tensor_from_data(data, 4);
     Tensor *out = tensor_relu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 1e6f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1e9f, out->data[3]);
 
     tensor_free(t);
     tensor_free(out);
@@ -120,41 +129,47 @@ void test_relu_nan_inf(void) {
 }
 
 void test_relu_mixed_sign(void) {
-    float32_t data[] = {-1.0f, 1.0f, -2.0f, 2.0f};
-    Tensor *t = create_tensor_from_data(data, 4);
+    float32_t data[] = {-1.0f, 1.0f, -2.0f, 2.0f, -3.0f, 3.0f};
+    Tensor *t = create_tensor_from_data(data, 6);
     Tensor *out = tensor_relu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[2]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 2.0f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 3.0f, out->data[5]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_tanh_standard_values(void) {
-    float32_t data[] = {0.0f, 1.0f, -1.0f};
-    Tensor *t = create_tensor_from_data(data, 3);
+    float32_t data[] = {0.0f, 1.0f, -1.0f, 0.5f, -0.5f};
+    Tensor *t = create_tensor_from_data(data, 5);
     Tensor *out = tensor_tanh(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.7615942f, out->data[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, -0.7615942f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.462117f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, -0.462117f, out->data[4]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_tanh_stability(void) {
-    float32_t data[] = {20.0f, -20.0f, 1000.0f, -1000.0f};
-    Tensor *t = create_tensor_from_data(data, 4);
+    float32_t data[] = {20.0f, -20.0f, 1000.0f, -1000.0f, 50.0f, -50.0f};
+    Tensor *t = create_tensor_from_data(data, 6);
     Tensor *out = tensor_tanh(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, -1.0f, out->data[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[2]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, -1.0f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, -1.0f, out->data[5]);
 
     tensor_free(t);
     tensor_free(out);
@@ -174,37 +189,44 @@ void test_tanh_nan_inf(void) {
 }
 
 void test_tanh_small_epsilon(void) {
-    float32_t data[] = {1e-5f, -1e-5f};
-    Tensor *t = create_tensor_from_data(data, 2);
+    float32_t data[] = {1e-5f, -1e-5f, 1e-8f, -1e-8f};
+    Tensor *t = create_tensor_from_data(data, 4);
     Tensor *out = tensor_tanh(t);
     TEST_ASSERT_FLOAT_WITHIN(1e-8, 1e-5f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-8, -1e-5f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-10, 1e-8f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-10, -1e-8f, out->data[3]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_gelu_standard_values(void) {
-    float32_t data[] = {0.0f, 1.0f, -1.0f, 2.0f};
-    Tensor *t = create_tensor_from_data(data, 4);
+    float32_t data[] = {0.0f, 1.0f, -1.0f, 2.0f, -2.0f, 3.0f, -3.0f};
+    Tensor *t = create_tensor_from_data(data, 7);
     Tensor *out = tensor_gelu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.845795f, out->data[1]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6, -0.154205f, out->data[2]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.9356f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8458f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1542f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.9357f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0643f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 2.9819f, out->data[5]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0180f, out->data[6]);
 
     tensor_free(t);
     tensor_free(out);
 }
 
 void test_gelu_stability(void) {
-    float32_t data[] = {100.0f, -100.0f};
-    Tensor *t = create_tensor_from_data(data, 2);
+    float32_t data[] = {100.0f, -100.0f, 50.0f, -50.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
     Tensor *out = tensor_gelu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 100.0f, out->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 50.0f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[3]);
 
     tensor_free(t);
     tensor_free(out);
@@ -309,6 +331,21 @@ void test_softmax_2d_axis_0(void) {
     tensor_free(out);
 }
 
+void test_softmax_2d_axis_1(void) {
+    float32_t data[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    uint64_t shape[] = {2, 2};
+    Tensor *t = tensor_create(data, shape, 2, false);
+    Tensor *out = tensor_softmax(t, 1);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.2689414f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.7310586f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.2689414f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.7310586f, out->data[3]);
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
 void test_softmax_nan(void) {
     float32_t data[] = {1.0f, NAN, 2.0f};
     Tensor *t = create_tensor_from_data(data, 3);
@@ -364,6 +401,7 @@ int main(void) {
     RUN_TEST(test_softmax_large_negative_values);
     RUN_TEST(test_softmax_zero_tensor);
     RUN_TEST(test_softmax_2d_axis_0);
+    RUN_TEST(test_softmax_2d_axis_1);
     RUN_TEST(test_softmax_nan);
     RUN_TEST(test_softmax_3d_tensor);
     return UNITY_END();

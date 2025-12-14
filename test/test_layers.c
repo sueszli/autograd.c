@@ -148,6 +148,26 @@ void test_linear_large_batch(void) {
     layer_free(l);
 }
 
+void test_linear_initialization_not_zero(void) {
+    Layer *l = layer_linear_create(50, 50, false);
+    Tensor **params;
+    size_t count;
+    layer_parameters(l, &params, &count);
+
+    int nonzero = 0;
+    for (uint64_t i = 0; i < params[0]->size; i++) {
+        if (fabs(params[0]->data[i]) > 1e-9f) {
+            nonzero++;
+        }
+    }
+
+    TEST_ASSERT_TRUE(nonzero > 0);
+
+    if (params)
+        free(params);
+    layer_free(l);
+}
+
 void test_dropout_identity_inference(void) {
     Layer *l = layer_dropout_create(0.5f);
 
@@ -548,6 +568,7 @@ int main(void) {
     RUN_TEST(test_linear_forward_values);
     RUN_TEST(test_linear_zero_input);
     RUN_TEST(test_linear_large_batch);
+    RUN_TEST(test_linear_initialization_not_zero);
     RUN_TEST(test_linear_mixed_signs);
     RUN_TEST(test_dropout_identity_inference);
     RUN_TEST(test_dropout_p0_training);
