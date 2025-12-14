@@ -266,55 +266,6 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
 
 /*
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
- *
- * @param target coordinates in the target broadcast shape (e.g., [1, 2])
- * @param target_ndim    number of dimensions in target shape (must be >= ndim)
- * @param shape          actual shape of data in memory (size-1 dims broadcast)
- * @param ndim           number of dimensions in shape (right-aligned with target_ndim)
- * @param strides        elements to skip per dimension (for linear offset calculation)
- * @return               linear offset into the data array
- *
- * example: broadcasting a 1D tensor to 2D
- *
- * actual data in memory:  [a, b, c]     shape: [3]
- *
- * target broadcast shape: [[a, b, c],   shape: [2, 3]
- *                          [a, b, c]]
- *
- * the 1D tensor broadcasts to 2D by repeating across the first dimension.
- * both rows point to the same data [a, b, c].
- *
- * algorithm walkthrough:
- *   query: "give me element at position [1, 2]" (row 1, col 2)
- *   inputs: target=[1,2], target_ndim=2, shape=[3], ndim=1
- *
- *   step 1: right-align dimensions (like aligning numbers for addition)
- *
- *           target: [2, 3]   <- 2 dimensions
- *                    v  v
- *           shape:     [3]   <- 1 dimension (aligns to the RIGHT)
- *
- *           formula: target_dim = d + (target_ndim - ndim)
- *                               = d + (2 - 1)
- *                               = d + 1
- *
- *           so shape dim 0 maps to target dim 1 (columns)
- *
- *   step 2: iterate over shape dimensions
- *
- *           d=0 (shape's only dim):
- *              target_dim = 0 + 1 = 1  (maps to column dimension)
- *              shape[0] = 3  (normal dimension, not broadcasting)
- *              idx = target[1] = 2  (use column index)
- *              offset += 2 * 1 = 2
- *
- *   result: offset = 2 -> data[2] = 'c'
- *
- *   note: the row dimension (dim 0) doesn't exist in shape, so it's implicitly
- *         broadcast (all rows access the same data).
- *
- * key insight: dimensions with size 1 are "frozen" at index 0.
- *              missing dimensions (when ndims differ) are implicitly broadcast.
  */
 static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
     assert(target != NULL || target_ndim == 0);
