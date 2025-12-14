@@ -132,14 +132,12 @@ endif()
 # sources
 #
 
-# work in progress...
-file(GLOB_RECURSE TENSOR_SOURCES src/*.c)
-list(FILTER TENSOR_SOURCES EXCLUDE REGEX "src/main\\.c$")
+file(GLOB_RECURSE SRCS src/*.c)
+list(FILTER SRCS EXCLUDE REGEX "src/main\\.c$")
 
-add_library(tensor ${TENSOR_SOURCES})
-
+add_library(lib ${SRCS})
 add_executable(binary src/main.c)
-target_link_libraries(binary PRIVATE tensor)
+target_link_libraries(binary PRIVATE lib)
 
 #
 # tests
@@ -156,7 +154,7 @@ if(BUILD_TESTS)
     set(TEST_EXECUTABLE "${TEST_NAME}_binary")
 
     add_executable(${TEST_EXECUTABLE} ${TEST_SOURCE})
-    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity tensor)
+    target_link_libraries(${TEST_EXECUTABLE} PRIVATE unity lib)
     target_include_directories(${TEST_EXECUTABLE} PRIVATE ${unity_SOURCE_DIR}/src)
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXECUTABLE})
