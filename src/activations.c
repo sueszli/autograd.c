@@ -4,7 +4,6 @@
 #include <stddef.h>
 
 // Sigmoid: 1 / (1 + exp(-x))
-// cppcheck-suppress unusedFunction
 Tensor *tensor_sigmoid(const Tensor *t) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -33,7 +32,6 @@ Tensor *tensor_sigmoid(const Tensor *t) {
 }
 
 // ReLU: max(0, x)
-// cppcheck-suppress unusedFunction
 Tensor *tensor_relu(const Tensor *t) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -48,8 +46,6 @@ Tensor *tensor_relu(const Tensor *t) {
 }
 
 // Tanh: (exp(x) - exp(-x)) / (exp(x) + exp(-x))
-// Uses standard tanhf
-// cppcheck-suppress unusedFunction
 Tensor *tensor_tanh(const Tensor *t) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -63,7 +59,6 @@ Tensor *tensor_tanh(const Tensor *t) {
 }
 
 // GELU: x * sigmoid(1.702 * x)
-// cppcheck-suppress unusedFunction
 Tensor *tensor_gelu(const Tensor *t) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -96,7 +91,6 @@ Tensor *tensor_gelu(const Tensor *t) {
 }
 
 // Softmax: exp(x_i) / sum(exp(x_j))
-// cppcheck-suppress unusedFunction
 Tensor *tensor_softmax(const Tensor *t, int64_t dim) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
