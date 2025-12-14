@@ -183,7 +183,7 @@ void tensor_free(Tensor *t) {
 }
 
 //
-// broadcasting
+// arithmetic
 //
 
 /*
@@ -195,21 +195,21 @@ void tensor_free(Tensor *t) {
  *           ^  ^  ^
  * out:     [2, 3, 5]
  */
-static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
-    assert(ndim_a <= MAX_NDIM && "ndim_a exceeds maximum tensor dimensions");
-    assert(ndim_b <= MAX_NDIM && "ndim_b exceeds maximum tensor dimensions");
+static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
+    assert(ndim_a <= MAX_NDIM);
+    assert(ndim_b <= MAX_NDIM);
     assert(out_shape != NULL);
     assert(out_ndim != NULL);
 
     uint64_t max_ndim = (ndim_a > ndim_b) ? ndim_a : ndim_b;
-    assert(max_ndim <= MAX_NDIM && "resulting ndim exceeds maximum");
+    assert(max_ndim <= MAX_NDIM);
     *out_ndim = max_ndim;
 
     int64_t idx_a = (int64_t)ndim_a - 1;
     int64_t idx_b = (int64_t)ndim_b - 1;
     int64_t idx_out = (int64_t)max_ndim - 1;
 
-    assert(idx_out < (int64_t)MAX_NDIM && "loop counter exceeds bounds");
+    assert(idx_out < (int64_t)MAX_NDIM);
     while (idx_out >= 0) {
         uint64_t dim_a = (idx_a >= 0 && shape_a) ? shape_a[idx_a] : 1;
         uint64_t dim_b = (idx_b >= 0 && shape_b) ? shape_b[idx_b] : 1;
@@ -227,10 +227,6 @@ static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uin
     return true;
 }
 
-//
-// arithmetic
-//
-
 typedef float32_t (*binary_op_t)(float32_t, float32_t);
 
 static float32_t op_add(float32_t a, float32_t b) { return a + b; }
@@ -238,19 +234,6 @@ static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
 static float32_t op_div(float32_t a, float32_t b) { return a / b; }
 
-/*
- * iterate over the output tensor and map indices back to input tensors
- * considering broadcasting rules.
- *
- * Example:
- * A: (3, 1) -> strides (1, 1)
- * B: (1, 5) -> strides (5, 1)
- * Out: (3, 5) -> strides (5, 1)
- *
- * Index i in Out -> (d0, d1)
- * A index: d0 * stride_a[0] + 0 * stride_a[1]  (since dim 1 is 1)
- * B index: 0 * stride_b[0] + d1 * stride_b[1]  (since dim 0 is 1)
- */
 static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
     assert(a != NULL);
     assert(b != NULL);
@@ -264,58 +247,54 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
         assert((uintptr_t)b->data % CACHELINE_SIZE == 0 && "b->data is not properly aligned");
     }
 
-    uint64_t out_shape[32]; // Hard limit of 32 dims should be enough
+    // prepare output: broadcast, reshape
+    uint64_t out_shape[MAX_NDIM];
     uint64_t out_ndim;
-
-    if (!broadcast_shapes(a->shape, a->ndim, b->shape, b->ndim, out_shape, &out_ndim)) {
-        assert(false && "Shapes cannot be broadcasted");
+    if (!broadcast_shapes_mut(a->shape, a->ndim, b->shape, b->ndim, out_shape, &out_ndim)) {
+        assert(false && "shapes cannot be broadcasted");
     }
-    assert(out_ndim <= 32 && "out_ndim exceeds stack array size");
-
+    assert(out_ndim <= MAX_NDIM);
     Tensor *result = tensor_zeros(out_shape, out_ndim, a->requires_grad || b->requires_grad);
+    uint64_t *result_indices = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
+    assert(result_indices != NULL && "calloc failed");
 
-    uint64_t *indices = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
-    assert(indices != NULL && "calloc failed");
-
+    // i = linear index in result
     for (uint64_t i = 0; i < result->size; i++) {
-        assert(i < result->size && "loop index out of bounds");
-
-        // unravel index
+        // result: linear index -> multi-dim coordinates
         uint64_t temp = i;
         for (int64_t d = (int64_t)out_ndim - 1; d >= 0; d--) {
-            indices[d] = temp % out_shape[d];
+            result_indices[d] = temp % out_shape[d];
             temp /= out_shape[d];
         }
 
+        // a: multi-dim coordinates -> linear offset
         uint64_t offset_a = 0;
         for (uint64_t d = 0; d < a->ndim; d++) {
-            // map out_dim index to a_dim index
-            // align right
-            uint64_t result_dim_idx = d + (out_ndim - a->ndim);
-            // if a dimension is 1, index is always 0 (broadcast)
-            uint64_t idx = (a->shape[d] == 1) ? 0 : indices[result_dim_idx];
+            uint64_t result_dim_idx = d + (out_ndim - a->ndim); // align right
+            // broadcasting rule: if a has size 1 in a dimension, always use index 0
+            uint64_t idx = (a->shape[d] == 1) ? 0 : result_indices[result_dim_idx];
             offset_a += idx * a->strides[d];
         }
         assert(offset_a < a->size && "offset_a out of bounds");
 
+        // b: multi-dim coordinates -> linear offset
         uint64_t offset_b = 0;
         for (uint64_t d = 0; d < b->ndim; d++) {
             uint64_t result_dim_idx = d + (out_ndim - b->ndim);
-            uint64_t idx = (b->shape[d] == 1) ? 0 : indices[result_dim_idx];
+            uint64_t idx = (b->shape[d] == 1) ? 0 : result_indices[result_dim_idx];
             offset_b += idx * b->strides[d];
         }
         assert(offset_b < b->size && "offset_b out of bounds");
 
+        // perform op
         result->data[i] = op(a->data[offset_a], b->data[offset_b]);
     }
 
-    free(indices);
+    free(result_indices);
 
-    // pair assertion: verify result
     assert(result != NULL);
     assert(result->ndim == out_ndim);
     assert(result->data != NULL || result->size == 0);
-
     return result;
 }
 
@@ -324,24 +303,6 @@ Tensor *tensor_sub(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_sub)
 Tensor *tensor_mul(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_mul); }
 Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
-/*
- * matmul (2D only)
- *
- * A: (M, K)
- * B: (K, N)
- * Out: (M, N)
- *
- *        [ b00 b01 ... b0N ]
- *        [ b10 b11 ... b1N ]
- *        [ ...             ]
- *        [ bK0 bK1 ... bKN ]
- *
- * [ a00 ... a0K ] -> [ r00 ... r0N ]
- * [ ...         ]    [ ...         ]
- * [ aM0 ... aMK ]    [ rM0 ... rMN ]
- *
- * r_ij = sum_k (a_ik * b_kj)
- */
 Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     assert(a != NULL);
     assert(b != NULL);
@@ -349,11 +310,9 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     assert(b->data != NULL && "b->data is NULL");
     assert((uintptr_t)a->data % CACHELINE_SIZE == 0 && "a->data is not properly aligned");
     assert((uintptr_t)b->data % CACHELINE_SIZE == 0 && "b->data is not properly aligned");
-
-    // Validate shapes
-    assert(a->ndim >= 1 && b->ndim >= 1 && "Matmul requires at least 1D tensors");
-    assert(a->ndim == 2 && b->ndim == 2 && "Only 2D matmul supported");
-    assert(a->shape[1] == b->shape[0] && "Inner dimensions must match");
+    assert(a->ndim >= 1 && b->ndim >= 1 && "matmul requires at least 1D tensors");
+    assert(a->ndim == 2 && b->ndim == 2 && "only 2D matmul supported");
+    assert(a->shape[1] == b->shape[0] && "inner dimensions must match");
 
     uint64_t M = a->shape[0];
     uint64_t K = a->shape[1];
@@ -366,7 +325,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     const uint64_t out_shape[] = {M, N};
     Tensor *result = tensor_zeros(out_shape, 2, a->requires_grad || b->requires_grad);
 
-    // Naive matrix multiplication O(M*N*K)
+    // naive algorithm
     for (uint64_t i = 0; i < M; i++) {
         for (uint64_t j = 0; j < N; j++) {
             float32_t sum = 0.0f;
@@ -383,12 +342,10 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
         }
     }
 
-    // pair assertion: verify result dimensions
     assert(result != NULL);
     assert(result->ndim == 2);
     assert(result->shape[0] == M);
     assert(result->shape[1] == N);
-
     return result;
 }
 
