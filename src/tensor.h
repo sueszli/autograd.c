@@ -23,21 +23,21 @@ Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad);
 void tensor_free(Tensor *t);
 
 // arithmetic
-Tensor *tensor_add(Tensor *a, Tensor *b);
-Tensor *tensor_sub(Tensor *a, Tensor *b);
-Tensor *tensor_mul(Tensor *a, Tensor *b);
-Tensor *tensor_div(Tensor *a, Tensor *b);
-Tensor *tensor_matmul(Tensor *a, Tensor *b);
+Tensor *tensor_add(const Tensor *a, const Tensor *b);
+Tensor *tensor_sub(const Tensor *a, const Tensor *b);
+Tensor *tensor_mul(const Tensor *a, const Tensor *b);
+Tensor *tensor_div(const Tensor *a, const Tensor *b);
+Tensor *tensor_matmul(const Tensor *a, const Tensor *b);
 
 // shape manipulation
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim);
-Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1);
+Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1);
 
 // reductions
-Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims);
-Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims);
-Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims);
+Tensor *tensor_sum(const Tensor *t, int64_t dim_idx, bool keepdims);
+Tensor *tensor_mean(const Tensor *t, int64_t dim_idx, bool keepdims);
+Tensor *tensor_max(const Tensor *t, int64_t dim_idx, bool keepdims);
 
 // utils
-void tensor_print(Tensor *t);
-Tensor *tensor_get(Tensor *t, const uint64_t *multidim);
+void tensor_print(const Tensor *t);
+Tensor *tensor_get(const Tensor *t, const uint64_t *multidim);
