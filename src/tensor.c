@@ -6,21 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/*
- * Helper: calculate_size
- * ----------------------
- * Calculates the total number of elements in a tensor from its shape.
- *
- * Steps:
- * 1. Initialize size to 1.
- * 2. Iterate through each dimension in the shape.
- * 3. Multiply size by the dimension size.
- *
- * Example: shape = [2, 3]
- * Iteration 0: size = 1 * 2 = 2
- * Iteration 1: size = 2 * 3 = 6
- * Result: 6
- */
 static uint64_t calculate_size(const uint64_t *shape, uint64_t ndim) {
     assert(shape != NULL || ndim == 0);
     uint64_t size = 1;
@@ -30,28 +15,6 @@ static uint64_t calculate_size(const uint64_t *shape, uint64_t ndim) {
     return size;
 }
 
-/*
- * Helper: calculate_strides
- * -------------------------
- * Calculates the strides for a tensor. Strides represent the number of
- * elements to skip in memory to reach the next element in a dimension.
- * For a row-major layout (C-style), the last dimension has a stride of 1.
- *
- * Layout: Row-Major (last dimension is contiguous)
- *
- * Example: shape = [2, 3, 4]
- * Strides calculation (from last to first):
- * - Dim 2 (size 4): stride = 1
- * - Dim 1 (size 3): stride = 1 * 4 = 4
- * - Dim 0 (size 2): stride = 4 * 3 = 12
- * Result: strides = [12, 4, 1]
- *
- * Steps:
- * 1. Initialize stride to 1.
- * 2. Iterate backwards from the last dimension to the first.
- * 3. Assign current stride to the current dimension.
- * 4. Update stride by multiplying with the current dimension size.
- */
 static void calculate_strides(const uint64_t *shape, uint64_t ndim, uint64_t *strides) {
     assert(shape != NULL || ndim == 0);
     assert(strides != NULL || ndim == 0);
@@ -62,42 +25,9 @@ static void calculate_strides(const uint64_t *shape, uint64_t ndim, uint64_t *st
     }
 }
 
-/*
- * Function: tensor_create
- * -----------------------
- * Allocates and initializes a new Tensor.
- *
- * Memory Layout:
- * +----------------+
- * | Tensor Struct  |
- * | - data ptr  ---|---> [ float, float, ... ] (contiguous data)
- * | - shape ptr ---|---> [ dim0, dim1, ... ]
- * | - strides ptr -|---> [ stride0, stride1, ... ]
- * | ...            |
- * +----------------+
- *
- * Steps:
- * 1. Validate inputs (assert).
- * 2. Allocate memory for the Tensor struct.
- * 3. Handle scalar/empty shape case (ndim=0):
- *    - Allocate single element data.
- *    - Set shape/strides to NULL.
- * 4. For non-scalars:
- *    - Allocate and copy shape array.
- *    - Allocate and calculate strides array.
- *    - Calculate total size.
- *    - Allocate data array.
- * 5. Initialize data:
- *    - Copy from input `data` if provided.
- *    - Zero-initialize if `data` is NULL.
- * 6. Return the new Tensor pointer.
- */
 // cppcheck-suppress staticFunction
 Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndim, bool requires_grad) {
-    // Assert inputs
-    // data can be NULL
     assert(shape != NULL || ndim == 0);
-    // ndim can be 0 (scalar)
 
     Tensor *t = (Tensor *)malloc(sizeof(Tensor));
     if (!t)
@@ -169,31 +99,12 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     return t;
 }
 
-/*
- * Function: tensor_zeros
- * ----------------------
- * Creates a tensor filled with zeros.
- * Wrapper around tensor_create with NULL data.
- */
 // cppcheck-suppress staticFunction
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) {
     assert(shape != NULL || ndim == 0);
     return tensor_create(NULL, shape, ndim, requires_grad);
 }
 
-/*
- * Function: tensor_free
- * ---------------------
- * Frees all memory associated with a tensor.
- *
- * Steps:
- * 1. Check if tensor is NULL.
- * 2. Free data array.
- * 3. Free shape array.
- * 4. Free strides array.
- * 5. Recursively free gradient tensor if present.
- * 6. Free the tensor struct itself.
- */
 // cppcheck-suppress staticFunction
 void tensor_free(Tensor *t) {
     if (!t)
@@ -209,28 +120,6 @@ void tensor_free(Tensor *t) {
     free(t);
 }
 
-/*
- * Helper: broadcast_shapes
- * ------------------------
- * Determines the output shape when broadcasting two shapes together.
- * Broadcasting rules (NumPy style):
- * 1. Align shapes to the right.
- * 2. Dimensions are compatible if they are equal or one of them is 1.
- *
- * Diagram:
- * Shape A:       (2, 3)
- * Shape B:       (   3) -> implicitly (1, 3)
- *                |  |
- * Matches:       No Yes (3==3)
- * Broadcast:     (2, 3)
- *
- * Steps:
- * 1. Determine max rank (max_ndim).
- * 2. Iterate from the last dimension backwards.
- * 3. Get dim_a and dim_b (pad with 1 if out of bounds).
- * 4. Check compatibility (dim_a == dim_b OR dim_a == 1 OR dim_b == 1).
- * 5. Output dim is max(dim_a, dim_b).
- */
 static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
     assert(shape_a != NULL || ndim_a == 0);
     assert(shape_b != NULL || ndim_b == 0);
@@ -271,28 +160,6 @@ static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
 static float32_t op_div(float32_t a, float32_t b) { return a / b; }
 
-/*
- * Helper: tensor_binary_op
- * ------------------------
- * Performs a binary operation (add, sub, mul, div) element-wise with broadcasting.
- *
- * Process:
- * 1. Determine broadcasted output shape.
- * 2. Create result tensor.
- * 3. Iterate through every element in the result tensor (linear index `i`).
- * 4. Convert linear index `i` -> multidimensional indices `indices[]`.
- * 5. Map `indices[]` back to source indices for A and B, handling broadcasting.
- *    - If dim size is 1, index is 0.
- *    - Otherwise, index matches.
- * 6. Calculate offsets in A and B data arrays using strides.
- * 7. Apply operation and store result.
- *
- * Map Indices Example:
- * Result Shape: (2, 2)
- * A Shape:      (2, 1)
- * Indices:      [1, 1]
- * A Indices:    [1, 0] (since dim 1 is size 1)
- */
 static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
     assert(a != NULL);
     assert(b != NULL);
@@ -370,33 +237,6 @@ Tensor *tensor_div(Tensor *a, Tensor *b) {
     return tensor_binary_op(a, b, op_div);
 }
 
-/*
- * Function: tensor_matmul
- * -----------------------
- * Performs matrix multiplication of two 2D tensors.
- *
- * Operation: C = A @ B
- * Shapes:    (M, K) @ (K, N) -> (M, N)
- *
- * Diagram:
- *       [ B00 B01 ]
- *       [ B10 B11 ]
- *       [ B20 B21 ]
- *          (KxN)
- *
- * [ A00 A01 A02 ]  x  [ C00 C01 ]
- * [ A10 A11 A12 ]     [ C10 C11 ]
- *    (MxK)               (MxN)
- *
- * Steps:
- * 1. Validate inputs (must be 2D, inner dimensions match).
- * 2. Create result tensor of shape (M, N).
- * 3. Triple loop implementation:
- *    - Loop i from 0 to M (rows of A)
- *      - Loop j from 0 to N (cols of B)
- *        - Accumulate sum = sum(A[i, k] * B[k, j]) for k in 0..K
- *        - Store sum in C[i, j]
- */
 Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     assert(a != NULL);
     assert(b != NULL);
@@ -443,32 +283,6 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
 // shape manipulation
 //
 
-/*
- * Function: tensor_reshape
- * ------------------------
- * Returns a new tensor with the same data but a different shape.
- *
- * Rules:
- * - New shape must contain the same total number of elements.
- * - One dimension can be -1 (inferred).
- *
- * Example:
- * Input:  (2, 3), size=6
- * Reshape: (3, 2) -> Valid
- * Reshape: (6)    -> Valid
- * Reshape: (6, -1)-> Inferred to (6, 1)
- *
- * Steps:
- * 1. Validate inputs and calculate new size.
- * 2. Handle inferred dimension (-1):
- *    - Calculate target size from known dimensions.
- *    - Divide total size by target size to find missing dimension.
- * 3. Verify size consistency.
- * 4. Create new tensor sharing the *same data pointer* (wait, code copies data).
- *    - Current implementation creates a NEW tensor with COPIED data.
- *    - It calculates the fully resolved shape.
- *    - Calls tensor_create.
- */
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim) {
     assert(t != NULL);
     assert(new_shape != NULL);
@@ -520,31 +334,6 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     return result;
 }
 
-/*
- * Function: tensor_transpose
- * --------------------------
- * Permutes two dimensions of the tensor.
- *
- * Example: Transpose(0, 1) on Shape (2, 3)
- * Input:
- * [[1, 2, 3],
- *  [4, 5, 6]]
- *
- * Output:
- * [[1, 4],
- *  [2, 5],
- *  [3, 6]]
- *
- * Shape: (3, 2)
- *
- * Steps:
- * 1. Validate dimensions.
- * 2. Calculate new shape (swap dim0 and dim1).
- * 3. Create result tensor.
- * 4. Iterate result indices.
- * 5. Map result indices back to input indices by swapping dims.
- * 6. Copy data element-wise.
- */
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
 
@@ -552,7 +341,6 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
         return tensor_create(t->data, t->shape, t->ndim, t->requires_grad);
     }
 
-    // Bounds check
     assert(dim0 < t->ndim);
     assert(dim1 < t->ndim);
 
@@ -606,30 +394,6 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 // reductions
 //
 
-/*
- * Function: tensor_sum
- * --------------------
- * Reduces a tensor by summing over a specified axis.
- *
- * Example: Sum axis 0 on (2, 3)
- * Input:
- * [[1, 2, 3],
- *  [4, 5, 6]]
- *
- * Summing over axis 0 (vertical):
- * [1+4, 2+5, 3+6] = [5, 7, 9]
- * Result Shape: (3) (or (1, 3) if keepdims=true)
- *
- * Steps:
- * 1. Normalize axis (handle negative indexing).
- * 2. Calculate new shape (remove axis dim unless keepdims).
- * 3. Create result tensor.
- * 4. Iterate result elements.
- * 5. For each result element:
- *    - Determine base coordinates in input tensor.
- *    - Loop over the reduction axis.
- *    - Accumulate values.
- */
 // cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
@@ -900,16 +664,7 @@ static void tensor_print_recursive(Tensor *t, uint64_t dim, uint64_t offset, uin
     printf("]");
 }
 
-/*
- * Function: tensor_print
- * ----------------------
- * Prints the tensor metadata (shape, size, etc.) and data.
- * Truncates data if size > 1000.
- */
 void tensor_print(Tensor *t) {
-    // Assert on input, although NULL is handled by printing Tensor(NULL)
-    // assert(t != NULL); // Not strictly needed as we handle it
-
     if (!t) {
         printf("Tensor(NULL)\n");
         return;
@@ -934,25 +689,13 @@ void tensor_print(Tensor *t) {
     }
 }
 
-/*
- * Function: tensor_get
- * --------------------
- * Extracts a single element from the tensor as a 0-d tensor (scalar).
- *
- * Steps:
- * 1. Validate indices.
- * 2. Calculate offset = sum(index[i] * stride[i]).
- * 3. Create new 0-d tensor pointing to the data at that offset.
- */
 Tensor *tensor_get(Tensor *t, const uint64_t *indices) {
     assert(t != NULL);
-    assert(indices != NULL); // Assuming indices is required if ndim > 0, handled below
+    assert(indices != NULL);
 
     uint64_t offset = 0;
     if (t->ndim > 0 && indices) {
         for (uint64_t i = 0; i < t->ndim; i++) {
-            // Assert bounds? The prompt says "assert statements for every single argument".
-            // Adding bounds check assertion might be good.
             assert(indices[i] < t->shape[i]);
             offset += indices[i] * t->strides[i];
         }
