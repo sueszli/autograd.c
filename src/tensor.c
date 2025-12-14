@@ -11,7 +11,7 @@
 //
 
 #define CACHELINE_SIZE 64
-_Static_assert(CACHELINE_SIZE >= 4, "cacheline_size must be at least 4 bytes");
+_Static_assert(CACHELINE_SIZE >= sizeof(float32_t), "cacheline_size must be at least 4 bytes");
 _Static_assert((CACHELINE_SIZE & (CACHELINE_SIZE - 1)) == 0, "cacheline_size must be power of 2");
 
 static void *safe_aligned_alloc(uint64_t size_bytes) {
@@ -88,11 +88,10 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     t->shape = NULL;
     t->strides = NULL;
 
-    // Handle scalar (ndim=0) or empty shape
+    // scalar or empty shape
     if (ndim == 0) {
         t->size = 1;
-        // Allocate single element, aligned
-        t->data = (float32_t *)safe_aligned_alloc(sizeof(float32_t));
+        t->data = (float32_t *)safe_aligned_alloc(sizeof(float32_t)); // single elem
         if (data) {
             t->data[0] = data[0];
         } else {
