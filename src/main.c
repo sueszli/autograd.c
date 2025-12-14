@@ -8,7 +8,7 @@
 
 int32_t main(void) {
     float32_t float_data[INPUT_SIZE];
-    uint64_t shape[] = {CHANNELS, HEIGHT, WIDTH};
+    const uint64_t shape[] = {CHANNELS, HEIGHT, WIDTH};
 
     // load 5 images into tensors
     for (int8_t i = 0; i < 5; i++) {
