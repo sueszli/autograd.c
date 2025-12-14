@@ -88,10 +88,10 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     t->shape = NULL;
     t->strides = NULL;
 
-    // scalar or empty shape
+    // scalar
     if (ndim == 0) {
         t->size = 1;
-        t->data = (float32_t *)safe_aligned_alloc(sizeof(float32_t)); // single elem
+        t->data = (float32_t *)safe_aligned_alloc(sizeof(float32_t));
         if (data) {
             t->data[0] = data[0];
         } else {
@@ -100,7 +100,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
         return t;
     }
 
-    // Allocate shape and strides
     t->shape = (uint64_t *)malloc((size_t)ndim * sizeof(uint64_t));
     assert(t->shape != NULL && "malloc failed");
     memcpy(t->shape, shape, (size_t)ndim * sizeof(uint64_t));
@@ -111,14 +110,14 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
 
     t->size = get_size(shape, ndim);
 
+    // zero-size
     if (t->size == 0) {
         t->data = NULL;
         return t;
     }
 
-    // Allocate data aligned
+    // data allocation must be aligned
     t->data = (float32_t *)safe_aligned_alloc(t->size * sizeof(float32_t));
-
     if (data) {
         memcpy(t->data, data, (size_t)t->size * sizeof(float32_t));
     } else {
