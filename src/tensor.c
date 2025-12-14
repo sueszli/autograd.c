@@ -610,7 +610,7 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t offset = 0;
-    uint64_t curr = 0; // dim index in reduced shape
+    uint64_t curr = 0;                       // dim index in reduced shape
     for (uint64_t d = 0; d < t->ndim; d++) { // dim index in original shape
         // skip reduced dimension
         if ((int64_t)d == dim_idx) {
