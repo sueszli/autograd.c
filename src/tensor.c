@@ -488,6 +488,39 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
 // utils
 // 
 
+static void tensor_print_recursive(Tensor *t, int64_t dim, int64_t offset, int indent) {
+    if (dim == t->ndim) {
+        printf("%f", t->data[offset]);
+        return;
+    }
+
+    if (dim == t->ndim - 1) {
+        printf("[");
+        for (int64_t i = 0; i < t->shape[dim]; i++) {
+            printf("%f", t->data[offset + i * t->strides[dim]]);
+            if (i < t->shape[dim] - 1) {
+                printf(", ");
+            }
+        }
+        printf("]");
+    } else {
+        printf("[");
+        for (int64_t i = 0; i < t->shape[dim]; i++) {
+            if (i > 0) {
+                for (int j = 0; j < indent; j++) printf(" ");
+            }
+            tensor_print_recursive(t, dim + 1, offset + i * t->strides[dim], indent + 1);
+
+            if (i < t->shape[dim] - 1) {
+                printf(",");
+                int64_t newlines = t->ndim - dim - 1;
+                for (int k = 0; k < newlines; k++) printf("\n");
+            }
+        }
+        printf("]");
+    }
+}
+
 void tensor_print(Tensor *t) {
     if (!t) {
         printf("Tensor(NULL)\n");
@@ -501,12 +534,14 @@ void tensor_print(Tensor *t) {
     }
     printf("], size=%" PRId64 ", requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
 
-    if (t->data && t->size <= 20) {
-        printf("Data: [");
-        for (int64_t i = 0; i < t->size; i++) {
-            printf("%f%s", t->data[i], i < t->size - 1 ? ", " : "");
+    if (t->data) {
+        if (t->size <= 1000) {
+            printf("Data: ");
+            tensor_print_recursive(t, 0, 0, 6);
+            printf("\n");
+        } else {
+            printf("Data: ... (size > 1000)\n");
         }
-        printf("]\n");
     }
 }
 
