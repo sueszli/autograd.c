@@ -536,12 +536,6 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 /**
  * calculates the output shape and ndim for a tensor reduction.
  *
- * @param t          input tensor.
- * @param dim_idx       index of the dimension to reduce.
- * @param keepdims   if true, maintains reduced dimension with size 1. otherwise, removes it.
- * @param out_shape  [output] pointer to newly allocated array for the resulting shape. caller must free.
- * @param out_ndim   [output] number of dimensions in the resulting shape.
- *
  * example:
  *   input tensor shape: [2, 3]
  *   reduce dim_idx: 0 (first dimension)
@@ -553,6 +547,10 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
     assert(t->ndim <= MAX_NDIM);
+    if (dim_idx < 0) {
+        dim_idx += (int64_t)t->ndim; // reverse indexing if negative
+    }
+    assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     *out_ndim = keepdims ? t->ndim : t->ndim - 1;
     assert(*out_ndim <= MAX_NDIM);
@@ -564,12 +562,12 @@ static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepd
     }
 
     if (keepdims) {
-        // ndim stays the same
+        // keep dim_idx, collapse to size 1
         for (uint64_t i = 0; i < t->ndim; i++) {
             (*out_shape)[i] = ((int64_t)i == dim_idx) ? 1 : t->shape[i];
         }
     } else {
-        // ndim
+        // drop dim_idx entirely
         uint64_t k = 0;
         for (uint64_t i = 0; i < t->ndim; i++) {
             if ((int64_t)i != dim_idx) {
@@ -581,6 +579,10 @@ static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepd
 
 static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indices, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
+    if (dim_idx < 0) {
+        dim_idx += (int64_t)t->ndim;
+    }
+    assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t base_offset = 0;
     uint64_t k = 0; // index into 'indices' array (which is result-shaped)
