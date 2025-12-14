@@ -571,7 +571,7 @@ void tensor_print(Tensor *t) {
     printf("], size=%" PRId64 ", requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
 
     if (t->data) {
-        u_int8_t max_size = 1000;
+        const u_int16_t max_size = 1000;
         if (t->size <= max_size) {
             printf("Data: ");
             tensor_print_recursive(t, 0, 0, 6);
