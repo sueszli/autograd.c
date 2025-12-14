@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define DATA_DIRECTORY "data"
-
 #define NUM_CLASSES 10
-
 typedef enum { AIRPLANE = 0, AUTOMOBILE = 1, BIRD = 2, CAT = 3, DEER = 4, DOG = 5, FROG = 6, HORSE = 7, SHIP = 8, TRUCK = 9 } label_t;
 
 #define CHANNELS 3
@@ -19,11 +16,18 @@ typedef enum { AIRPLANE = 0, AUTOMOBILE = 1, BIRD = 2, CAT = 3, DEER = 4, DOG = 
 #define NUM_TRAIN_SAMPLES 50000
 #define NUM_TEST_SAMPLES 10000
 
+//
+// data loading
+//
+
+// path to subdirectory with dataset
+#define DATA_DIRECTORY "data"
+
+// static arrays with dataset
 typedef struct {
     label_t label;
     uint8_t data[INPUT_SIZE];
 } sample_t;
-
 static sample_t test_samples[NUM_TEST_SAMPLES];
 static sample_t train_samples[NUM_TRAIN_SAMPLES];
 
@@ -52,7 +56,9 @@ static inline void load_batch(const char *filepath, sample_t *samples, int32_t c
     assert(close_result == 0 && "failed to close batch file");
 }
 
-__attribute__((constructor)) static void load_data(void) {
+// load data from disk into static arrays
+__attribute__((constructor)) // compiler trick: called on header import
+static void load_data(void) {
     static const char *const batches[] = {"data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin", "data_batch_4.bin", "data_batch_5.bin"};
     assert(NUM_TRAIN_SAMPLES == 50000);
     assert(NUM_TEST_SAMPLES == 10000);
@@ -81,6 +87,10 @@ __attribute__((constructor)) static void load_data(void) {
     assert(written > 0 && written < (int32_t)sizeof(path) && "path buffer overflow");
     load_batch(path, test_samples, NUM_TEST_SAMPLES);
 }
+
+//
+// utils
+//
 
 static inline const char *label_to_str(label_t label) {
     static const char *const labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
