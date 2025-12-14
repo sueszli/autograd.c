@@ -273,7 +273,7 @@ Tensor *tensor_mul(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_mul)
 Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
 /*
- * Matrix Multiplication (2D only)
+ * matmul (2D only)
  *
  * A: (M, K)
  * B: (K, N)
