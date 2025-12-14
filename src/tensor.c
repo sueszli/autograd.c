@@ -159,7 +159,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     return t;
 }
 
-// cppcheck-suppress staticFunction
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) { return tensor_create(NULL, shape, ndim, requires_grad); }
 
 void tensor_free(Tensor *t) {
@@ -417,7 +416,6 @@ Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
 // shape manipulation
 //
 
-// cppcheck-suppress unusedFunction
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim) {
     assert(t != NULL);
     assert(new_shape != NULL);
@@ -476,7 +474,6 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
  *    [2, 5],
  *    [3, 6]]
  */
-// cppcheck-suppress unusedFunction
 Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -811,7 +808,6 @@ void tensor_print(const Tensor *t) {
 }
 
 // use stride to get offset in flat data array
-// cppcheck-suppress unusedFunction
 Tensor *tensor_get(const Tensor *t, const uint64_t *multidim) {
     if (!t) {
         return NULL;
