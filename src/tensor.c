@@ -236,7 +236,6 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
  * shape:   [2, 3]  (2 rows, 3 cols)
  *
  * memory:  [a, b, c, d, e, f]
- *           0  1  2  3  4  5  <- linear offsets
  *
  * logical: [[a, b, c],    row 0
  *           [d, e, f]]    row 1
@@ -265,39 +264,36 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
 }
 
 /*
- * converts multi-dimensional coordinates to a linear offset with broadcasting support.
+ * Converts multi-dimensional coordinates to a linear memory offset, handling broadcasting.
  *
- * example:
- *   map a coordinate from a broadcasted shape [2, 3] to a linear offset
+ * This function calculates the offset in the "source" tensor corresponding to a
+ * coordinate in a (potentially larger, broadcasted) "target" shape.
  *
- *   shape:   [1, 3]  (1 row, 3 cols)
+ * Conceptual Model:
+ *   We access the source tensor as if it were broadcasted to match the target shape.
+ *   If a dimension in the source shape is 1 (or missing, implicitly 1), it is
+ *   conceptually stretched. We always read from index 0 along that dimension.
  *
- *   memory:  [a, b, c]
- *             0  1  2  <- linear offsets
+ * Example:
+ *   Source: Shape [1, 3] (1 row, 3 cols), Strides [3, 1], Data [A, B, C]
+ *   Target: We want to access coordinate [1, 2] (Row 1, Col 2).
  *
- *   logical: [[a, b, c]]  row 0
+ *   Visualizing the Broadcast:
+ *     Although the source only has row 0, broadcasting treats it as repeating:
+ *       Row 0: [A, B, C]  <-- Real data
+ *       Row 1: [A, B, C]  <-- Virtual duplicate
  *
- *   broadcasted view (2x3):
- *            [[a, b, c],  row 0 (mapped to source row 0)
- *             [a, b, c]]  row 1 (mapped to source row 0 via broadcasting)
- *                    ^
- * 
- *   target coordinate: [1, 2] selects this element ('c')
+ *   Calculation (Right-aligned dimensions):
  *
- *   algorithm (left-to-right):
- *     ndim_source=2, ndim_target=2
+ *     Dim 0 (Rows): Source size is 1. Target requests row 1.
+ *       - Rule: Source dim is 1 => Broadcast! Use index 0.
+ *       - Offset += 0 * stride[0] (3) = 0.
  *
- *     d=0 (row): source_shape[0] is 1.
- *       broadcasting applies (dim == 1).
- *       use index 0 (ignore target[0]=1).
- *       offset += 0 * stride[0] (3) = 0.
+ *     Dim 1 (Cols): Source size is 3. Target requests col 2.
+ *       - Rule: Source dim > 1 => No broadcast. Use index 2.
+ *       - Offset += 2 * stride[1] (1) = 2.
  *
- *     d=1 (col): source_shape[1] is 3.
- *       no broadcasting.
- *       use target[1] = 2.
- *       offset += 2 * stride[1] (1) = 2.
- *
- *     result: offset = 2 (value 'c')
+ *   Result: Offset = 2 (Value 'C').
  */
 static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
     assert(target != NULL || target_ndim == 0);
