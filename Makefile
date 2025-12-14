@@ -1,5 +1,5 @@
 .PHONY: run
-run: fmt lint
+run: lint
 	mkdir -p /tmp/build && cd /tmp/build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && cd $(PWD) && ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=$(PWD)/suppr.txt /tmp/build/binary
 
 .PHONY: leaks
@@ -9,7 +9,7 @@ leaks:
 	cd $(PWD) && leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
 
 .PHONY: test
-test:
+test: fmt lint
 	rm -rf /tmp/test-build && mkdir -p /tmp/test-build && cd /tmp/test-build && cmake -DBUILD_TESTS=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ./test_tensor_binary
 
 .PHONY: run-release

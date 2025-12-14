@@ -12,7 +12,10 @@
 
 typedef enum { AIRPLANE = 0, AUTOMOBILE = 1, BIRD = 2, CAT = 3, DEER = 4, DOG = 5, FROG = 6, HORSE = 7, SHIP = 8, TRUCK = 9 } label_t;
 
-#define INPUT_SIZE (32 * 32 * 3)
+#define CHANNELS 3
+#define HEIGHT 32
+#define WIDTH 32
+#define INPUT_SIZE (CHANNELS * HEIGHT * WIDTH)
 #define NUM_TRAIN_SAMPLES 50000
 #define NUM_TEST_SAMPLES 10000
 
