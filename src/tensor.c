@@ -579,14 +579,14 @@ static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepd
     }
 }
 
-static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indices, int64_t axis, bool keepdims) {
+static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indices, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
 
     uint64_t base_offset = 0;
     uint64_t k = 0; // index into 'indices' array (which is result-shaped)
 
     for (uint64_t d = 0; d < t->ndim; d++) {
-        if ((int64_t)d == axis) {
+        if ((int64_t)d == dim_idx) {
             // reduction axis contributes to offset in the inner loop, not base
             continue;
         }
@@ -612,17 +612,17 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indic
 }
 
 // cppcheck-suppress staticFunction
-Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
+Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    if (axis < 0) {
-        axis += (int64_t)t->ndim;
+    if (dim_idx < 0) {
+        dim_idx += (int64_t)t->ndim;
     }
-    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
+    assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -637,13 +637,13 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     for (uint64_t i = 0; i < result->size; i++) {
         linear_to_multidim_mut(i, result->shape, new_ndim, curr);
 
-        uint64_t base_offset = get_reduction_base_offset(t, curr, axis, keepdims);
+        uint64_t base_offset = get_reduction_base_offset(t, curr, dim_idx, keepdims);
 
         // Reduce along axis
         float32_t sum = 0.0f;
-        uint64_t axis_dim = (t->shape) ? t->shape[axis] : 1;
+        uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
         assert(axis_dim <= MAX_TENSOR_SIZE && "axis_dim exceeds maximum tensor size");
-        uint64_t axis_stride = t->strides[axis];
+        uint64_t axis_stride = t->strides[dim_idx];
 
         for (uint64_t j = 0; j < axis_dim; j++) {
             uint64_t offset = base_offset + j * axis_stride;
@@ -659,17 +659,17 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     return result;
 }
 
-Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
+Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
-    if (axis < 0) {
-        axis += (int64_t)t->ndim;
+    if (dim_idx < 0) {
+        dim_idx += (int64_t)t->ndim;
     }
-    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
+    assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     // mutates the returned tensor in place
-    Tensor *sum_mut = tensor_sum(t, axis, keepdims);
+    Tensor *sum_mut = tensor_sum(t, dim_idx, keepdims);
 
-    uint64_t n = (t->shape) ? t->shape[axis] : 1;
+    uint64_t n = (t->shape) ? t->shape[dim_idx] : 1;
     assert(n > 0 && "division by zero: axis dimension is 0");
     float32_t scale = 1.0f / (float32_t)n;
 
@@ -680,17 +680,17 @@ Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
     return sum_mut;
 }
 
-Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
+Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    if (axis < 0) {
-        axis += (int64_t)t->ndim;
+    if (dim_idx < 0) {
+        dim_idx += (int64_t)t->ndim;
     }
-    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
+    assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -707,11 +707,11 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
             linear_to_multidim_mut(i, result->shape, new_ndim, curr);
         }
 
-        uint64_t base_offset = get_reduction_base_offset(t, curr, axis, keepdims);
+        uint64_t base_offset = get_reduction_base_offset(t, curr, dim_idx, keepdims);
 
         float32_t max_val = -INFINITY;
-        uint64_t axis_dim = (t->shape) ? t->shape[axis] : 1;
-        uint64_t axis_stride = t->strides[axis];
+        uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
+        uint64_t axis_stride = t->strides[dim_idx];
 
         if (axis_dim > 0) {
             assert(base_offset < t->size && "base_offset out of bounds");

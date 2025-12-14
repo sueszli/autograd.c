@@ -34,9 +34,9 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1);
 
 // reductions
-Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims);
-Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims);
-Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims);
+Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims);
+Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims);
+Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims);
 
 // utils
 void tensor_print(Tensor *t);
