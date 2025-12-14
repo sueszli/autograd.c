@@ -546,9 +546,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 static void reduction_shapes_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
     assert(t->ndim <= MAX_NDIM);
-    if (dim_idx < 0) {
-        dim_idx += (int64_t)t->ndim; // reverse indexing if negative
-    }
+    dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx; // handle negative indices
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     *out_ndim = keepdims ? t->ndim : t->ndim - 1;
@@ -579,9 +577,7 @@ static void reduction_shapes_mut(const Tensor *t, int64_t dim_idx, bool keepdims
 // same as multidim_to_linear, but skips the reduced dimension
 static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
-    if (dim_idx < 0) {
-        dim_idx += (int64_t)t->ndim;
-    }
+    dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t offset = 0;
@@ -608,9 +604,7 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
 Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    if (dim_idx < 0) {
-        dim_idx += (int64_t)t->ndim;
-    }
+    dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t *new_shape;
@@ -654,9 +648,7 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
 
 Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
-    if (dim_idx < 0) {
-        dim_idx += (int64_t)t->ndim;
-    }
+    dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     // mutates the returned tensor in place
@@ -676,9 +668,7 @@ Tensor *tensor_mean(Tensor *t, int64_t dim_idx, bool keepdims) {
 Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    if (dim_idx < 0) {
-        dim_idx += (int64_t)t->ndim;
-    }
+    dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t *new_shape;
