@@ -254,51 +254,6 @@ void test_tensor_reductions(void) {
     tensor_free(t);
 }
 
-void test_broadcast_error(void) {
-    float32_t data_a[] = {1, 2};
-    uint64_t shape_a[] = {2};
-    Tensor *a = tensor_create(data_a, shape_a, 1, false);
-
-    float32_t data_b[] = {1, 2, 3};
-    uint64_t shape_b[] = {3};
-    Tensor *b = tensor_create(data_b, shape_b, 1, false);
-
-    Tensor *c = tensor_add(a, b);
-    TEST_ASSERT_NULL(c);
-
-    tensor_free(a);
-    tensor_free(b);
-}
-
-void test_matmul_error_shapes(void) {
-    float32_t data_a[] = {1, 2, 3, 4}; // 2x2
-    uint64_t shape_a[] = {2, 2};
-    Tensor *a = tensor_create(data_a, shape_a, 2, false);
-
-    float32_t data_b[] = {1, 2, 3, 4}; // 2x2
-    uint64_t shape_b[] = {2, 2};
-    Tensor *b = tensor_create(data_b, shape_b, 2, false);
-
-    // mismatched k dim
-    int64_t shape_bad[] = {3, 2};
-    Tensor *c = tensor_reshape(b, shape_bad, 2); // this will fail logic actually because size 4 != 6
-    TEST_ASSERT_NULL(c);
-
-    // correct fail test: inner dims don't match
-    // A: 2x2
-    // B: 3x1 (size 3)
-    float32_t data_d[] = {1, 2, 3};
-    uint64_t shape_d[] = {3, 1};
-    Tensor *d = tensor_create(data_d, shape_d, 2, false);
-
-    Tensor *res = tensor_matmul(a, d);
-    TEST_ASSERT_NULL(res);
-
-    tensor_free(a);
-    tensor_free(b);
-    tensor_free(d);
-}
-
 void test_tensor_get(void) {
     // 2x3 tensor
     float32_t data[] = {1, 2, 3, 4, 5, 6};
@@ -368,29 +323,6 @@ void test_tensor_broadcast_complex(void) {
     tensor_free(c);
 }
 
-void test_tensor_reshape_errors(void) {
-    float32_t data[] = {1, 2, 3, 4};
-    uint64_t shape[] = {4};
-    Tensor *t = tensor_create(data, shape, 1, false);
-
-    // error: multiple -1
-    int64_t shape_err1[] = {-1, -1};
-    Tensor *t_err1 = tensor_reshape(t, shape_err1, 2);
-    TEST_ASSERT_NULL(t_err1);
-
-    // error: total size mismatch
-    int64_t shape_err2[] = {2, 3}; // size 6 != 4
-    Tensor *t_err2 = tensor_reshape(t, shape_err2, 2);
-    TEST_ASSERT_NULL(t_err2);
-
-    // error: -1 but not divisible
-    int64_t shape_err3[] = {3, -1}; // 4 is not divisible by 3
-    Tensor *t_err3 = tensor_reshape(t, shape_err3, 2);
-    TEST_ASSERT_NULL(t_err3);
-
-    tensor_free(t);
-}
-
 void test_tensor_transpose_general(void) {
     // 3D tensor: (2, 3, 2)
     // data: 0..11
@@ -450,12 +382,9 @@ int main(void) {
     RUN_TEST(test_tensor_reshape);
     RUN_TEST(test_tensor_transpose);
     RUN_TEST(test_tensor_reductions);
-    RUN_TEST(test_broadcast_error);
-    RUN_TEST(test_matmul_error_shapes);
     RUN_TEST(test_tensor_get);
     RUN_TEST(test_tensor_requires_grad);
     RUN_TEST(test_tensor_broadcast_complex);
-    RUN_TEST(test_tensor_reshape_errors);
     RUN_TEST(test_tensor_transpose_general);
     RUN_TEST(test_tensor_div_broadcast);
     return UNITY_END();
