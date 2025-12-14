@@ -3,24 +3,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <inttypes.h>
 
-static int calculate_size(int* shape, int ndim) {
-    int size = 1;
-    for (int i = 0; i < ndim; i++) {
+static int64_t calculate_size(int64_t* shape, int64_t ndim) {
+    int64_t size = 1;
+    for (int64_t i = 0; i < ndim; i++) {
         size *= shape[i];
     }
     return size;
 }
 
-static void calculate_strides(int* shape, int ndim, int* strides) {
-    int stride = 1;
-    for (int i = ndim - 1; i >= 0; i--) {
+static void calculate_strides(int64_t* shape, int64_t ndim, int64_t* strides) {
+    int64_t stride = 1;
+    for (int64_t i = ndim - 1; i >= 0; i--) {
         strides[i] = stride;
         stride *= shape[i];
     }
 }
 
-Tensor* tensor_create(float* data, int* shape, int ndim, bool requires_grad) {
+Tensor* tensor_create(float32_t* data, int64_t* shape, int64_t ndim, bool requires_grad) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
     if (!t) return NULL;
 
@@ -34,39 +35,39 @@ Tensor* tensor_create(float* data, int* shape, int ndim, bool requires_grad) {
 
     if (ndim > 0 && shape) {
         t->size = calculate_size(shape, ndim);
-        t->shape = (int*)malloc((size_t)ndim * sizeof(int));
-        t->strides = (int*)malloc((size_t)ndim * sizeof(int));
+        t->shape = (int64_t*)malloc((size_t)ndim * sizeof(int64_t));
+        t->strides = (int64_t*)malloc((size_t)ndim * sizeof(int64_t));
 
         if (!t->shape || !t->strides) {
             tensor_free(t);
             return NULL;
         }
 
-        memcpy(t->shape, shape, (size_t)ndim * sizeof(int));
+        memcpy(t->shape, shape, (size_t)ndim * sizeof(int64_t));
         calculate_strides(t->shape, ndim, t->strides);
     } else {
-        // scalar case, size is 1
+        // scalar case
         t->ndim = 0;
     }
 
     if (t->size > 0) {
-        t->data = (float*)malloc((size_t)t->size * sizeof(float));
+        t->data = (float32_t*)malloc((size_t)t->size * sizeof(float32_t));
         if (!t->data) {
             tensor_free(t);
             return NULL;
         }
 
         if (data) {
-            memcpy(t->data, data, (size_t)t->size * sizeof(float));
+            memcpy(t->data, data, (size_t)t->size * sizeof(float32_t));
         } else {
-            memset(t->data, 0, (size_t)t->size * sizeof(float));
+            memset(t->data, 0, (size_t)t->size * sizeof(float32_t));
         }
     }
 
     return t;
 }
 
-Tensor* tensor_zeros(int* shape, int ndim, bool requires_grad) {
+Tensor* tensor_zeros(int64_t* shape, int64_t ndim, bool requires_grad) {
     return tensor_create(NULL, shape, ndim, requires_grad);
 }
 
@@ -88,31 +89,31 @@ void tensor_print(Tensor* t) {
 
     printf("Tensor(shape=[");
     if (t->shape) {
-        for (int i = 0; i < t->ndim; i++) {
-            printf("%d%s", t->shape[i], i < t->ndim - 1 ? ", " : "");
+        for (int64_t i = 0; i < t->ndim; i++) {
+            printf("%" PRId64 "%s", t->shape[i], i < t->ndim - 1 ? ", " : "");
         }
     }
-    printf("], size=%d, requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
+    printf("], size=%" PRId64 ", requires_grad=%s)\n", t->size, t->requires_grad ? "true" : "false");
 
     if (t->data && t->size <= 20) {
         printf("Data: [");
-        for (int i = 0; i < t->size; i++) {
-            printf("%f%s", t->data[i], i < t->size - 1 ? ", " : "");
+        for (int64_t i = 0; i < t->size; i++) {
+            printf("%f%s", (double)t->data[i], i < t->size - 1 ? ", " : "");
         }
         printf("]\n");
     }
 }
 
-static bool broadcast_shapes(int* shape_a, int ndim_a, int* shape_b, int ndim_b, int* out_shape, int* out_ndim) {
-    int max_ndim = ndim_a > ndim_b ? ndim_a : ndim_b;
+static bool broadcast_shapes(int64_t* shape_a, int64_t ndim_a, int64_t* shape_b, int64_t ndim_b, int64_t* out_shape, int64_t* out_ndim) {
+    int64_t max_ndim = ndim_a > ndim_b ? ndim_a : ndim_b;
     *out_ndim = max_ndim;
 
-    int idx_a = ndim_a - 1;
-    int idx_b = ndim_b - 1;
+    int64_t idx_a = ndim_a - 1;
+    int64_t idx_b = ndim_b - 1;
 
-    for (int i = max_ndim - 1; i >= 0; i--) {
-        int dim_a = (idx_a >= 0 && shape_a) ? shape_a[idx_a--] : 1;
-        int dim_b = (idx_b >= 0 && shape_b) ? shape_b[idx_b--] : 1;
+    for (int64_t i = max_ndim - 1; i >= 0; i--) {
+        int64_t dim_a = (idx_a >= 0 && shape_a) ? shape_a[idx_a--] : 1;
+        int64_t dim_b = (idx_b >= 0 && shape_b) ? shape_b[idx_b--] : 1;
 
         if (dim_a != dim_b && dim_a != 1 && dim_b != 1) return false;
 
@@ -121,55 +122,55 @@ static bool broadcast_shapes(int* shape_a, int ndim_a, int* shape_b, int ndim_b,
     return true;
 }
 
-typedef float (*binary_op_t)(float, float);
+typedef float32_t (*binary_op_t)(float32_t, float32_t);
 
-static float op_add(float a, float b) { return a + b; }
-static float op_sub(float a, float b) { return a - b; }
-static float op_mul(float a, float b) { return a * b; }
-static float op_div(float a, float b) { return a / b; }
+static float32_t op_add(float32_t a, float32_t b) { return a + b; }
+static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
+static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
+static float32_t op_div(float32_t a, float32_t b) { return a / b; }
 
 static Tensor* tensor_binary_op(Tensor* a, Tensor* b, binary_op_t op) {
-    int out_shape[32];
-    int out_ndim;
+    int64_t out_shape[32];
+    int64_t out_ndim;
 
     if (!broadcast_shapes(a->shape, a->ndim, b->shape, b->ndim, out_shape, &out_ndim)) {
-        fprintf(stderr, "Error: Shapes cannot be broadcasted.\n");
+        fprintf(stderr, "error: shapes cannot be broadcasted.\n");
         return NULL;
     }
 
     Tensor* result = tensor_zeros(out_shape, out_ndim, a->requires_grad || b->requires_grad);
     if (!result) return NULL;
 
-    int* indices = (int*)calloc((size_t)out_ndim, sizeof(int));
+    int64_t* indices = (int64_t*)calloc((size_t)out_ndim, sizeof(int64_t));
     if (out_ndim > 0 && !indices) {
         tensor_free(result);
         return NULL;
     }
 
-    for (int i = 0; i < result->size; i++) {
+    for (int64_t i = 0; i < result->size; i++) {
         // map linear index to multidimensional index
         if (out_ndim > 0) {
-            int temp = i;
-            for (int d = out_ndim - 1; d >= 0; d--) {
+            int64_t temp = i;
+            for (int64_t d = out_ndim - 1; d >= 0; d--) {
                 indices[d] = temp % out_shape[d];
                 temp /= out_shape[d];
             }
         }
 
-        int offset_a = 0;
+        int64_t offset_a = 0;
         if (a->ndim > 0) {
-            for (int d = 0; d < a->ndim; d++) {
-                int result_dim_idx = d + (out_ndim - a->ndim);
-                int idx = (a->shape[d] == 1) ? 0 : indices[result_dim_idx];
+            for (int64_t d = 0; d < a->ndim; d++) {
+                int64_t result_dim_idx = d + (out_ndim - a->ndim);
+                int64_t idx = (a->shape[d] == 1) ? 0 : indices[result_dim_idx];
                 offset_a += idx * a->strides[d];
             }
         }
 
-        int offset_b = 0;
+        int64_t offset_b = 0;
         if (b->ndim > 0) {
-            for (int d = 0; d < b->ndim; d++) {
-                int result_dim_idx = d + (out_ndim - b->ndim);
-                int idx = (b->shape[d] == 1) ? 0 : indices[result_dim_idx];
+            for (int64_t d = 0; d < b->ndim; d++) {
+                int64_t result_dim_idx = d + (out_ndim - b->ndim);
+                int64_t idx = (b->shape[d] == 1) ? 0 : indices[result_dim_idx];
                 offset_b += idx * b->strides[d];
             }
         }
@@ -188,33 +189,33 @@ Tensor* tensor_div(Tensor* a, Tensor* b) { return tensor_binary_op(a, b, op_div)
 
 Tensor* tensor_matmul(Tensor* a, Tensor* b) {
     if (a->ndim < 1 || b->ndim < 1) {
-        fprintf(stderr, "Error: Matmul requires at least 1D tensors.\n");
+        fprintf(stderr, "error: matmul requires at least 1d tensors.\n");
         return NULL;
     }
 
-    // only 2D matmul supported for now
+    // only 2d matmul supported for now
     if (a->ndim != 2 || b->ndim != 2) {
-        fprintf(stderr, "Error: Only 2D matmul supported in C implementation for now.\n");
+        fprintf(stderr, "error: only 2d matmul supported for now.\n");
         return NULL;
     }
 
     if (a->shape[1] != b->shape[0]) {
-        fprintf(stderr, "Error: Inner dimensions must match: %d != %d\n", a->shape[1], b->shape[0]);
+        fprintf(stderr, "error: inner dimensions must match: %" PRId64 " != %" PRId64 "\n", a->shape[1], b->shape[0]);
         return NULL;
     }
 
-    int M = a->shape[0];
-    int K = a->shape[1];
-    int N = b->shape[1];
+    int64_t M = a->shape[0];
+    int64_t K = a->shape[1];
+    int64_t N = b->shape[1];
 
-    int out_shape[] = {M, N};
+    int64_t out_shape[] = {M, N};
     Tensor* result = tensor_zeros(out_shape, 2, a->requires_grad || b->requires_grad);
     if (!result) return NULL;
 
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0;
-            for (int k = 0; k < K; k++) {
+    for (int64_t i = 0; i < M; i++) {
+        for (int64_t j = 0; j < N; j++) {
+            float32_t sum = 0;
+            for (int64_t k = 0; k < K; k++) {
                 sum += a->data[i * a->strides[0] + k * a->strides[1]] *
                        b->data[k * b->strides[0] + j * b->strides[1]];
             }
@@ -224,14 +225,14 @@ Tensor* tensor_matmul(Tensor* a, Tensor* b) {
     return result;
 }
 
-Tensor* tensor_reshape(Tensor* t, int* new_shape, int new_ndim) {
-    int new_size = 1;
-    int unknown_idx = -1;
+Tensor* tensor_reshape(Tensor* t, int64_t* new_shape, int64_t new_ndim) {
+    int64_t new_size = 1;
+    int64_t unknown_idx = -1;
 
-    for (int i = 0; i < new_ndim; i++) {
+    for (int64_t i = 0; i < new_ndim; i++) {
         if (new_shape[i] == -1) {
             if (unknown_idx != -1) {
-                fprintf(stderr, "Error: Only one dimension can be -1.\n");
+                fprintf(stderr, "error: only one dimension can be -1.\n");
                 return NULL;
             }
             unknown_idx = i;
@@ -241,19 +242,23 @@ Tensor* tensor_reshape(Tensor* t, int* new_shape, int new_ndim) {
     }
 
     if (unknown_idx != -1) {
+        if (new_size == 0) {
+            fprintf(stderr, "error: cannot infer dimension size when other dimensions imply size 0.\n");
+            return NULL;
+        }
         if (t->size % new_size != 0) {
-             fprintf(stderr, "Error: Invalid shape.\n");
+             fprintf(stderr, "error: invalid shape.\n");
              return NULL;
         }
     } else if (new_size != t->size) {
-        fprintf(stderr, "Error: Total elements must match: %d != %d\n", t->size, new_size);
+        fprintf(stderr, "error: total elements must match: %" PRId64 " != %" PRId64 "\n", t->size, new_size);
         return NULL;
     }
 
-    int* resolved_shape = (int*)malloc((size_t)new_ndim * sizeof(int));
+    int64_t* resolved_shape = (int64_t*)malloc((size_t)new_ndim * sizeof(int64_t));
     if (!resolved_shape) return NULL;
 
-    for (int i = 0; i < new_ndim; i++) {
+    for (int64_t i = 0; i < new_ndim; i++) {
         resolved_shape[i] = new_shape[i];
     }
     if (unknown_idx != -1) {
@@ -265,17 +270,17 @@ Tensor* tensor_reshape(Tensor* t, int* new_shape, int new_ndim) {
     return result;
 }
 
-Tensor* tensor_transpose(Tensor* t, int dim0, int dim1) {
+Tensor* tensor_transpose(Tensor* t, int64_t dim0, int64_t dim1) {
     if (t->ndim < 2) {
         return tensor_create(t->data, t->shape, t->ndim, t->requires_grad);
     }
 
-    int* new_shape = (int*)malloc((size_t)t->ndim * sizeof(int));
+    int64_t* new_shape = (int64_t*)malloc((size_t)t->ndim * sizeof(int64_t));
     if (!new_shape) return NULL;
 
-    memcpy(new_shape, t->shape, (size_t)t->ndim * sizeof(int));
+    memcpy(new_shape, t->shape, (size_t)t->ndim * sizeof(int64_t));
 
-    int temp = new_shape[dim0];
+    int64_t temp = new_shape[dim0];
     new_shape[dim0] = new_shape[dim1];
     new_shape[dim1] = temp;
 
@@ -283,22 +288,22 @@ Tensor* tensor_transpose(Tensor* t, int dim0, int dim1) {
     free(new_shape);
     if (!result) return NULL;
 
-    int* indices = (int*)calloc((size_t)t->ndim, sizeof(int));
+    int64_t* indices = (int64_t*)calloc((size_t)t->ndim, sizeof(int64_t));
     if (!indices) {
         tensor_free(result);
         return NULL;
     }
 
-    for (int i = 0; i < result->size; i++) {
-        int temp_i = i;
-        for (int d = t->ndim - 1; d >= 0; d--) {
+    for (int64_t i = 0; i < result->size; i++) {
+        int64_t temp_i = i;
+        for (int64_t d = t->ndim - 1; d >= 0; d--) {
             indices[d] = temp_i % result->shape[d];
             temp_i /= result->shape[d];
         }
 
-        int offset = 0;
-        for (int d = 0; d < t->ndim; d++) {
-            int idx_val;
+        int64_t offset = 0;
+        for (int64_t d = 0; d < t->ndim; d++) {
+            int64_t idx_val;
             if (d == dim0) idx_val = indices[dim1];
             else if (d == dim1) idx_val = indices[dim0];
             else idx_val = indices[d];
@@ -312,27 +317,27 @@ Tensor* tensor_transpose(Tensor* t, int dim0, int dim1) {
     return result;
 }
 
-Tensor* tensor_sum(Tensor* t, int axis, bool keepdims) {
+Tensor* tensor_sum(Tensor* t, int64_t axis, bool keepdims) {
     if (axis < 0) axis += t->ndim;
     if (axis < 0 || axis >= t->ndim) return NULL;
 
-    int* new_shape = NULL;
-    int new_ndim = t->ndim;
+    int64_t* new_shape = NULL;
+    int64_t new_ndim = t->ndim;
 
     if (t->ndim > 0) {
-        new_shape = (int*)malloc((size_t)t->ndim * sizeof(int));
+        new_shape = (int64_t*)malloc((size_t)t->ndim * sizeof(int64_t));
         if (!new_shape) return NULL;
     }
 
     if (keepdims) {
-        for (int i = 0; i < t->ndim; i++) {
+        for (int64_t i = 0; i < t->ndim; i++) {
             new_shape[i] = (i == axis) ? 1 : t->shape[i];
         }
     } else {
         new_ndim = t->ndim - 1;
         if (new_ndim > 0) {
-            int k = 0;
-            for (int i = 0; i < t->ndim; i++) {
+            int64_t k = 0;
+            for (int64_t i = 0; i < t->ndim; i++) {
                 if (i != axis) new_shape[k++] = t->shape[i];
             }
         }
@@ -342,39 +347,39 @@ Tensor* tensor_sum(Tensor* t, int axis, bool keepdims) {
     if (new_shape) free(new_shape);
     if (!result) return NULL;
 
-    int* indices = NULL;
+    int64_t* indices = NULL;
     if (result->ndim > 0) {
-        indices = (int*)calloc((size_t)result->ndim, sizeof(int));
+        indices = (int64_t*)calloc((size_t)result->ndim, sizeof(int64_t));
         if (!indices) {
             tensor_free(result);
             return NULL;
         }
     }
 
-    for (int i = 0; i < result->size; i++) {
+    for (int64_t i = 0; i < result->size; i++) {
         if (result->ndim > 0) {
-            int temp_i = i;
-            for (int d = result->ndim - 1; d >= 0; d--) {
+            int64_t temp_i = i;
+            for (int64_t d = result->ndim - 1; d >= 0; d--) {
                 indices[d] = temp_i % result->shape[d];
                 temp_i /= result->shape[d];
             }
         }
 
-        int base_offset = 0;
-        int k = 0;
-        for (int d = 0; d < t->ndim; d++) {
+        int64_t base_offset = 0;
+        int64_t k = 0;
+        for (int64_t d = 0; d < t->ndim; d++) {
             if (d == axis) continue;
 
-            int idx_val = 0;
+            int64_t idx_val = 0;
             if (indices) {
                 idx_val = keepdims ? indices[d] : indices[k++];
             }
             base_offset += idx_val * t->strides[d];
         }
 
-        float sum = 0;
-        int axis_dim = t->shape ? t->shape[axis] : 1;
-        for (int j = 0; j < axis_dim; j++) {
+        float32_t sum = 0;
+        int64_t axis_dim = t->shape ? t->shape[axis] : 1;
+        for (int64_t j = 0; j < axis_dim; j++) {
             sum += t->data[base_offset + j * t->strides[axis]];
         }
         result->data[i] = sum;
@@ -384,40 +389,40 @@ Tensor* tensor_sum(Tensor* t, int axis, bool keepdims) {
     return result;
 }
 
-Tensor* tensor_mean(Tensor* t, int axis, bool keepdims) {
+Tensor* tensor_mean(Tensor* t, int64_t axis, bool keepdims) {
     Tensor* sum = tensor_sum(t, axis, keepdims);
     if (!sum) return NULL;
 
     if (axis < 0) axis += t->ndim;
-    int n = t->shape ? t->shape[axis] : 1;
+    int64_t n = t->shape ? t->shape[axis] : 1;
 
-    for (int i = 0; i < sum->size; i++) {
-        sum->data[i] /= (float)n;
+    for (int64_t i = 0; i < sum->size; i++) {
+        sum->data[i] /= (float32_t)n;
     }
     return sum;
 }
 
-Tensor* tensor_max(Tensor* t, int axis, bool keepdims) {
+Tensor* tensor_max(Tensor* t, int64_t axis, bool keepdims) {
     if (axis < 0) axis += t->ndim;
     if (axis < 0 || axis >= t->ndim) return NULL;
 
-    int* new_shape = NULL;
-    int new_ndim = t->ndim;
+    int64_t* new_shape = NULL;
+    int64_t new_ndim = t->ndim;
 
     if (t->ndim > 0) {
-        new_shape = (int*)malloc((size_t)t->ndim * sizeof(int));
+        new_shape = (int64_t*)malloc((size_t)t->ndim * sizeof(int64_t));
         if (!new_shape) return NULL;
     }
 
     if (keepdims) {
-        for (int i = 0; i < t->ndim; i++) {
+        for (int64_t i = 0; i < t->ndim; i++) {
             new_shape[i] = (i == axis) ? 1 : t->shape[i];
         }
     } else {
         new_ndim = t->ndim - 1;
         if (new_ndim > 0) {
-            int k = 0;
-            for (int i = 0; i < t->ndim; i++) {
+            int64_t k = 0;
+            for (int64_t i = 0; i < t->ndim; i++) {
                 if (i != axis) new_shape[k++] = t->shape[i];
             }
         }
@@ -427,42 +432,42 @@ Tensor* tensor_max(Tensor* t, int axis, bool keepdims) {
     if (new_shape) free(new_shape);
     if (!result) return NULL;
 
-    int* indices = NULL;
+    int64_t* indices = NULL;
     if (result->ndim > 0) {
-        indices = (int*)calloc((size_t)result->ndim, sizeof(int));
+        indices = (int64_t*)calloc((size_t)result->ndim, sizeof(int64_t));
         if (!indices) {
             tensor_free(result);
             return NULL;
         }
     }
 
-    for (int i = 0; i < result->size; i++) {
+    for (int64_t i = 0; i < result->size; i++) {
         if (indices) {
-            int temp_i = i;
-            for (int d = result->ndim - 1; d >= 0; d--) {
+            int64_t temp_i = i;
+            for (int64_t d = result->ndim - 1; d >= 0; d--) {
                 indices[d] = temp_i % result->shape[d];
                 temp_i /= result->shape[d];
             }
         }
 
-        int base_offset = 0;
-        int k = 0;
-        for (int d = 0; d < t->ndim; d++) {
+        int64_t base_offset = 0;
+        int64_t k = 0;
+        for (int64_t d = 0; d < t->ndim; d++) {
             if (d == axis) continue;
 
-            int idx_val = 0;
+            int64_t idx_val = 0;
             if (indices) {
                 idx_val = keepdims ? indices[d] : indices[k++];
             }
             base_offset += idx_val * t->strides[d];
         }
 
-        float max_val = -INFINITY;
-        int axis_dim = t->shape ? t->shape[axis] : 1;
+        float32_t max_val = -INFINITY;
+        int64_t axis_dim = t->shape ? t->shape[axis] : 1;
         if (axis_dim > 0) {
             max_val = t->data[base_offset];
-            for (int j = 1; j < axis_dim; j++) {
-                float val = t->data[base_offset + j * t->strides[axis]];
+            for (int64_t j = 1; j < axis_dim; j++) {
+                float32_t val = t->data[base_offset + j * t->strides[axis]];
                 if (val > max_val) max_val = val;
             }
         }
@@ -473,14 +478,14 @@ Tensor* tensor_max(Tensor* t, int axis, bool keepdims) {
     return result;
 }
 
-Tensor* tensor_get(Tensor* t, int* indices) {
-    int offset = 0;
+Tensor* tensor_get(Tensor* t, int64_t* indices) {
+    int64_t offset = 0;
     if (t->ndim > 0 && indices) {
-        for (int i = 0; i < t->ndim; i++) {
+        for (int64_t i = 0; i < t->ndim; i++) {
             offset += indices[i] * t->strides[i];
         }
     }
 
-    // shape NULL, ndim 0 -> scalar
+    // shape null, ndim 0 -> scalar
     return tensor_create(&t->data[offset], NULL, 0, t->requires_grad);
 }
