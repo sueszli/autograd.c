@@ -74,9 +74,9 @@ void test_gelu(void) {
 
     TEST_ASSERT_FLOAT_WITHIN(TOLERANCE, 0.0f, res->data[1]);
 
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.8458f, res->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.8413f, res->data[2]);
 
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, -0.1542f, res->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.1587f, res->data[0]);
 
     tensor_free(t);
     tensor_free(res);
@@ -114,6 +114,20 @@ void test_softmax(void) {
     tensor_free(res2);
 }
 
+void test_relu_nan(void) {
+    float32_t data[] = {NAN, 1.0f, -1.0f};
+    uint64_t shape[] = {3};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *res = tensor_relu(t);
+
+    TEST_ASSERT_TRUE(isnan(res->data[0]));
+    TEST_ASSERT_FLOAT_WITHIN(TOLERANCE, 1.0f, res->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(TOLERANCE, 0.0f, res->data[2]);
+
+    tensor_free(t);
+    tensor_free(res);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_sigmoid);
@@ -121,5 +135,6 @@ int main(void) {
     RUN_TEST(test_tanh);
     RUN_TEST(test_gelu);
     RUN_TEST(test_softmax);
+    RUN_TEST(test_relu_nan);
     return UNITY_END();
 }
