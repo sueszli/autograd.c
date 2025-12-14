@@ -228,7 +228,8 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
 }
 
 /*
- * converts a linear index to multi-dimensional coordinates.
+ * converts a linear index to multi-dimensional indices.
+ * mutates out_indices array.
  *
  * example:
  *
@@ -241,7 +242,7 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
  *           [d, e, f]]    row 1
  *
  * algorithm (right-to-left):
- *   given: linear_idx=4
+ *   given: lin=4
  *
  *   d=1 (rightmost/col):  4 % 3 = 1  -> col 1
  *                         4 / 3 = 1  -> carry to next dimension
@@ -251,14 +252,14 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
  *
  *   result: [1, 1] -> element 'e'
  */
-static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *shape, uint64_t ndim, uint64_t *out_indices) {
+static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t ndim, uint64_t *out_multidim) {
     assert(shape != NULL || ndim == 0);
-    assert(out_indices != NULL || ndim == 0);
+    assert(out_multidim != NULL || ndim == 0);
     assert(ndim <= MAX_NDIM);
 
-    uint64_t carry = linear_idx;
+    uint64_t carry = lin;
     for (int64_t d = (int64_t)ndim - 1; d >= 0; d--) {
-        out_indices[d] = carry % shape[d];
+        out_multidim[d] = carry % shape[d];
         carry /= shape[d];
     }
 }
@@ -266,7 +267,7 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
 /*
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
  *
- * @param target_indices coordinates in the target broadcast shape (e.g., [1, 2])
+ * @param target coordinates in the target broadcast shape (e.g., [1, 2])
  * @param target_ndim    number of dimensions in target shape (must be >= ndim)
  * @param shape          actual shape of data in memory (size-1 dims broadcast)
  * @param ndim           number of dimensions in shape (right-aligned with target_ndim)
@@ -285,7 +286,7 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
  *
  * algorithm walkthrough:
  *   query: "give me element at position [1, 2]" (row 1, col 2)
- *   inputs: target_indices=[1,2], target_ndim=2, shape=[3], ndim=1
+ *   inputs: target=[1,2], target_ndim=2, shape=[3], ndim=1
  *
  *   step 1: right-align dimensions (like aligning numbers for addition)
  *
@@ -304,7 +305,7 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
  *           d=0 (shape's only dim):
  *              target_dim = 0 + 1 = 1  (maps to column dimension)
  *              shape[0] = 3  (normal dimension, not broadcasting)
- *              idx = target_indices[1] = 2  (use column index)
+ *              idx = target[1] = 2  (use column index)
  *              offset += 2 * 1 = 2
  *
  *   result: offset = 2 -> data[2] = 'c'
@@ -315,8 +316,8 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
  * key insight: dimensions with size 1 are "frozen" at index 0.
  *              missing dimensions (when ndims differ) are implicitly broadcast.
  */
-static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *target_indices, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
-    assert(target_indices != NULL || target_ndim == 0);
+static uint64_t multidim_to_linear(const uint64_t *target, uint64_t target_ndim, const uint64_t *shape, uint64_t ndim, const uint64_t *strides) {
+    assert(target != NULL || target_ndim == 0);
     assert(shape != NULL || ndim == 0);
     assert(strides != NULL || ndim == 0);
     assert(target_ndim >= ndim);
@@ -326,7 +327,7 @@ static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *target_indic
     for (uint64_t d = 0; d < ndim; d++) {
         uint64_t target_dim = d + (target_ndim - ndim); // align right
         // broadcasting rule: if shape has size 1 in a dimension, always use index 0
-        uint64_t idx = (shape[d] == 1) ? 0 : target_indices[target_dim];
+        uint64_t idx = (shape[d] == 1) ? 0 : target[target_dim];
         offset += idx * strides[d];
     }
     return offset;
@@ -360,26 +361,25 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
     assert(out_ndim <= MAX_NDIM);
     Tensor *out_tensor = tensor_zeros(out_shape, out_ndim, a->requires_grad || b->requires_grad);
 
-    // working buffer to store current position in output tensor as multi-dim coordinates.
-    // gets reused on each iteration: linear index i -> multi-dim coords -> offsets in a and b
-    uint64_t *out_indices = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
-    assert(out_indices != NULL && "calloc failed");
+    // curr = current position in output tensor as multidim indices
+    uint64_t *curr = (uint64_t *)calloc((size_t)out_ndim, sizeof(uint64_t));
+    assert(curr != NULL && "calloc failed");
 
-    // iterate through every element in the output tensor
+    // i = current position in output tensor as linear index
     for (uint64_t i = 0; i < out_tensor->size; i++) {
-        // convert linear index i to multi-dim coordinates
-        linear_to_multidim_indices_mut(i, out_shape, out_ndim, out_indices);
+        // convert i to curr (mutates curr array)
+        linear_to_multidim_mut(i, out_shape, out_ndim, curr);
 
-        uint64_t offset_a = multidim_to_linear_offset_broadcast(out_indices, out_ndim, a->shape, a->ndim, a->strides);
+        uint64_t offset_a = multidim_to_linear(curr, out_ndim, a->shape, a->ndim, a->strides);
         assert(offset_a < a->size && "offset_a out of bounds");
 
-        uint64_t offset_b = multidim_to_linear_offset_broadcast(out_indices, out_ndim, b->shape, b->ndim, b->strides);
+        uint64_t offset_b = multidim_to_linear(curr, out_ndim, b->shape, b->ndim, b->strides);
         assert(offset_b < b->size && "offset_b out of bounds");
 
         out_tensor->data[i] = op(a->data[offset_a], b->data[offset_b]);
     }
 
-    free(out_indices);
+    free(curr);
 
     assert(out_tensor != NULL);
     assert(out_tensor->ndim == out_ndim);
