@@ -57,6 +57,7 @@ static void calculate_strides(const uint64_t *shape, uint64_t ndim, uint64_t *ou
 // Tensor Creation / Destruction
 // --------------------------------------------------------------------------
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndim, bool requires_grad) {
     // Assert constraints
     assert(shape != NULL || ndim == 0);
@@ -111,9 +112,8 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     return t;
 }
 
-Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) {
-    return tensor_create(NULL, shape, ndim, requires_grad);
-}
+// cppcheck-suppress staticFunction
+Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad) { return tensor_create(NULL, shape, ndim, requires_grad); }
 
 void tensor_free(Tensor *t) {
     if (!t) {
@@ -148,9 +148,7 @@ void tensor_free(Tensor *t) {
  *          ^  ^  ^
  * out:     [2, 3, 5]
  */
-static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a,
-                             const uint64_t *shape_b, uint64_t ndim_b,
-                             uint64_t *out_shape, uint64_t *out_ndim) {
+static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
     assert(out_shape != NULL);
     assert(out_ndim != NULL);
 
@@ -251,18 +249,10 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
     return result;
 }
 
-Tensor *tensor_add(Tensor *a, Tensor *b) {
-    return tensor_binary_op(a, b, op_add);
-}
-Tensor *tensor_sub(Tensor *a, Tensor *b) {
-    return tensor_binary_op(a, b, op_sub);
-}
-Tensor *tensor_mul(Tensor *a, Tensor *b) {
-    return tensor_binary_op(a, b, op_mul);
-}
-Tensor *tensor_div(Tensor *a, Tensor *b) {
-    return tensor_binary_op(a, b, op_div);
-}
+Tensor *tensor_add(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_add); }
+Tensor *tensor_sub(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_sub); }
+Tensor *tensor_mul(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_mul); }
+Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
 /*
  * Matrix Multiplication (2D only)
@@ -303,8 +293,7 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
         for (uint64_t j = 0; j < N; j++) {
             float32_t sum = 0.0f;
             for (uint64_t k = 0; k < K; k++) {
-                sum += a->data[i * a->strides[0] + k * a->strides[1]] *
-                       b->data[k * b->strides[0] + j * b->strides[1]];
+                sum += a->data[i * a->strides[0] + k * a->strides[1]] * b->data[k * b->strides[0] + j * b->strides[1]];
             }
             result->data[i * result->strides[0] + j * result->strides[1]] = sum;
         }
@@ -415,8 +404,10 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
         for (uint64_t d = 0; d < t->ndim; d++) {
             // For input, the indices are swapped compared to output at dim0/dim1
             uint64_t idx_val = indices[d];
-            if (d == dim0) idx_val = indices[dim1];
-            else if (d == dim1) idx_val = indices[dim0];
+            if (d == dim0)
+                idx_val = indices[dim1];
+            else if (d == dim1)
+                idx_val = indices[dim0];
 
             offset += idx_val * t->strides[d];
         }
@@ -440,8 +431,7 @@ static void resolve_axis(uint64_t ndim, int64_t axis, int64_t *out_axis) {
     *out_axis = axis;
 }
 
-static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims,
-                                      uint64_t **out_shape, uint64_t *out_ndim) {
+static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     *out_ndim = keepdims ? t->ndim : t->ndim - 1;
     *out_shape = NULL;
 
@@ -490,6 +480,7 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indic
     return base_offset;
 }
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
     resolve_axis(t->ndim, axis, &axis);
@@ -499,10 +490,12 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
-    if (new_shape) free(new_shape);
+    if (new_shape)
+        free(new_shape);
 
     uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
-    if (new_ndim > 0) assert(indices != NULL && "calloc failed");
+    if (new_ndim > 0)
+        assert(indices != NULL && "calloc failed");
 
     for (uint64_t i = 0; i < result->size; i++) {
         // Unravel result index
@@ -527,7 +520,8 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = sum;
     }
 
-    if (indices) free(indices);
+    if (indices)
+        free(indices);
     return result;
 }
 
@@ -556,10 +550,12 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
     calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
-    if (new_shape) free(new_shape);
+    if (new_shape)
+        free(new_shape);
 
     uint64_t *indices = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
-    if (new_ndim > 0) assert(indices != NULL && "calloc failed");
+    if (new_ndim > 0)
+        assert(indices != NULL && "calloc failed");
 
     for (uint64_t i = 0; i < result->size; i++) {
         if (new_ndim > 0) {
@@ -588,7 +584,8 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
         result->data[i] = max_val;
     }
 
-    if (indices) free(indices);
+    if (indices)
+        free(indices);
     return result;
 }
 
