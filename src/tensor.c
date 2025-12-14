@@ -75,7 +75,7 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
  *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
  */
 static uint64_t *get_strides(const uint64_t *shape, uint64_t ndim) {
-    assert(ndim <= MAX_NDIM && "ndim exceeds maximum tensor dimensions");
+    assert(ndim <= MAX_NDIM);
 
     if (ndim == 0) {
         return NULL;
@@ -100,7 +100,7 @@ static uint64_t *get_strides(const uint64_t *shape, uint64_t ndim) {
 
 // cppcheck-suppress staticFunction
 Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndim, bool requires_grad) {
-    assert(ndim <= MAX_NDIM && "ndim exceeds maximum tensor dimensions");
+    assert(ndim <= MAX_NDIM);
     assert(shape != NULL || ndim == 0);
 
     Tensor *t = (Tensor *)malloc(sizeof(Tensor));
@@ -371,8 +371,8 @@ Tensor *tensor_div(Tensor *a, Tensor *b) { return tensor_binary_op(a, b, op_div)
 Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     assert(a != NULL);
     assert(b != NULL);
-    assert(a->data != NULL && "a->data is NULL");
-    assert(b->data != NULL && "b->data is NULL");
+    assert(a->data != NULL);
+    assert(b->data != NULL);
     assert((uintptr_t)a->data % CACHELINE_SIZE == 0 && "a->data is not properly aligned");
     assert((uintptr_t)b->data % CACHELINE_SIZE == 0 && "b->data is not properly aligned");
     assert(a->ndim >= 1 && b->ndim >= 1 && "matmul requires at least 1D tensors");
@@ -383,9 +383,9 @@ Tensor *tensor_matmul(Tensor *a, Tensor *b) {
     uint64_t K = a->shape[1];
     uint64_t N = b->shape[1];
 
-    assert(M <= MAX_TENSOR_SIZE && "M exceeds maximum tensor size");
-    assert(K <= MAX_TENSOR_SIZE && "K exceeds maximum tensor size");
-    assert(N <= MAX_TENSOR_SIZE && "N exceeds maximum tensor size");
+    assert(M <= MAX_TENSOR_SIZE);
+    assert(K <= MAX_TENSOR_SIZE);
+    assert(N <= MAX_TENSOR_SIZE);
 
     const uint64_t out_shape[] = {M, N};
     Tensor *result = tensor_zeros(out_shape, 2, a->requires_grad || b->requires_grad);
@@ -422,7 +422,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     assert(t != NULL);
     assert(new_shape != NULL);
     assert(t->data != NULL || t->size == 0);
-    assert(new_ndim <= MAX_NDIM && "new_ndim exceeds maximum tensor dimensions");
+    assert(new_ndim <= MAX_NDIM);
 
     uint64_t new_size = 1;
     int64_t unknown_idx = -1; // one dimension can be -1 (inferred)
@@ -479,7 +479,7 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
 Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    assert(t->ndim <= MAX_NDIM && "ndim exceeds maximum tensor dimensions");
+    assert(t->ndim <= MAX_NDIM);
     if (t->size > 0) {
         assert((uintptr_t)t->data % CACHELINE_SIZE == 0 && "data is not properly aligned");
     }
@@ -544,10 +544,10 @@ static int64_t resolve_axis(uint64_t ndim, int64_t axis) {
 
 static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
-    assert(t->ndim <= MAX_NDIM && "t->ndim exceeds maximum tensor dimensions");
+    assert(t->ndim <= MAX_NDIM);
 
     *out_ndim = keepdims ? t->ndim : t->ndim - 1;
-    assert(*out_ndim <= MAX_NDIM && "out_ndim exceeds maximum tensor dimensions");
+    assert(*out_ndim <= MAX_NDIM);
     *out_shape = NULL;
 
     if (*out_ndim > 0) {
