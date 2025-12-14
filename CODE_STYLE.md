@@ -40,6 +40,7 @@ Safety:
 
 Pre-commit:
 
+- Add unit tests for each new function and feature.
 - Run `make fmt` to format code
 - Run `make test` to run tests and ensure they pass
 - Do NOT run `make run` as it requires downloading large data files
