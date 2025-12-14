@@ -41,14 +41,11 @@ float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
     float32_t sum_loss = 0.0f;
 
     for (uint64_t i = 0; i < batch_size; i++) {
-        // Get target class index for this sample
         float32_t target_float = targets->data[i];
-        // Ensure target is a valid integer index
         assert(target_float >= 0.0f && target_float < (float32_t)num_classes);
-        // We cast to int safely because we just checked range
         uint64_t target_idx = (uint64_t)target_float;
 
-        // Find max logit for numerical stability (Log-Sum-Exp trick)
+        // log-softmax for numerical stability
         float32_t max_logit = -FLT_MAX;
         for (uint64_t j = 0; j < num_classes; j++) {
             float32_t logit = logits->data[i * num_classes + j];
@@ -57,7 +54,7 @@ float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
             }
         }
 
-        // Compute sum(exp(logit - max_logit))
+        // compute sum(exp(logit - max_logit))
         float32_t sum_exp = 0.0f;
         for (uint64_t j = 0; j < num_classes; j++) {
             float32_t logit = logits->data[i * num_classes + j];
@@ -92,7 +89,7 @@ float32_t binary_cross_entropy_loss(const Tensor *predictions, const Tensor *tar
         float32_t pred = predictions->data[i];
         float32_t target = targets->data[i];
 
-        // Clamp prediction to avoid log(0)
+        // clamp to avoid log(0)
         if (pred < EPSILON) {
             pred = EPSILON;
         }
@@ -100,7 +97,7 @@ float32_t binary_cross_entropy_loss(const Tensor *predictions, const Tensor *tar
             pred = 1.0f - EPSILON;
         }
 
-        // BCE formula: -(target * log(pred) + (1 - target) * log(1 - pred))
+        // BCE: -(target * log(pred) + (1 - target) * log(1 - pred))
         float32_t term1 = target * logf(pred);
         float32_t term2 = (1.0f - target) * logf(1.0f - pred);
         sum_loss += -(term1 + term2);
