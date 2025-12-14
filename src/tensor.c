@@ -488,7 +488,7 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
 // utils
 // 
 
-static void tensor_print_recursive(Tensor *t, int64_t dim, int64_t offset, int indent) {
+static void tensor_print_recursive(Tensor *t, int64_t dim, int64_t offset, int64_t indent) {
     if (dim == t->ndim) {
         printf("%f", t->data[offset]);
         return;
@@ -503,22 +503,23 @@ static void tensor_print_recursive(Tensor *t, int64_t dim, int64_t offset, int i
             }
         }
         printf("]");
-    } else {
-        printf("[");
-        for (int64_t i = 0; i < t->shape[dim]; i++) {
-            if (i > 0) {
-                for (int j = 0; j < indent; j++) printf(" ");
-            }
-            tensor_print_recursive(t, dim + 1, offset + i * t->strides[dim], indent + 1);
-
-            if (i < t->shape[dim] - 1) {
-                printf(",");
-                int64_t newlines = t->ndim - dim - 1;
-                for (int k = 0; k < newlines; k++) printf("\n");
-            }
-        }
-        printf("]");
+        return;
     }
+
+    printf("[");
+    for (int64_t i = 0; i < t->shape[dim]; i++) {
+        if (i > 0) {
+            for (int64_t j = 0; j < indent; j++) printf(" ");
+        }
+        tensor_print_recursive(t, dim + 1, offset + i * t->strides[dim], indent + 1);
+
+        if (i < t->shape[dim] - 1) {
+            printf(",");
+            int64_t newlines = t->ndim - dim - 1;
+            for (int64_t k = 0; k < newlines; k++) printf("\n");
+        }
+    }
+    printf("]");
 }
 
 void tensor_print(Tensor *t) {
