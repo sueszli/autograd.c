@@ -31,7 +31,7 @@ static void *safe_aligned_alloc(uint64_t size_bytes) {
     return ptr;
 }
 
-static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
+static uint64_t size(const uint64_t *shape, uint64_t ndim) {
     assert(ndim <= MAX_NDIM);
 
     // scalar
@@ -74,7 +74,7 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
  * access examples:
  *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
  */
-static uint64_t *get_strides(const uint64_t *shape, uint64_t ndim) {
+static uint64_t *strides(const uint64_t *shape, uint64_t ndim) {
     assert(ndim <= MAX_NDIM);
 
     if (ndim == 0) {
@@ -132,9 +132,9 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     assert(t->shape != NULL && "malloc failed");
     memcpy(t->shape, shape, (size_t)ndim * sizeof(uint64_t));
 
-    t->strides = get_strides(t->shape, ndim);
+    t->strides = strides(t->shape, ndim);
 
-    t->size = get_size(shape, ndim);
+    t->size = size(shape, ndim);
 
     // zero-size
     if (t->size == 0) {
@@ -155,7 +155,7 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     }
 
     assert(t->ndim == ndim);
-    assert(t->size == get_size(shape, ndim));
+    assert(t->size == size(shape, ndim));
     assert(t->data != NULL || t->size == 0);
     return t;
 }
@@ -264,7 +264,7 @@ static void linear_to_multidim_mut(uint64_t lin, const uint64_t *shape, uint64_t
 }
 
 /*
- * converts multi-dimensional coordinates to a linear memory offset,
+ * converts multi-dimensional coordinates to a linear memory offset.
  *
  * example: requesting element at [1, 2] from a tensor
  *
@@ -534,7 +534,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 //
 
 /*
- * calculates the output shape and ndim for a tensor reduction.
+ * calculates the output shape and ndim for a tensor reduction
  *
  * example:
  *   input shape:   [2, 3]
@@ -543,7 +543,7 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
  *   a) keepdims == false -> output shape: [3]
  *   b) keepdims == true  -> output shape: [1, 3]
  */
-static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
+static void reduction_shapes_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
     assert(t->ndim <= MAX_NDIM);
     if (dim_idx < 0) {
@@ -576,7 +576,18 @@ static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepd
     }
 }
 
-static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
+/*
+ * converts multi-dim indices to linear offset,
+ * corresponding to the base offset BEFORE reduction along dim_idx.
+ *
+ * example: reducing along dimension 1 (rows)
+ *
+ * shape before reduction:   [2, 3, 4]
+ * shape after reduction:    [2, 4]      // dim_idx=1, keepdims=false
+ *
+ * target: element at [1, 2] after reduction
+ */
+static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *multidim, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
     if (dim_idx < 0) {
         dim_idx += (int64_t)t->ndim;
@@ -584,7 +595,7 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *multi
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
     uint64_t base_offset = 0;
-    uint64_t k = 0; // index into 'indices' array (which is result-shaped)
+    uint64_t curr = 0; // idx in `multidim` array (which is result-shaped)
 
     for (uint64_t d = 0; d < t->ndim; d++) {
         if ((int64_t)d == dim_idx) {
@@ -594,9 +605,9 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *multi
 
         uint64_t idx_val = 0;
         if (multidim) {
-            // if keepdims, result has same ndim, so we use d
-            // if !keepdims, result has ndim-1, so we use k
-            idx_val = multidim[keepdims ? d : k];
+            // if keepdims, result has same ndim, so we use d (the original dimension index)
+            // if !keepdims, result has ndim-1, so we use curr (index in result shape)
+            idx_val = multidim[keepdims ? d : curr];
             if (t->shape) {
                 assert(idx_val < t->shape[d] && "index out of bounds");
             }
@@ -605,7 +616,7 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *multi
         base_offset += idx_val * t->strides[d];
 
         if (!keepdims) {
-            k++;
+            curr++;
         }
     }
     assert(base_offset < t->size && "base_offset out of bounds");
@@ -623,7 +634,7 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    get_reduction_shape_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
+    reduction_shapes_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -638,9 +649,9 @@ Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     for (uint64_t i = 0; i < result->size; i++) {
         linear_to_multidim_mut(i, result->shape, new_ndim, curr);
 
-        uint64_t base_offset = get_reduction_base_offset(t, curr, dim_idx, keepdims);
+        uint64_t base_offset = reduction_multidim_to_linear(t, curr, dim_idx, keepdims);
 
-        // Reduce along axis
+        // reduce along dim_idx
         float32_t sum = 0.0f;
         uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
         assert(axis_dim <= MAX_TENSOR_SIZE && "axis_dim exceeds maximum tensor size");
@@ -691,7 +702,7 @@ Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims) {
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    get_reduction_shape_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
+    reduction_shapes_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -708,7 +719,7 @@ Tensor *tensor_max(Tensor *t, int64_t dim_idx, bool keepdims) {
             linear_to_multidim_mut(i, result->shape, new_ndim, curr);
         }
 
-        uint64_t base_offset = get_reduction_base_offset(t, curr, dim_idx, keepdims);
+        uint64_t base_offset = reduction_multidim_to_linear(t, curr, dim_idx, keepdims);
 
         float32_t max_val = -INFINITY;
         uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
