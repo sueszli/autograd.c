@@ -227,6 +227,49 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
     return true;
 }
 
+// linear index to multi-dimensional coordinates.
+static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *shape, uint64_t ndim, uint64_t *out_indices) {
+    assert(shape != NULL || ndim == 0);
+    assert(out_indices != NULL || ndim == 0);
+    assert(ndim <= MAX_NDIM);
+
+    uint64_t temp = linear_idx;
+    for (int64_t d = (int64_t)ndim - 1; d >= 0; d--) {
+        out_indices[d] = temp % shape[d];
+        temp /= shape[d];
+    }
+}
+
+/*
+ * Converts multi-dimensional coordinates to a linear offset with broadcasting support.
+ *
+ * The result_indices are from a broadcasted output shape (result_ndim dimensions).
+ * The tensor has potentially fewer dimensions (tensor_ndim).
+ * This function maps the result coordinates to the tensor's linear offset.
+ *
+ * Example:
+ *   result_indices=[1,2,3] (from shape [2,3,4])
+ *   tensor_shape=[3,1] (will be right-aligned to [_,3,1])
+ *   tensor_strides=[1,1]
+ *   -> maps to indices [2,0] for the tensor -> offset = 2*1 + 0*1 = 2
+ */
+static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *result_indices, uint64_t result_ndim, const uint64_t *tensor_shape, uint64_t tensor_ndim, const uint64_t *strides) {
+    assert(result_indices != NULL || result_ndim == 0);
+    assert(tensor_shape != NULL || tensor_ndim == 0);
+    assert(strides != NULL || tensor_ndim == 0);
+    assert(result_ndim >= tensor_ndim);
+    assert(tensor_ndim <= MAX_NDIM);
+
+    uint64_t offset = 0;
+    for (uint64_t d = 0; d < tensor_ndim; d++) {
+        uint64_t result_dim_idx = d + (result_ndim - tensor_ndim); // align right
+        // broadcasting rule: if tensor has size 1 in a dimension, always use index 0
+        uint64_t idx = (tensor_shape[d] == 1) ? 0 : result_indices[result_dim_idx];
+        offset += idx * strides[d];
+    }
+    return offset;
+}
+
 typedef float32_t (*binary_op_t)(float32_t, float32_t);
 
 static float32_t op_add(float32_t a, float32_t b) { return a + b; }
@@ -260,33 +303,14 @@ static Tensor *tensor_binary_op(Tensor *a, Tensor *b, binary_op_t op) {
 
     // i = linear index in result
     for (uint64_t i = 0; i < result->size; i++) {
-        // result: linear index -> multi-dim coordinates
-        uint64_t temp = i;
-        for (int64_t d = (int64_t)out_ndim - 1; d >= 0; d--) {
-            result_indices[d] = temp % out_shape[d];
-            temp /= out_shape[d];
-        }
+        linear_to_multidim_indices_mut(i, out_shape, out_ndim, result_indices);
 
-        // a: multi-dim coordinates -> linear offset
-        uint64_t offset_a = 0;
-        for (uint64_t d = 0; d < a->ndim; d++) {
-            uint64_t result_dim_idx = d + (out_ndim - a->ndim); // align right
-            // broadcasting rule: if a has size 1 in a dimension, always use index 0
-            uint64_t idx = (a->shape[d] == 1) ? 0 : result_indices[result_dim_idx];
-            offset_a += idx * a->strides[d];
-        }
+        uint64_t offset_a = multidim_to_linear_offset_broadcast(result_indices, out_ndim, a->shape, a->ndim, a->strides);
         assert(offset_a < a->size && "offset_a out of bounds");
 
-        // b: multi-dim coordinates -> linear offset
-        uint64_t offset_b = 0;
-        for (uint64_t d = 0; d < b->ndim; d++) {
-            uint64_t result_dim_idx = d + (out_ndim - b->ndim);
-            uint64_t idx = (b->shape[d] == 1) ? 0 : result_indices[result_dim_idx];
-            offset_b += idx * b->strides[d];
-        }
+        uint64_t offset_b = multidim_to_linear_offset_broadcast(result_indices, out_ndim, b->shape, b->ndim, b->strides);
         assert(offset_b < b->size && "offset_b out of bounds");
 
-        // perform op
         result->data[i] = op(a->data[offset_a], b->data[offset_b]);
     }
 
