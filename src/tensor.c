@@ -7,7 +7,7 @@
 #include <string.h>
 
 //
-// cache line aligned alloc
+// memory management
 //
 
 #define CACHELINE_SIZE 64
@@ -24,15 +24,14 @@ static void *safe_aligned_alloc(uint64_t size_bytes) {
     return ptr;
 }
 
-//
-// shape / stride calculation
-//
-
 static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
+    // scalar
     if (ndim == 0) {
         return 1;
     }
     assert(shape != NULL);
+
+    // product of dimensions
     uint64_t size = 1;
     for (uint64_t i = 0; i < ndim; i++) {
         size *= shape[i];
@@ -40,6 +39,28 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
     return size;
 }
 
+// Strides: how many elements to skip in flat memory to move 1 step along each dimension.
+// Converts multi-dim index to linear offset: `offset = sum_i (index[i] * strides[i])`
+//
+// Example:
+//
+// Shape:   [2, 3]  (2 rows, 3 cols)
+//
+// Memory:  [a, b, c, d, e, f]
+//
+// Logical: [[a, b, c],    row 0
+//           [d, e, f]]    row 1
+//
+// Algorithm (iterate backward through dimensions):
+//     i=1: out_strides[1] = 1   (within a row, move 1 elem)
+//         stride = 1 * 3 = 3
+//     i=0: out_strides[0] = 3   (between rows, move 3 elems)
+//         stride = 3 * 2 = 6
+//
+// Result: out_strides = [3, 1]
+//
+// Access examples:
+//     element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
 static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
     if (ndim == 0) {
         return;
@@ -54,13 +75,8 @@ static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_st
     }
 }
 
-// --------------------------------------------------------------------------
-// Tensor Creation / Destruction
-// --------------------------------------------------------------------------
-
 // cppcheck-suppress staticFunction
 Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndim, bool requires_grad) {
-    // Assert constraints
     assert(shape != NULL || ndim == 0);
 
     Tensor *t = (Tensor *)malloc(sizeof(Tensor));
