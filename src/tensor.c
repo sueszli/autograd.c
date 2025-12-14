@@ -533,28 +533,24 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
 // reductions
 //
 
-/*
- * resolves negative axis indices to positive ones (like python / numpy).
+/**
+ * calculates the output shape and ndim for a tensor reduction.
+ *
+ * @param t          input tensor.
+ * @param dim_idx       index of the dimension to reduce.
+ * @param keepdims   if true, maintains reduced dimension with size 1. otherwise, removes it.
+ * @param out_shape  [output] pointer to newly allocated array for the resulting shape. caller must free.
+ * @param out_ndim   [output] number of dimensions in the resulting shape.
  *
  * example:
+ *   input tensor shape: [2, 3]
+ *   reduce dim_idx: 0 (first dimension)
  *
- * ndim: 3 (shape: [d0, d1, d2])
+ *   if keepdims = false: output shape: [3]
  *
- * axis = -1: (last dimension)
- *    -1 + 3 = 2  -> refers to d2
- *
- * axis = -2: (second to last dimension)
- *    -2 + 3 = 1  -> refers to d1
+ *   if keepdims = true: output shape: [1, 3]
  */
-static int64_t resolve_axis(uint64_t ndim, int64_t axis) {
-    if (axis < 0) {
-        axis += (int64_t)ndim;
-    }
-    assert(axis >= 0 && axis < (int64_t)ndim && "axis out of bounds");
-    return axis;
-}
-
-static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
+static void get_reduction_shape_mut(const Tensor *t, int64_t dim_idx, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
     assert(t->ndim <= MAX_NDIM);
 
@@ -570,13 +566,13 @@ static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdi
     if (keepdims) {
         // ndim stays the same
         for (uint64_t i = 0; i < t->ndim; i++) {
-            (*out_shape)[i] = ((int64_t)i == axis) ? 1 : t->shape[i];
+            (*out_shape)[i] = ((int64_t)i == dim_idx) ? 1 : t->shape[i];
         }
     } else {
         // ndim
         uint64_t k = 0;
         for (uint64_t i = 0; i < t->ndim; i++) {
-            if ((int64_t)i != axis) {
+            if ((int64_t)i != dim_idx) {
                 (*out_shape)[k++] = t->shape[i];
             }
         }
@@ -619,11 +615,14 @@ static uint64_t get_reduction_base_offset(const Tensor *t, const uint64_t *indic
 Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    axis = resolve_axis(t->ndim, axis);
+    if (axis < 0) {
+        axis += (int64_t)t->ndim;
+    }
+    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -662,7 +661,10 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
 
 Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
-    axis = resolve_axis(t->ndim, axis);
+    if (axis < 0) {
+        axis += (int64_t)t->ndim;
+    }
+    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
 
     // mutates the returned tensor in place
     Tensor *sum_mut = tensor_sum(t, axis, keepdims);
@@ -681,11 +683,14 @@ Tensor *tensor_mean(Tensor *t, int64_t axis, bool keepdims) {
 Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
-    axis = resolve_axis(t->ndim, axis);
+    if (axis < 0) {
+        axis += (int64_t)t->ndim;
+    }
+    assert(axis >= 0 && axis < (int64_t)t->ndim && "axis out of bounds");
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
