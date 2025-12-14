@@ -139,7 +139,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     // zero-size
     if (t->size == 0) {
         t->data = NULL;
-        // pair assertion: validate zero-size tensor
         assert(t->ndim == ndim);
         assert(t->size == 0);
         assert(t->data == NULL);
@@ -155,11 +154,9 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
         memset(t->data, 0, (size_t)t->size * sizeof(float32_t));
     }
 
-    // pair assertion: validate created tensor
     assert(t->ndim == ndim);
     assert(t->size == get_size(shape, ndim));
     assert(t->data != NULL || t->size == 0);
-
     return t;
 }
 
