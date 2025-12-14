@@ -39,28 +39,30 @@ static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
     return size;
 }
 
-// Strides: how many elements to skip in flat memory to move 1 step along each dimension.
-// Converts multi-dim index to linear offset: `offset = sum_i (index[i] * strides[i])`
-//
-// Example:
-//
-// Shape:   [2, 3]  (2 rows, 3 cols)
-//
-// Memory:  [a, b, c, d, e, f]
-//
-// Logical: [[a, b, c],    row 0
-//           [d, e, f]]    row 1
-//
-// Algorithm (iterate backward through dimensions):
-//     i=1: out_strides[1] = 1   (within a row, move 1 elem)
-//         stride = 1 * 3 = 3
-//     i=0: out_strides[0] = 3   (between rows, move 3 elems)
-//         stride = 3 * 2 = 6
-//
-// Result: out_strides = [3, 1]
-//
-// Access examples:
-//     element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
+/*
+ * Strides: how many elements to skip in flat memory to move 1 step along each dimension.
+ * Converts multi-dim index to linear offset: `offset = sum_i (index[i] * strides[i])`
+ *
+ * Example:
+ *
+ * Shape:   [2, 3]  (2 rows, 3 cols)
+ *
+ * Memory:  [a, b, c, d, e, f]
+ *
+ * Logical: [[a, b, c],    row 0
+ *           [d, e, f]]    row 1
+ *
+ * Algorithm (iterate backward through dimensions):
+ *     i=1: out_strides[1] = 1   (within a row, move 1 elem)
+ *         stride = 1 * 3 = 3
+ *     i=0: out_strides[0] = 3   (between rows, move 3 elems)
+ *         stride = 3 * 2 = 6
+ *
+ * Result: out_strides = [3, 1]
+ *
+ * Access examples:
+ *    element[row=1, col=2]: offset = 1*3 + 2*1 = 5 -> data[5] = f
+*/
 static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
     if (ndim == 0) {
         return;
@@ -149,19 +151,19 @@ void tensor_free(Tensor *t) {
     free(t);
 }
 
-// --------------------------------------------------------------------------
-// Broadcasting
-// --------------------------------------------------------------------------
+//
+// broadcasting
+//
 
 /*
- * broadcasting logic:
  * aligns dimensions from the right.
- * compatible if dimensions are equal or one of them is 1.
+ *  compatible if dimensions are equal or one of them is 1.
+ * 
+ *  shape_a: [   3, 1]
+ *  shape_b: [2, 1, 5]
+ *            ^  ^  ^
+ *  out:     [2, 3, 5]
  *
- * shape_a: [   3, 1]
- * shape_b: [2, 1, 5]
- *          ^  ^  ^
- * out:     [2, 3, 5]
  */
 static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
     assert(out_shape != NULL);
@@ -191,9 +193,9 @@ static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uin
     return true;
 }
 
-// --------------------------------------------------------------------------
-// Arithmetic
-// --------------------------------------------------------------------------
+//
+// arithmetic
+//
 
 typedef float32_t (*binary_op_t)(float32_t, float32_t);
 
