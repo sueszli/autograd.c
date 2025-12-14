@@ -45,8 +45,9 @@ Pre-commit
     - Functional: Prefer pure functions (data in, data out) and immutability for logic.
     - Procedural: Use direct loops and local mutation when simpler or significantly more performant.
 
-# (3) Performance (Data-Oriented Design)
+# (3) Performance
 
+- Follow Data-Oriented Design (DoD) principles
 - Design for Hardware: Organize data to match how the hardware reads it (cache lines).
 - Struct of Arrays (SoA): Prefer SoA over Array of Structs (AoS) for heavy computation to maximize SIMD usage.
 - Data Alignment: Ensure critical data (tensors) is **aligned** (e.g., 64 bytes) for SIMD efficiency. Assert alignment on access.
