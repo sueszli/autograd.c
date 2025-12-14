@@ -467,9 +467,9 @@ void test_dropout_p09_training(void) {
 }
 
 void test_sequential_deep(void) {
-    int depth = 5;
+    size_t depth = 5;
     Layer **layers = (Layer **)malloc(depth * sizeof(Layer *));
-    for (int i = 0; i < depth; ++i) {
+    for (size_t i = 0; i < depth; ++i) {
         layers[i] = layer_linear_create(2, 2, false);
         Tensor **p;
         size_t c;
