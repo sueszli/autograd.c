@@ -13,29 +13,27 @@ typedef struct Tensor {
     struct Tensor *grad; // accumulated gradient (del loss / del tensor) during backprop
 } Tensor;
 
-// Creation and Destruction
+// memory management
 Tensor *tensor_create(const float *data, const int *shape, int ndim, bool requires_grad);
 Tensor *tensor_zeros(const int *shape, int ndim, bool requires_grad);
 void tensor_free(Tensor *t);
 
-// Utils
-void tensor_print(Tensor *t);
-
-// Arithmetic
+// arithmetic
 Tensor *tensor_add(Tensor *a, Tensor *b);
 Tensor *tensor_sub(Tensor *a, Tensor *b);
 Tensor *tensor_mul(Tensor *a, Tensor *b);
 Tensor *tensor_div(Tensor *a, Tensor *b);
-
-// Matrix Multiplication
 Tensor *tensor_matmul(Tensor *a, Tensor *b);
 
-// Shape Manipulation
+// shape manipulation
 Tensor *tensor_reshape(const Tensor *t, const int *new_shape, int new_ndim);
 Tensor *tensor_transpose(Tensor *t, int dim0, int dim1);
 
-// Reductions
+// reductions
 Tensor *tensor_sum(Tensor *t, int axis, bool keepdims);
 Tensor *tensor_mean(Tensor *t, int axis, bool keepdims);
 Tensor *tensor_max(Tensor *t, int axis, bool keepdims);
-Tensor *tensor_get(Tensor *t, const int *indices); // Element access for testing/debugging
+
+// utils
+void tensor_print(Tensor *t);
+Tensor *tensor_get(Tensor *t, const int *indices);
