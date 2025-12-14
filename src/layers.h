@@ -3,9 +3,9 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-// 
+//
 // base layer interface
-// 
+//
 
 // vtable polymorphism
 typedef struct Layer Layer;
@@ -14,9 +14,9 @@ typedef void (*LayerFreeFunc)(Layer *layer);
 typedef void (*LayerParametersFunc)(Layer *layer, Tensor ***out_params, size_t *out_count);
 
 struct Layer {
-    LayerForwardFunc forward;
-    LayerFreeFunc free;
-    LayerParametersFunc parameters;
+    LayerForwardFunc forward;       // forward pass
+    LayerFreeFunc free;             // free resources
+    LayerParametersFunc parameters; // retrieve params
     char *name;
 };
 
@@ -46,9 +46,9 @@ void layer_free(Layer *layer);
  */
 void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count);
 
-// 
+//
 // layer constructors
-// 
+//
 
 /**
  * creates a linear (dense) layer.
