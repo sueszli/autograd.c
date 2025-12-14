@@ -157,12 +157,12 @@ void tensor_free(Tensor *t) {
 
 /*
  * aligns dimensions from the right.
- *  compatible if dimensions are equal or one of them is 1.
+ * compatible if dimensions are equal or one of them is 1.
  * 
- *  shape_a: [   3, 1]
- *  shape_b: [2, 1, 5]
- *            ^  ^  ^
- *  out:     [2, 3, 5]
+ * shape_a: [   3, 1]
+ * shape_b: [2, 1, 5]
+ *           ^  ^  ^
+ * out:     [2, 3, 5]
  */
 static bool broadcast_shapes(const uint64_t *shape_a, uint64_t ndim_a, const uint64_t *shape_b, uint64_t ndim_b, uint64_t *out_shape, uint64_t *out_ndim) {
     assert(out_shape != NULL);
