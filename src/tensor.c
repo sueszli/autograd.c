@@ -568,10 +568,12 @@ static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdi
     }
 
     if (keepdims) {
+        // ndim stays the same
         for (uint64_t i = 0; i < t->ndim; i++) {
             (*out_shape)[i] = ((int64_t)i == axis) ? 1 : t->shape[i];
         }
     } else {
+        // ndim
         uint64_t k = 0;
         for (uint64_t i = 0; i < t->ndim; i++) {
             if ((int64_t)i != axis) {
