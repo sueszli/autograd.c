@@ -1,8 +1,8 @@
 #include "../src/tensor.h"
 #include "unity.h"
 #include <math.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -360,7 +360,7 @@ void test_tensor_broadcast_complex(void) {
     TEST_ASSERT_EQUAL_INT64(4, c->shape[1]);
 
     TEST_ASSERT_EQUAL_FLOAT(11.0f, c->data[0]);
-    TEST_ASSERT_EQUAL_FLOAT(13.0f, c->data[8]); // row 2, col 0 (index 8) -> 3 + 10 = 13
+    TEST_ASSERT_EQUAL_FLOAT(13.0f, c->data[8]);  // row 2, col 0 (index 8) -> 3 + 10 = 13
     TEST_ASSERT_EQUAL_FLOAT(43.0f, c->data[11]); // row 2, col 3 (index 11) -> 3 + 40 = 43
 
     tensor_free(a);
@@ -395,7 +395,8 @@ void test_tensor_transpose_general(void) {
     // 3D tensor: (2, 3, 2)
     // data: 0..11
     float32_t data[12];
-    for (int i=0; i<12; i++) data[i] = (float32_t)i;
+    for (int i = 0; i < 12; i++)
+        data[i] = (float32_t)i;
     int64_t shape[] = {2, 3, 2};
     Tensor *t = tensor_create(data, shape, 3, false);
 
