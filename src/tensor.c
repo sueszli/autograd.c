@@ -22,6 +22,7 @@ static void calculate_strides(const int *shape, int ndim, int *strides) {
     }
 }
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_create(const float *data, const int *shape, int ndim, bool requires_grad) {
     Tensor *t = (Tensor *)malloc(sizeof(Tensor));
     if (!t)
@@ -85,8 +86,10 @@ Tensor *tensor_create(const float *data, const int *shape, int ndim, bool requir
     return t;
 }
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_zeros(const int *shape, int ndim, bool requires_grad) { return tensor_create(NULL, shape, ndim, requires_grad); }
 
+// cppcheck-suppress staticFunction
 void tensor_free(Tensor *t) {
     if (t) {
         if (t->data)
@@ -365,6 +368,7 @@ Tensor *tensor_transpose(Tensor *t, int dim0, int dim1) {
     return result;
 }
 
+// cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int axis, bool keepdims) {
     if (axis < 0)
         axis += t->ndim;
