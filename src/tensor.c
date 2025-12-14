@@ -425,28 +425,28 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     assert(new_ndim <= MAX_NDIM && "new_ndim exceeds maximum tensor dimensions");
 
     uint64_t new_size = 1;
-    int64_t unknown_idx = -1;
+    int64_t unknown_idx = -1; // one dimension can be -1 (inferred)
 
-    // validate new shape and handle -1
+    // validate
     for (uint64_t i = 0; i < new_ndim; i++) {
         if (new_shape[i] == -1) {
-            assert(unknown_idx == -1 && "Only one dimension can be -1");
+            assert(unknown_idx == -1 && "only one dimension can be -1");
             unknown_idx = (int64_t)i;
         } else {
-            assert(new_shape[i] >= 0 && "Dimension cannot be negative (except -1)");
+            assert(new_shape[i] >= 0 && "dimension cannot be negative (except -1)");
             new_size *= (uint64_t)new_shape[i];
         }
     }
-
     if (unknown_idx != -1) {
-        assert(t->size % new_size == 0 && "Invalid shape (cannot infer dimension)");
+        assert(t->size % new_size == 0 && "invalid shape (cannot infer dimension)");
     } else {
-        assert(new_size == t->size && "Total elements must match");
+        assert(new_size == t->size && "total elements must match");
     }
 
     uint64_t *resolved_shape = (uint64_t *)malloc((size_t)new_ndim * sizeof(uint64_t));
     assert(resolved_shape != NULL && "malloc failed");
 
+    // fill in
     for (uint64_t i = 0; i < new_ndim; i++) {
         if ((int64_t)i == unknown_idx) {
             resolved_shape[i] = t->size / new_size;
@@ -507,8 +507,6 @@ Tensor *tensor_transpose(Tensor *t, uint64_t dim0, uint64_t dim1) {
     assert(indices != NULL && "calloc failed");
 
     for (uint64_t i = 0; i < result->size; i++) {
-        assert(i < result->size && "loop index out of bounds");
-
         uint64_t temp_i = i;
         for (int64_t d = (int64_t)t->ndim - 1; d >= 0; d--) {
             indices[d] = temp_i % result->shape[d];
