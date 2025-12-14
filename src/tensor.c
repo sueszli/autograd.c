@@ -600,6 +600,26 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
     return offset;
 }
 
+/*
+ * sums elements along a dimension.
+ *
+ * example:
+ *
+ * shape:   [2, 3]
+ *
+ * logical: [[1, 2, 3],
+ *           [4, 5, 6]]
+ *
+ * operation (sum along dim 0):
+ *
+ *   a) keepdims = true
+ *      shape:  [1, 3]
+ *      result: [[5, 7, 9]]
+ *
+ *   b) keepdims = false
+ *      shape:  [3]
+ *      result: [5, 7, 9]
+ */
 // cppcheck-suppress staticFunction
 Tensor *tensor_sum(Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
