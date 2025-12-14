@@ -554,7 +554,16 @@ static int64_t resolve_axis(uint64_t ndim, int64_t axis) {
     return axis;
 }
 
-static void calculate_reduction_shape(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
+/**
+ * @brief calculates the output shape and ndim for a tensor reduction.
+ *
+ * @param t          input tensor.
+ * @param axis       dimension to reduce along.
+ * @param keepdims   if true, maintains reduced dimension with size 1; otherwise, removes it.
+ * @param out_shape  [output] pointer to newly allocated array for the resulting shape. caller must free.
+ * @param out_ndim   [output] number of dimensions in the resulting shape.
+ */
+static void get_reduction_shape_mut(const Tensor *t, int64_t axis, bool keepdims, uint64_t **out_shape, uint64_t *out_ndim) {
     assert(t != NULL);
     assert(t->ndim <= MAX_NDIM);
 
@@ -623,7 +632,7 @@ Tensor *tensor_sum(Tensor *t, int64_t axis, bool keepdims) {
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
@@ -685,7 +694,7 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
 
     uint64_t *new_shape;
     uint64_t new_ndim;
-    calculate_reduction_shape(t, axis, keepdims, &new_shape, &new_ndim);
+    get_reduction_shape_mut(t, axis, keepdims, &new_shape, &new_ndim);
 
     Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
     if (new_shape) {
