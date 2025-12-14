@@ -14,9 +14,9 @@ typedef void (*LayerFreeFunc)(Layer *layer);
 typedef void (*LayerParametersFunc)(Layer *layer, Tensor ***out_params, size_t *out_count);
 
 struct Layer {
-    LayerForwardFunc forward;       // forward pass
-    LayerFreeFunc free;             // free resources
-    LayerParametersFunc parameters; // retrieve params
+    LayerForwardFunc forward;
+    LayerFreeFunc free;
+    LayerParametersFunc parameters;
     char *name;
 };
 
