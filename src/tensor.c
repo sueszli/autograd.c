@@ -266,49 +266,68 @@ static void linear_to_multidim_indices_mut(uint64_t linear_idx, const uint64_t *
 /*
  * converts multi-dimensional coordinates to a linear offset with broadcasting support.
  *
- * example:
+ * @param broadcast_indices  coordinates in the broadcasted view (e.g., [1, 2] for row 1, col 2)
+ * @param broadcast_ndim     number of dimensions in the broadcasted view
+ * @param physical_shape     actual shape of the physical data in memory
+ * @param physical_ndim      number of dimensions in the physical data
+ * @param physical_strides   stride array for the physical data (how many elements to skip per dimension)
+ * @return                   linear offset into the physical data array
  *
- * result_shape:  [2, 3]  (broadcasted output)
- * tensor_shape:  [1, 3]  (tensor being broadcasted)
- * tensor_strides: [3, 1]
+ * example: broadcasting a 1D tensor to 2D
  *
- * tensor memory:  [a, b, c]
- *                  0  1  2  <- linear offsets
+ * physical data (actual memory):  [a, b, c]     shape: [3]
  *
- * tensor logical: [[a, b, c]]    row 0
+ * broadcasted view (logical):     [[a, b, c],   shape: [2, 3]
+ *                                  [a, b, c]]
  *
- * result logical: [[a, b, c],    row 0 (broadcasts from tensor row 0)
- *                  [a, b, c]]    row 1 (broadcasts from tensor row 0)
+ * the 1D tensor broadcasts to 2D by repeating across the first dimension.
+ * both rows point to the same physical data [a, b, c].
  *
- * algorithm (left-to-right):
- *   given: result_indices=[1,2], result_ndim=2, tensor_shape=[1,3], tensor_ndim=2
+ * algorithm walkthrough:
+ *   query: "give me element at position [1, 2]" (row 1, col 2)
+ *   inputs: broadcast_indices=[1,2], broadcast_ndim=2, physical_shape=[3], physical_ndim=1
  *
- *   d=0 (leftmost/row):   result_dim_idx = 0 + (2-2) = 0
- *                         tensor_shape[0] = 1  -> use idx = 0 (broadcast!)
- *                         offset += 0 * 3 = 0
+ *   step 1: right-align dimensions (like aligning numbers for addition)
  *
- *   d=1 (rightmost/col):  result_dim_idx = 1 + (2-2) = 1
- *                         tensor_shape[1] = 3  -> use idx = result_indices[1] = 2
- *                         offset += 2 * 1 = 2
+ *           broadcast: [2, 3]   <- 2 dimensions
+ *                       v  v
+ *           physical:     [3]   <- 1 dimension (aligns to the RIGHT)
  *
- *   result: offset = 2 -> element 'c'
+ *           formula: broadcast_dim = d + (broadcast_ndim - physical_ndim)
+ *                                  = d + (2 - 1)
+ *                                  = d + 1
  *
- * intuition: right-align dimensions, then use stride formula.
- *            dimensions with size 1 are "stretched" by always using index 0.
+ *           so physical dim 0 maps to broadcast dim 1 (columns)
+ *
+ *   step 2: iterate over physical dimensions
+ *
+ *           d=0 (physical's only dim):
+ *              broadcast_dim = 0 + 1 = 1  (maps to column dimension)
+ *              physical_shape[0] = 3  (normal dimension, not broadcasting)
+ *              idx = broadcast_indices[1] = 2  (use column index)
+ *              offset += 2 * 1 = 2
+ *
+ *   result: offset = 2 -> data[2] = 'c'
+ *
+ *   note: the row dimension (dim 0) doesn't exist in physical shape, so it's implicitly
+ *         broadcast (all rows access the same data).
+ *
+ * key insight: dimensions with size 1 are "frozen" at index 0.
+ *              missing dimensions (when ndims differ) are implicitly broadcast.
  */
-static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *result_indices, uint64_t result_ndim, const uint64_t *tensor_shape, uint64_t tensor_ndim, const uint64_t *strides) {
-    assert(result_indices != NULL || result_ndim == 0);
-    assert(tensor_shape != NULL || tensor_ndim == 0);
-    assert(strides != NULL || tensor_ndim == 0);
-    assert(result_ndim >= tensor_ndim);
-    assert(tensor_ndim <= MAX_NDIM);
+static uint64_t multidim_to_linear_offset_broadcast(const uint64_t *broadcast_indices, uint64_t broadcast_ndim, const uint64_t *physical_shape, uint64_t physical_ndim, const uint64_t *physical_strides) {
+    assert(broadcast_indices != NULL || broadcast_ndim == 0);
+    assert(physical_shape != NULL || physical_ndim == 0);
+    assert(physical_strides != NULL || physical_ndim == 0);
+    assert(broadcast_ndim >= physical_ndim);
+    assert(physical_ndim <= MAX_NDIM);
 
     uint64_t offset = 0;
-    for (uint64_t d = 0; d < tensor_ndim; d++) {
-        uint64_t result_dim_idx = d + (result_ndim - tensor_ndim); // align right
-        // broadcasting rule: if tensor has size 1 in a dimension, always use index 0
-        uint64_t idx = (tensor_shape[d] == 1) ? 0 : result_indices[result_dim_idx];
-        offset += idx * strides[d];
+    for (uint64_t d = 0; d < physical_ndim; d++) {
+        uint64_t broadcast_dim = d + (broadcast_ndim - physical_ndim); // align right
+        // broadcasting rule: if physical shape has size 1 in a dimension, always use index 0
+        uint64_t idx = (physical_shape[d] == 1) ? 0 : broadcast_indices[broadcast_dim];
+        offset += idx * physical_strides[d];
     }
     return offset;
 }
