@@ -211,7 +211,7 @@ void test_tensor_reductions(void) {
     int64_t shape[] = {2, 3};
     Tensor *t = tensor_create(data, shape, 2, false);
 
-    // Sum axis 0: [5, 7, 9] (shape 3)
+    // sum axis 0: [5, 7, 9] (shape 3)
     Tensor *s0 = tensor_sum(t, 0, false);
     TEST_ASSERT_NOT_NULL(s0);
     TEST_ASSERT_EQUAL_INT64(1, s0->ndim);
@@ -221,7 +221,7 @@ void test_tensor_reductions(void) {
     TEST_ASSERT_EQUAL_FLOAT(9.0f, s0->data[2]);
     tensor_free(s0);
 
-    // Sum axis 1: [6, 15] (shape 2)
+    // sum axis 1: [6, 15] (shape 2)
     Tensor *s1 = tensor_sum(t, 1, false);
     TEST_ASSERT_NOT_NULL(s1);
     TEST_ASSERT_EQUAL_INT64(1, s1->ndim);
@@ -230,21 +230,21 @@ void test_tensor_reductions(void) {
     TEST_ASSERT_EQUAL_FLOAT(15.0f, s1->data[1]);
     tensor_free(s1);
 
-    // Mean axis 1: [2, 5]
+    // mean axis 1: [2, 5]
     Tensor *m1 = tensor_mean(t, 1, false);
     TEST_ASSERT_NOT_NULL(m1);
     TEST_ASSERT_EQUAL_FLOAT(2.0f, m1->data[0]);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, m1->data[1]);
     tensor_free(m1);
 
-    // Max axis 1: [3, 6]
+    // max axis 1: [3, 6]
     Tensor *max1 = tensor_max(t, 1, false);
     TEST_ASSERT_NOT_NULL(max1);
     TEST_ASSERT_EQUAL_FLOAT(3.0f, max1->data[0]);
     TEST_ASSERT_EQUAL_FLOAT(6.0f, max1->data[1]);
     tensor_free(max1);
 
-    // Test keepdims
+    // test keepdims
     Tensor *s1_kd = tensor_sum(t, 1, true);
     TEST_ASSERT_EQUAL_INT64(2, s1_kd->ndim);
     TEST_ASSERT_EQUAL_INT64(2, s1_kd->shape[0]);
@@ -279,12 +279,12 @@ void test_matmul_error_shapes(void) {
     int64_t shape_b[] = {2, 2};
     Tensor *b = tensor_create(data_b, shape_b, 2, false);
 
-    // Mismatched k dim
+    // mismatched k dim
     int64_t shape_bad[] = {3, 2};
     Tensor *c = tensor_reshape(b, shape_bad, 2); // this will fail logic actually because size 4 != 6
     TEST_ASSERT_NULL(c);
 
-    // Correct fail test: inner dims don't match
+    // correct fail test: inner dims don't match
     // A: 2x2
     // B: 3x1 (size 3)
     float32_t data_d[] = {1, 2, 3};
@@ -305,7 +305,7 @@ void test_tensor_get(void) {
     int64_t shape[] = {2, 3};
     Tensor *t = tensor_create(data, shape, 2, false);
 
-    // Get element at [0, 1] -> 2.0
+    // get element at [0, 1] -> 2.0
     int64_t idx1[] = {0, 1};
     Tensor *val1 = tensor_get(t, idx1);
     TEST_ASSERT_NOT_NULL(val1);
@@ -313,7 +313,7 @@ void test_tensor_get(void) {
     TEST_ASSERT_EQUAL_FLOAT(2.0f, val1->data[0]);
     tensor_free(val1);
 
-    // Get element at [1, 2] -> 6.0
+    // get element at [1, 2] -> 6.0
     int64_t idx2[] = {1, 2};
     Tensor *val2 = tensor_get(t, idx2);
     TEST_ASSERT_NOT_NULL(val2);
@@ -348,7 +348,7 @@ void test_tensor_broadcast_complex(void) {
     int64_t shape_b[] = {1, 4};
     Tensor *b = tensor_create(data_b, shape_b, 2, false);
 
-    // Expected result: (3, 4)
+    // expected result: (3, 4)
     // [[11, 21, 31, 41],
     //  [12, 22, 32, 42],
     //  [13, 23, 33, 43]]
@@ -373,17 +373,17 @@ void test_tensor_reshape_errors(void) {
     int64_t shape[] = {4};
     Tensor *t = tensor_create(data, shape, 1, false);
 
-    // Error: multiple -1
+    // error: multiple -1
     int64_t shape_err1[] = {-1, -1};
     Tensor *t_err1 = tensor_reshape(t, shape_err1, 2);
     TEST_ASSERT_NULL(t_err1);
 
-    // Error: total size mismatch
+    // error: total size mismatch
     int64_t shape_err2[] = {2, 3}; // size 6 != 4
     Tensor *t_err2 = tensor_reshape(t, shape_err2, 2);
     TEST_ASSERT_NULL(t_err2);
 
-    // Error: -1 but not divisible
+    // error: -1 but not divisible
     int64_t shape_err3[] = {3, -1}; // 4 is not divisible by 3
     Tensor *t_err3 = tensor_reshape(t, shape_err3, 2);
     TEST_ASSERT_NULL(t_err3);
@@ -399,8 +399,8 @@ void test_tensor_transpose_general(void) {
     int64_t shape[] = {2, 3, 2};
     Tensor *t = tensor_create(data, shape, 3, false);
 
-    // Transpose axis 0 and 2 -> shape (2, 3, 2)
-    // Original strides: [6, 2, 1]
+    // transpose axis 0 and 2 -> shape (2, 3, 2)
+    // original strides: [6, 2, 1]
     // T[i, j, k] -> T[k, j, i]
     Tensor *t2 = tensor_transpose(t, 0, 2);
     TEST_ASSERT_NOT_NULL(t2);
@@ -408,10 +408,10 @@ void test_tensor_transpose_general(void) {
     TEST_ASSERT_EQUAL_INT64(3, t2->shape[1]);
     TEST_ASSERT_EQUAL_INT64(2, t2->shape[2]);
 
-    // Check value at [0, 1, 1] in new tensor
-    // Corresponds to [1, 1, 0] in old tensor
-    // Old: 1*6 + 1*2 + 0*1 = 8 -> data[8] = 8.0
-    // New index: 0*6 + 1*2 + 1*1 = 3
+    // check value at [0, 1, 1] in new tensor
+    // corresponds to [1, 1, 0] in old tensor
+    // old: 1*6 + 1*2 + 0*1 = 8 -> data[8] = 8.0
+    // new index: 0*6 + 1*2 + 1*1 = 3
     TEST_ASSERT_EQUAL_FLOAT(8.0f, t2->data[3]);
 
     tensor_free(t);
@@ -437,7 +437,6 @@ void test_tensor_div_broadcast(void) {
     tensor_free(c);
 }
 
-
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_tensor_create);
@@ -452,7 +451,6 @@ int main(void) {
     RUN_TEST(test_tensor_reductions);
     RUN_TEST(test_broadcast_error);
     RUN_TEST(test_matmul_error_shapes);
-    // New tests
     RUN_TEST(test_tensor_get);
     RUN_TEST(test_tensor_requires_grad);
     RUN_TEST(test_tensor_broadcast_complex);
