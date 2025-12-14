@@ -6,28 +6,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-// --------------------------------------------------------------------------
-// Memory Helpers
-// --------------------------------------------------------------------------
+//
+// cache line aligned alloc
+//
 
-// Ensure 64-byte alignment for SIMD operations
+#define CACHELINE_SIZE 64
+_Static_assert(CACHELINE_SIZE >= 4, "cacheline_size must be at least 4 bytes");
+_Static_assert((CACHELINE_SIZE & (CACHELINE_SIZE - 1)) == 0, "cacheline_size must be power of 2");
+
 static void *safe_aligned_alloc(uint64_t size_bytes) {
-    const size_t alignment = 64;
     size_t s_bytes = (size_t)size_bytes;
-    // aligned_alloc requires size to be a multiple of alignment
-    if (s_bytes % alignment != 0) {
-        s_bytes = (s_bytes / alignment + 1) * alignment;
+    if (s_bytes % CACHELINE_SIZE != 0) {
+        s_bytes = (s_bytes / CACHELINE_SIZE + 1) * CACHELINE_SIZE;
     }
-    void *ptr = aligned_alloc(alignment, s_bytes);
+    void *ptr = aligned_alloc(CACHELINE_SIZE, s_bytes);
     assert(ptr != NULL && "aligned_alloc failed: out of memory");
     return ptr;
 }
 
-// --------------------------------------------------------------------------
-// Shape / Stride Calculation
-// --------------------------------------------------------------------------
+//
+// shape / stride calculation
+//
 
-static uint64_t calculate_size(const uint64_t *shape, uint64_t ndim) {
+static uint64_t get_size(const uint64_t *shape, uint64_t ndim) {
     if (ndim == 0) {
         return 1;
     }
@@ -39,7 +40,7 @@ static uint64_t calculate_size(const uint64_t *shape, uint64_t ndim) {
     return size;
 }
 
-static void calculate_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
+static void write_strides(const uint64_t *shape, uint64_t ndim, uint64_t *out_strides) {
     if (ndim == 0) {
         return;
     }
@@ -91,9 +92,9 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
 
     t->strides = (uint64_t *)malloc((size_t)ndim * sizeof(uint64_t));
     assert(t->strides != NULL && "malloc failed");
-    calculate_strides(t->shape, ndim, t->strides);
+    write_strides(t->shape, ndim, t->strides);
 
-    t->size = calculate_size(shape, ndim);
+    t->size = get_size(shape, ndim);
 
     if (t->size == 0) {
         t->data = NULL;
@@ -590,7 +591,7 @@ Tensor *tensor_max(Tensor *t, int64_t axis, bool keepdims) {
 }
 
 // --------------------------------------------------------------------------
-// Utils
+// utils
 // --------------------------------------------------------------------------
 
 static void tensor_print_recursive(Tensor *t, uint64_t dim, uint64_t offset, uint64_t indent) {
