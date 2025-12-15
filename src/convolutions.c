@@ -19,11 +19,9 @@ typedef struct {
     uint64_t padding;
 } Conv2dLayer;
 
-/*
- * applies padding to a 4D tensor (batch_size, channels, height, width).
- * returns a new tensor with shape (batch_size, channels, height+2p, width+2p).
- * value is 0.0f (or -inf for maxpool if needed).
- */
+// applies padding to a 4D tensor (batch_size, channels, height, width).
+// returns a new tensor with shape (batch_size, channels, height+2p, width+2p).
+// value is 0.0f (or -inf for maxpool if needed).
 static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value) {
     if (padding == 0) {
         return tensor_create(input->data, input->shape, input->ndim, false); // copy

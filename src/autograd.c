@@ -11,6 +11,8 @@
 #define MAX_NDIM 32
 #define MAX_ARRAY_SIZE 1000000
 #define MAX_TENSOR_SIZE 100000000
+#define INITIAL_ARRAY_CAPACITY 16
+#define ARRAY_GROWTH_FACTOR 2
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -26,35 +28,32 @@
 
 /*
  * Accumulates the gradient into the tensor's .grad field.
- * If the tensor does not require gradients, this function does nothing.
+ * Handles the first gradient arrival by initializing to zero before adding.
+ * Subsequent calls accumulate via addition.
  *
- * t:    The tensor to update.
- * grad: The gradient to accumulate (must be same shape/size unless broadcasting logic handled elsewhere,
- *       but here we assume direct addition is valid or `tensor_add` handles it).
+ * tensor_mut: The tensor to update (mutable).
+ * grad:       The gradient to accumulate.
  */
-static void accumulate_grad(Tensor *t, const Tensor *grad) {
-    // If t is NULL, it's likely a logic error in the caller (e.g. missing input tensor in context)
-    assert(t != NULL);
+static void accumulate_grad(Tensor *tensor_mut, const Tensor *grad) {
+    assert(tensor_mut != NULL);
 
-    // If we don't need gradients for this tensor, skip.
-    if (!t->requires_grad) {
+    if (!tensor_mut->requires_grad) {
         return;
     }
 
     assert(grad != NULL);
     assert(grad->data != NULL || grad->size == 0);
 
-    if (t->grad == NULL) {
-        // First gradient arrival: initialize as zero and add (or just copy)
-        // cloning via zeros + add is safe and ensures we own the memory
-        Tensor *zeros = tensor_zeros(t->shape, t->ndim, false);
-        t->grad = tensor_add(zeros, grad);
+    if (tensor_mut->grad == NULL) {
+        // first gradient: initialize to zero then add to ensure we own the memory
+        Tensor *zeros = tensor_zeros(tensor_mut->shape, tensor_mut->ndim, false);
+        tensor_mut->grad = tensor_add(zeros, grad);
         tensor_free(zeros);
     } else {
-        // Accumulate: new_grad = old_grad + grad
-        Tensor *new_grad = tensor_add(t->grad, grad);
-        tensor_free(t->grad);
-        t->grad = new_grad;
+        // subsequent gradients: accumulate via addition
+        Tensor *new_grad = tensor_add(tensor_mut->grad, grad);
+        tensor_free(tensor_mut->grad);
+        tensor_mut->grad = new_grad;
     }
 }
 
@@ -75,7 +74,7 @@ typedef struct {
 static void ptr_array_init(PtrArray *arr) {
     assert(arr != NULL);
     arr->size = 0;
-    arr->capacity = 16;
+    arr->capacity = INITIAL_ARRAY_CAPACITY;
     arr->data = (GradFn **)malloc((uint64_t)arr->capacity * sizeof(GradFn *));
     assert(arr->data != NULL && "malloc failed");
 }
@@ -90,24 +89,24 @@ static void ptr_array_free(PtrArray *arr) {
     arr->capacity = 0;
 }
 
-static void ptr_array_append(PtrArray *arr, GradFn *fn) {
+static void ptr_array_append(PtrArray *arr, GradFn *grad_fn) {
     assert(arr != NULL);
-    assert(fn != NULL);
+    assert(grad_fn != NULL);
 
     if (arr->size >= arr->capacity) {
-        arr->capacity *= 2;
+        arr->capacity *= ARRAY_GROWTH_FACTOR;
         GradFn **new_data = (GradFn **)realloc(arr->data, (uint64_t)arr->capacity * sizeof(GradFn *));
         assert(new_data != NULL && "realloc failed");
         arr->data = new_data;
     }
-    arr->data[arr->size++] = fn;
+    arr->data[arr->size++] = grad_fn;
 }
 
-static bool ptr_array_contains(const PtrArray *arr, const GradFn *fn) {
+static bool ptr_array_contains(const PtrArray *arr, const GradFn *grad_fn) {
     assert(arr != NULL);
     assert(arr->size < MAX_ARRAY_SIZE && "Array size exceeds maximum limit");
-    for (uint64_t fn_idx = 0; fn_idx < arr->size; fn_idx++) {
-        if (arr->data[fn_idx] == fn) {
+    for (uint64_t idx = 0; idx < arr->size; idx++) {
+        if (arr->data[idx] == grad_fn) {
             return true;
         }
     }
@@ -115,26 +114,29 @@ static bool ptr_array_contains(const PtrArray *arr, const GradFn *fn) {
 }
 
 /*
- * Recursive helper for topological sort.
- * Performs a Depth First Search (DFS) to order nodes.
+ * Recursive helper for topological sort via DFS.
+ * Post-order traversal ensures dependencies come before dependents.
  */
-static void build_topo_recursive(GradFn *fn, PtrArray *topo, PtrArray *visited, uint64_t depth) {
+static void build_topo_recursive(GradFn *grad_fn, PtrArray *topo, PtrArray *visited, uint64_t depth) {
     assert(depth < MAX_RECURSION_DEPTH && "Recursion depth exceeded: graph too deep");
-    assert(fn != NULL);
+    assert(grad_fn != NULL);
     assert(topo != NULL);
     assert(visited != NULL);
 
-    if (ptr_array_contains(visited, fn)) {
+    if (ptr_array_contains(visited, grad_fn)) {
         return;
     }
-    ptr_array_append(visited, fn);
+    ptr_array_append(visited, grad_fn);
 
-    for (int64_t next_idx = 0; next_idx < fn->num_next; next_idx++) {
-        if (fn->next_fns[next_idx]) {
-            build_topo_recursive(fn->next_fns[next_idx], topo, visited, depth + 1);
+    // visit children first (post-order traversal)
+    for (int64_t child_idx = 0; child_idx < grad_fn->num_next; child_idx++) {
+        if (grad_fn->next_fns[child_idx]) {
+            build_topo_recursive(grad_fn->next_fns[child_idx], topo, visited, depth + 1);
         }
     }
-    ptr_array_append(topo, fn);
+
+    // add current node after all children have been visited
+    ptr_array_append(topo, grad_fn);
 }
 
 //
@@ -142,19 +144,17 @@ static void build_topo_recursive(GradFn *fn, PtrArray *topo, PtrArray *visited, 
 //
 
 /*
- * backward: Computes the gradient of current tensor w.r.t. graph leaves.
- *
- * 1. Seeds the gradient (d_output = 1.0 if scalar, or uses provided grad).
- * 2. Builds a topological order of the compute graph efficiently.
- * 3. Iterates in reverse topological order, calling .apply() on each node.
+ * Computes gradients of root tensor w.r.t. all graph leaves via backpropagation.
+ * Uses reverse-mode automatic differentiation: builds computation graph topology,
+ * then propagates gradients from root to leaves in reverse topological order.
  */
 void backward(Tensor *root, const Tensor *grad) {
     assert(root != NULL);
 
-    // 1. Seed gradient
+    // seed the gradient at root node
     if (root->grad == NULL) {
         if (grad == NULL) {
-            // Implicit scalar gradient
+            // scalar loss with implicit gradient of 1.0
             if (root->size == 1) {
                 const uint64_t shape[] = {1};
                 root->grad = tensor_create(NULL, shape, 0, false);
@@ -163,26 +163,24 @@ void backward(Tensor *root, const Tensor *grad) {
                 assert(false && "Grad must be specified for non-scalar root");
             }
         } else {
-            // Explicit gradient provided
+            // explicit gradient provided by caller
             assert(grad->data != NULL || grad->size == 0);
-
-            // Explicitly copy the gradient to ensure we own it.
-            // This is safer than relying on implicit semantics.
+            // copy gradient to ensure we own the memory
             root->grad = tensor_create(grad->data, grad->shape, grad->ndim, false);
         }
     } else {
-        // If gradient already exists, accumulate.
+        // gradient already exists, accumulate new gradient
         if (grad != NULL) {
             accumulate_grad(root, grad);
         }
     }
 
     if (!root->grad_fn) {
-        // Leaf node, nothing to propagate
+        // leaf node has no backward function to propagate through
         return;
     }
 
-    // 2. Topological sort
+    // build topological sort of computation graph
     PtrArray topo;
     ptr_array_init(&topo);
     PtrArray visited;
@@ -190,16 +188,15 @@ void backward(Tensor *root, const Tensor *grad) {
 
     build_topo_recursive(root->grad_fn, &topo, &visited, 0);
 
-    // 3. Backward pass
-    // Process nodes in reverse topological order (children before parents)
-    for (int64_t i = (int64_t)topo.size - 1; i >= 0; i--) {
-        GradFn *fn = topo.data[i];
-        assert(fn != NULL);
+    // propagate gradients in reverse topological order (outputs to inputs)
+    for (int64_t topo_idx = (int64_t)topo.size - 1; topo_idx >= 0; topo_idx--) {
+        GradFn *grad_fn = topo.data[topo_idx];
+        assert(grad_fn != NULL);
 
-        Tensor *out = fn->out_tensor;
-        // If the output of this function has a gradient, propagate it
-        if (out && out->grad) {
-            fn->apply(fn, out->grad);
+        Tensor *output_tensor = grad_fn->out_tensor;
+        // propagate gradient only if output has accumulated gradient
+        if (output_tensor && output_tensor->grad) {
+            grad_fn->apply(grad_fn, output_tensor->grad);
         }
     }
 
@@ -237,60 +234,58 @@ void grad_fn_free(GradFn *fn) {
 //
 
 /*
- * Handle broadcasting in backward pass.
- * If the input shape was smaller than result shape (due to broadcasting),
- * we must sum up the gradients along the broadcasted dimensions.
+ * Reverses broadcasting that occurred in forward pass.
+ * When forward pass broadcast input (e.g., shape (3) -> (2,3)), the backward
+ * gradient must be summed along broadcasted dimensions to match input shape.
  *
  * Example:
- *   Forward: A (2, 1) + B (3) -> C (2, 3)
- *   Backward: dL/dC (2, 3)
- *   dL/dA = sum(dL/dC, axis=1) -> (2, 1)
- *   dL/dB = sum(dL/dC, axis=0) -> (1, 3) -> reshape -> (3)
+ *   Forward: A (2,1) + B (3) -> C (2,3)  [both inputs broadcast to (2,3)]
+ *   Backward: dL/dC (2,3)
+ *     dL/dA = sum(dL/dC, axis=1, keepdim=True) -> (2,1)
+ *     dL/dB = sum(dL/dC, axis=0) -> (3)
  */
 static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
     if (!grad || !input) {
         return NULL;
     }
 
-    const Tensor *curr = grad;
-    bool needs_free = false; // Do we own 'curr'?
+    const Tensor *curr_grad = grad;
+    bool owns_tensor = false;
 
-    // 1. Collapse extra dimensions (e.g. valid for (2,3) -> (3) cases? Wait.)
-    // Broadcasting adds dimensions on the left.
-    // So if grad is (N, C, H, W) and input is (C, H, W), we sum first axis.
-
-    while (curr->ndim > input->ndim) {
-        Tensor *next = tensor_sum(curr, 0, false);
-        if (needs_free) {
-            tensor_free((Tensor *)curr);
+    // broadcasting adds dimensions on the left, so collapse extra leading dimensions
+    // example: grad (2,3,4) with input (3,4) -> sum axis 0 -> (3,4)
+    while (curr_grad->ndim > input->ndim) {
+        Tensor *summed = tensor_sum(curr_grad, 0, false);
+        if (owns_tensor) {
+            tensor_free((Tensor *)curr_grad);
         }
-        curr = next;
-        needs_free = true;
+        curr_grad = summed;
+        owns_tensor = true;
     }
 
-    // 2. Collapse broadcasted dimensions (where dimension was 1)
-    // Now ndim should be equal.
-    assert(curr->ndim == input->ndim);
+    // now dimensions match; collapse any dims where input had size 1
+    // example: grad (2,3) with input (2,1) -> sum axis 1 with keepdim -> (2,1)
+    assert(curr_grad->ndim == input->ndim);
     assert(input->ndim < MAX_NDIM && "Number of dimensions exceeds maximum");
 
     for (uint64_t dim_idx = 0; dim_idx < input->ndim; dim_idx++) {
-        // If input has size 1 but gradient has size > 1, it was broadcasted.
-        if (input->shape[dim_idx] == 1 && curr->shape[dim_idx] > 1) {
-            Tensor *next = tensor_sum(curr, (int64_t)dim_idx, true);
-            if (needs_free) {
-                tensor_free((Tensor *)curr);
+        // dimension was broadcasted from 1 to N, so sum back to 1
+        if (input->shape[dim_idx] == 1 && curr_grad->shape[dim_idx] > 1) {
+            Tensor *summed = tensor_sum(curr_grad, (int64_t)dim_idx, true);
+            if (owns_tensor) {
+                tensor_free((Tensor *)curr_grad);
             }
-            curr = next;
-            needs_free = true;
+            curr_grad = summed;
+            owns_tensor = true;
         }
     }
 
-    // If we haven't made a copy yet, we must clone because the caller expects to own the result.
-    if (!needs_free) {
+    // caller expects to own result, so clone if we never created a new tensor
+    if (!owns_tensor) {
         return tensor_create(grad->data, grad->shape, grad->ndim, false);
     }
 
-    return (Tensor *)curr;
+    return (Tensor *)curr_grad;
 }
 
 static void accumulate_grad_unbroadcast(Tensor *t, const Tensor *grad) {
@@ -990,18 +985,18 @@ static void mse_apply(GradFn *base, const Tensor *grad_output) {
     assert(grad_output != NULL);
     MSEBackward *self = (MSEBackward *)base;
 
-    // grad_output IS A SCALAR TENSOR (loss is scalar)
+    // loss is scalar, so grad_output is scalar tensor
     assert(grad_output->size == 1);
-    float32_t g = grad_output->data[0];
+    float32_t grad_scalar = grad_output->data[0];
 
     Tensor *grad_pred = tensor_create(NULL, self->predictions->shape, self->predictions->ndim, false);
     assert(self->predictions->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
-    float32_t sample_count_f32 = (float32_t)self->predictions->size;
+    float32_t element_count_f32 = (float32_t)self->predictions->size;
 
     for (uint64_t elem_idx = 0; elem_idx < self->predictions->size; elem_idx++) {
-        // grad = 2 * (pred - target) / N
+        // gradient of MSE: 2 * (pred - target) / N
         float32_t diff = self->predictions->data[elem_idx] - self->targets->data[elem_idx];
-        grad_pred->data[elem_idx] = g * 2.0f * diff / sample_count_f32;
+        grad_pred->data[elem_idx] = grad_scalar * 2.0f * diff / element_count_f32;
     }
 
     accumulate_grad(self->predictions, grad_pred);
@@ -1039,28 +1034,26 @@ static void bce_apply(GradFn *base, const Tensor *grad_output) {
     BCEBackward *self = (BCEBackward *)base;
 
     assert(grad_output->size == 1);
-    float32_t g = grad_output->data[0];
+    float32_t grad_scalar = grad_output->data[0];
 
     Tensor *grad_pred = tensor_create(NULL, self->predictions->shape, self->predictions->ndim, false);
     assert(self->predictions->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
-    float32_t sample_count_f32 = (float32_t)self->predictions->size;
+    float32_t element_count_f32 = (float32_t)self->predictions->size;
 
     for (uint64_t elem_idx = 0; elem_idx < self->predictions->size; elem_idx++) {
-        float32_t p = self->predictions->data[elem_idx];
-        float32_t y = self->targets->data[elem_idx];
+        float32_t pred = self->predictions->data[elem_idx];
+        float32_t target = self->targets->data[elem_idx];
 
-        if (p < EPSILON)
-            p = EPSILON;
-        if (p > 1.0f - EPSILON)
-            p = 1.0f - EPSILON;
+        // clamp prediction to avoid log(0) in forward pass
+        if (pred < EPSILON)
+            pred = EPSILON;
+        if (pred > 1.0f - EPSILON)
+            pred = 1.0f - EPSILON;
 
-        // grad = (p - y) / (p * (1 - p) * N)
-        // For BCE Loss = -mean(y*log(p) + (1-y)*log(1-p))
-        // dLoss/dp = (p - y) / (p * (1-p)) / N
-        // Multiplied by incoming gradient g
-
-        float32_t denom = p * (1.0f - p) * sample_count_f32;
-        grad_pred->data[elem_idx] = g * (p - y) / denom;
+        // gradient of BCE: (pred - target) / (pred * (1 - pred)) / N
+        // derived from: -mean(target*log(pred) + (1-target)*log(1-pred))
+        float32_t denom = pred * (1.0f - pred) * element_count_f32;
+        grad_pred->data[elem_idx] = grad_scalar * (pred - target) / denom;
     }
 
     accumulate_grad(self->predictions, grad_pred);
@@ -1357,15 +1350,21 @@ typedef struct {
     Tensor *targets;
 } CrossEntropyBackward;
 
+/*
+ * Helper to compute softmax probability for a single element.
+ * Uses numerically stable softmax with max subtraction.
+ */
+static inline float32_t compute_softmax_prob(const float32_t *logits, uint64_t class_count, uint64_t offset, float32_t max_val, float32_t sum_exp, uint64_t class_idx) { return expf(logits[offset + class_idx] - max_val) / sum_exp; }
+
 static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
     assert(base != NULL);
     assert(grad_output != NULL);
     CrossEntropyBackward *self = (CrossEntropyBackward *)base;
 
     assert(grad_output->size == 1);
-    float32_t g = grad_output->data[0];
+    float32_t grad_scalar = grad_output->data[0];
 
-    // Recompute softmax
+    // cross-entropy operates on 2D logits: (batch_size, class_count)
     assert(self->logits->ndim == 2);
     uint64_t batch_size = self->logits->shape[0];
     uint64_t class_count = self->logits->shape[1];
@@ -1373,31 +1372,33 @@ static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
     assert(class_count < MAX_TENSOR_SIZE && "Class count exceeds maximum limit");
 
     Tensor *grad_logits = tensor_create(NULL, self->logits->shape, self->logits->ndim, false);
+    float32_t batch_size_f32 = (float32_t)batch_size;
 
     for (uint64_t batch_idx = 0; batch_idx < batch_size; batch_idx++) {
-        // 1. max for stability
-        float32_t max_val = -INFINITY;
+        uint64_t offset = batch_idx * class_count;
+
+        // find max logit for numerical stability in softmax
+        float32_t max_logit = -INFINITY;
         for (uint64_t class_idx = 0; class_idx < class_count; class_idx++) {
-            float32_t val = self->logits->data[batch_idx * class_count + class_idx];
-            if (val > max_val)
-                max_val = val;
+            float32_t logit_val = self->logits->data[offset + class_idx];
+            if (logit_val > max_logit)
+                max_logit = logit_val;
         }
 
-        // 2. exp sum
-        float32_t sum_exp = 0.0f;
+        // compute sum of exponentials for softmax denominator
+        float32_t exp_sum = 0.0f;
         for (uint64_t class_idx = 0; class_idx < class_count; class_idx++) {
-            sum_exp += expf(self->logits->data[batch_idx * class_count + class_idx] - max_val);
+            exp_sum += expf(self->logits->data[offset + class_idx] - max_logit);
         }
 
-        // 3. compute grad
-        // grad_logit[j] = (probs[j] - indicator[j==target]) / batch_size
+        // gradient: (softmax_prob - one_hot_target) / batch_size
         uint64_t target_class_idx = (uint64_t)self->targets->data[batch_idx];
 
         for (uint64_t class_idx = 0; class_idx < class_count; class_idx++) {
-            float32_t prob = expf(self->logits->data[batch_idx * class_count + class_idx] - max_val) / sum_exp;
-            float32_t indicator = (class_idx == target_class_idx) ? 1.0f : 0.0f;
+            float32_t prob = compute_softmax_prob(self->logits->data, class_count, offset, max_logit, exp_sum, class_idx);
+            float32_t one_hot_target = (class_idx == target_class_idx) ? 1.0f : 0.0f;
 
-            grad_logits->data[batch_idx * class_count + class_idx] = g * (prob - indicator) / (float32_t)batch_size;
+            grad_logits->data[offset + class_idx] = grad_scalar * (prob - one_hot_target) / batch_size_f32;
         }
     }
 
