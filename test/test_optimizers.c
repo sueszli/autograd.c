@@ -55,12 +55,6 @@ void test_sgd_step_momentum(void) {
     optimizer_step(opt);
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.1f, w->data[0]);
 
-    // Cleanup old grad before replacing it, although w->grad owns it.
-    // If we want to replace w->grad, we should free the old one first OR ensure w->grad is what we think.
-    // Here, w->grad IS grad1.
-    // If we want to set a new gradient for step 2:
-
-    // 1. Manually free old grad because we are about to overwrite the pointer.
     tensor_free(grad1);
     w->grad = NULL;
 
