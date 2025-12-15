@@ -1,4 +1,5 @@
 #include "activations.h"
+#include "autograd.h"
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
@@ -26,6 +27,10 @@ Tensor *tensor_sigmoid(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         out->data[i] = sigmoid(t->data[i]);
     }
+    if (out->requires_grad) {
+        out->grad_fn = new_sigmoid_backward((Tensor *)t, out);
+        out->grad_fn->out_tensor = out;
+    }
     return out;
 }
 
@@ -38,6 +43,10 @@ Tensor *tensor_relu(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
         out->data[i] = (x > 0.0f) ? x : 0.0f;
+    }
+    if (out->requires_grad) {
+        out->grad_fn = new_relu_backward((Tensor *)t);
+        out->grad_fn->out_tensor = out;
     }
     return out;
 }
@@ -85,5 +94,9 @@ Tensor *tensor_softmax(const Tensor *t, int64_t dim) {
     tensor_free(shifted);
     tensor_free(sum_exp);
 
+    if (out->requires_grad) {
+        out->grad_fn = new_softmax_backward((Tensor *)t, out, dim);
+        out->grad_fn->out_tensor = out;
+    }
     return out;
 }

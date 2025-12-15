@@ -1,4 +1,5 @@
 #include "tensor.h"
+#include "autograd.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
@@ -361,10 +362,38 @@ static Tensor *tensor_binary_op(const Tensor *a, const Tensor *b, binary_op_t op
     return out_tensor;
 }
 
-Tensor *tensor_add(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_add); }
-Tensor *tensor_sub(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_sub); }
-Tensor *tensor_mul(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_mul); }
-Tensor *tensor_div(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_div); }
+Tensor *tensor_add(const Tensor *a, const Tensor *b) {
+    Tensor *out = tensor_binary_op(a, b, op_add);
+    if (out->requires_grad) {
+        out->grad_fn = new_add_backward((Tensor *)a, (Tensor *)b);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
+}
+Tensor *tensor_sub(const Tensor *a, const Tensor *b) {
+    Tensor *out = tensor_binary_op(a, b, op_sub);
+    if (out->requires_grad) {
+        out->grad_fn = new_sub_backward((Tensor *)a, (Tensor *)b);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
+}
+Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
+    Tensor *out = tensor_binary_op(a, b, op_mul);
+    if (out->requires_grad) {
+        out->grad_fn = new_mul_backward((Tensor *)a, (Tensor *)b);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
+}
+Tensor *tensor_div(const Tensor *a, const Tensor *b) {
+    Tensor *out = tensor_binary_op(a, b, op_div);
+    if (out->requires_grad) {
+        out->grad_fn = new_div_backward((Tensor *)a, (Tensor *)b);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
+}
 
 Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(a != NULL);
@@ -409,6 +438,11 @@ Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(result->ndim == 2);
     assert(result->shape[0] == M);
     assert(result->shape[1] == N);
+
+    if (result->requires_grad) {
+        result->grad_fn = new_matmul_backward((Tensor *)a, (Tensor *)b);
+        result->grad_fn->out_tensor = result;
+    }
     return result;
 }
 

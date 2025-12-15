@@ -1,16 +1,24 @@
 #include "autograd.h"
 #include "tensor.h"
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// =========================================================================
+#define MAX_RECURSION_DEPTH 1024
+#define MAX_NDIM 32
+
+//
 // Helpers
-// =========================================================================
+//
 
 static void accumulate_grad(Tensor *t, Tensor *grad) {
-    if (!t || !grad || !t->requires_grad) return;
+    if (!t || !grad || !t->requires_grad) {
+        return;
+    }
+    assert(grad->data != NULL);
+
     if (t->grad == NULL) {
         t->grad = tensor_create(grad->data, grad->shape, grad->ndim, false);
     } else {
@@ -20,47 +28,72 @@ static void accumulate_grad(Tensor *t, Tensor *grad) {
     }
 }
 
-// =========================================================================
+//
 // Topological Sort
-// =========================================================================
+//
 
 typedef struct {
     GradFn **arr;
-    int size;
-    int capacity;
+    int32_t size;
+    int32_t capacity;
 } PtrArray;
 
+static void ptr_array_init(PtrArray *arr) {
+    arr->size = 0;
+    arr->capacity = 16;
+    arr->arr = (GradFn **)malloc((size_t)arr->capacity * sizeof(GradFn *));
+    assert(arr->arr != NULL && "malloc failed");
+}
+
+static void ptr_array_free(PtrArray *arr) {
+    if (arr->arr) {
+        free(arr->arr);
+        arr->arr = NULL;
+    }
+}
+
 static void ptr_array_append(PtrArray *arr, GradFn *fn) {
+    assert(arr != NULL);
+    assert(fn != NULL);
     if (arr->size >= arr->capacity) {
-        arr->capacity = (arr->capacity == 0) ? 16 : arr->capacity * 2;
-        arr->arr = (GradFn **)realloc(arr->arr, arr->capacity * sizeof(GradFn *));
-        assert(arr->arr != NULL);
+        arr->capacity *= 2;
+        GradFn **new_arr = (GradFn **)realloc(arr->arr, (size_t)arr->capacity * sizeof(GradFn *));
+        assert(new_arr != NULL && "realloc failed");
+        arr->arr = new_arr;
     }
     arr->arr[arr->size++] = fn;
 }
 
-static bool ptr_array_contains(PtrArray *arr, GradFn *fn) {
-    for (int i = 0; i < arr->size; i++) {
-        if (arr->arr[i] == fn) return true;
+static bool ptr_array_contains(const PtrArray *arr, const GradFn *fn) {
+    assert(arr != NULL);
+    for (int32_t i = 0; i < arr->size; i++) {
+        if (arr->arr[i] == fn) {
+            return true;
+        }
     }
     return false;
 }
 
-static void build_topo_recursive(GradFn *fn, PtrArray *topo, PtrArray *visited) {
-    if (ptr_array_contains(visited, fn)) return;
+static void build_topo_recursive(GradFn *fn, PtrArray *topo, PtrArray *visited, int32_t depth) {
+    assert(depth < MAX_RECURSION_DEPTH && "Recursion depth exceeded");
+    assert(fn != NULL);
+
+    if (ptr_array_contains(visited, fn)) {
+        return;
+    }
     ptr_array_append(visited, fn);
 
-    for (int i = 0; i < fn->num_next; i++) {
+    for (int32_t i = 0; i < fn->num_next; i++) {
         if (fn->next_fns[i]) {
-            build_topo_recursive(fn->next_fns[i], topo, visited);
+            build_topo_recursive(fn->next_fns[i], topo, visited, depth + 1);
         }
     }
     ptr_array_append(topo, fn);
 }
 
-// =========================================================================
+//
 // Autograd Engine
-// =========================================================================
+//
 
 void backward(Tensor *root, Tensor *grad) {
     assert(root != NULL);
@@ -68,7 +101,8 @@ void backward(Tensor *root, Tensor *grad) {
     // 1. Seed gradient
     if (root->grad == NULL) {
         if (grad == NULL) {
-            if (root->size == 1) {
+            bool is_scalar = (root->size == 1);
+            if (is_scalar) {
                 uint64_t shape[] = {1};
                 root->grad = tensor_create(NULL, shape, 0, false);
                 root->grad->data[0] = 1.0f;
@@ -80,71 +114,95 @@ void backward(Tensor *root, Tensor *grad) {
         }
     } else {
         if (grad != NULL) {
-             accumulate_grad(root, grad);
+            accumulate_grad(root, grad);
         }
     }
 
-    if (!root->grad_fn) return;
+    if (!root->grad_fn) {
+        return;
+    }
 
     // 2. Topological sort
-    PtrArray topo = {0};
-    PtrArray visited = {0};
-    build_topo_recursive(root->grad_fn, &topo, &visited);
+    PtrArray topo;
+    ptr_array_init(&topo);
+    PtrArray visited;
+    ptr_array_init(&visited);
+
+    build_topo_recursive(root->grad_fn, &topo, &visited, 0);
 
     // 3. Backward pass
-    for (int i = topo.size - 1; i >= 0; i--) {
+    for (int32_t i = topo.size - 1; i >= 0; i--) {
         GradFn *fn = topo.arr[i];
-        
+        assert(fn != NULL);
+
         Tensor *out = fn->out_tensor;
-        // out might be NULL if the tensor was freed? 
-        // Assumption: User keeps tensors alive.
         if (out && out->grad) {
-             fn->apply(fn, out->grad);
+            fn->apply(fn, out->grad);
         }
     }
-    
-    if (topo.arr) free(topo.arr);
-    if (visited.arr) free(visited.arr);
+
+    ptr_array_free(&topo);
+    ptr_array_free(&visited);
 }
 
 void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, struct Tensor *), GradFn **next_fns, int num_next, char *name) {
+    assert(fn != NULL);
+    assert(apply != NULL);
+
     fn->apply = apply;
     fn->next_fns = next_fns;
     fn->num_next = num_next;
     fn->name = name ? strdup(name) : NULL;
-    fn->out_tensor = NULL; 
+    fn->out_tensor = NULL;
 }
 
 void grad_fn_free(GradFn *fn) {
-    if (!fn) return;
-    if (fn->next_fns) free(fn->next_fns);
-    if (fn->name) free(fn->name);
+    if (!fn) {
+        return;
+    }
+    if (fn->next_fns) {
+        free(fn->next_fns);
+    }
+    if (fn->name) {
+        free(fn->name);
+    }
+    free(fn);
 }
 
-// =========================================================================
+//
 // Operations Backwards
-// =========================================================================
+//
 
 // ADD
 typedef struct {
     GradFn base;
-    Tensor *a; // input a
-    Tensor *b; // input b
+    Tensor *a;
+    Tensor *b;
 } AddBackward;
 
 static void add_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
     AddBackward *self = (AddBackward *)base;
     accumulate_grad(self->a, grad_output);
     accumulate_grad(self->b, grad_output);
 }
 
 GradFn *new_add_backward(Tensor *a, Tensor *b) {
-    AddBackward *fn = malloc(sizeof(AddBackward));
-    GradFn **next_fns = malloc(2 * sizeof(GradFn *));
+    assert(a != NULL);
+    assert(b != NULL);
+    AddBackward *fn = (AddBackward *)malloc(sizeof(AddBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
+
     int count = 0;
-    if (a->grad_fn) next_fns[count++] = a->grad_fn;
-    if (b->grad_fn) next_fns[count++] = b->grad_fn;
-    
+    if (a->grad_fn)
+        next_fns[count++] = a->grad_fn;
+    if (b->grad_fn)
+        next_fns[count++] = b->grad_fn;
+
     grad_fn_init((GradFn *)fn, add_apply, next_fns, count, "AddBackward");
     fn->a = a;
     fn->b = b;
@@ -154,39 +212,45 @@ GradFn *new_add_backward(Tensor *a, Tensor *b) {
 // SUB
 typedef struct {
     GradFn base;
-    Tensor *a; // input a
-    Tensor *b; // input b
+    Tensor *a;
+    Tensor *b;
 } SubBackward;
 
 static void sub_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
     SubBackward *self = (SubBackward *)base;
     accumulate_grad(self->a, grad_output);
-    
+
     // grad_b = -grad_output
-    // create -1 tensor
-    // or tensor_neg helper? let's multiply by scalar -1
-    // Simplest: 0 - grad_output
-    
-    // Use tensor_mul with scalar -1 tensor
-    // (Assuming we have tensor_scalar op or broadcasting)
-    // Quick hack: tensor_zeros_like(grad) - grad
-    uint64_t *shape = malloc(grad_output->ndim * sizeof(uint64_t));
+    uint64_t *shape = (uint64_t *)malloc(grad_output->ndim * sizeof(uint64_t));
+    assert(shape != NULL);
     memcpy(shape, grad_output->shape, grad_output->ndim * sizeof(uint64_t));
+
     Tensor *zeros = tensor_zeros(shape, grad_output->ndim, false);
     free(shape);
+
     Tensor *neg_grad = tensor_sub(zeros, grad_output);
     tensor_free(zeros);
-    
+
     accumulate_grad(self->b, neg_grad);
     tensor_free(neg_grad);
 }
 
 GradFn *new_sub_backward(Tensor *a, Tensor *b) {
-    SubBackward *fn = malloc(sizeof(SubBackward));
-    GradFn **next_fns = malloc(2 * sizeof(GradFn *));
+    assert(a != NULL);
+    assert(b != NULL);
+    SubBackward *fn = (SubBackward *)malloc(sizeof(SubBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
+
     int count = 0;
-    if (a->grad_fn) next_fns[count++] = a->grad_fn;
-    if (b->grad_fn) next_fns[count++] = b->grad_fn;
+    if (a->grad_fn)
+        next_fns[count++] = a->grad_fn;
+    if (b->grad_fn)
+        next_fns[count++] = b->grad_fn;
 
     grad_fn_init((GradFn *)fn, sub_apply, next_fns, count, "SubBackward");
     fn->a = a;
@@ -202,25 +266,32 @@ typedef struct {
 } MulBackward;
 
 static void mul_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
     MulBackward *self = (MulBackward *)base;
-    
-    // da = grad * b
+
     Tensor *da = tensor_mul(grad_output, self->b);
     accumulate_grad(self->a, da);
     tensor_free(da);
-    
-    // db = grad * a
+
     Tensor *db = tensor_mul(grad_output, self->a);
     accumulate_grad(self->b, db);
     tensor_free(db);
 }
 
 GradFn *new_mul_backward(Tensor *a, Tensor *b) {
-    MulBackward *fn = malloc(sizeof(MulBackward));
-    GradFn **next_fns = malloc(2 * sizeof(GradFn *));
+    assert(a != NULL);
+    assert(b != NULL);
+    MulBackward *fn = (MulBackward *)malloc(sizeof(MulBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
     int count = 0;
-    if (a->grad_fn) next_fns[count++] = a->grad_fn;
-    if (b->grad_fn) next_fns[count++] = b->grad_fn;
+    if (a->grad_fn)
+        next_fns[count++] = a->grad_fn;
+    if (b->grad_fn)
+        next_fns[count++] = b->grad_fn;
 
     grad_fn_init((GradFn *)fn, mul_apply, next_fns, count, "MulBackward");
     fn->a = a;
@@ -236,43 +307,283 @@ typedef struct {
 } DivBackward;
 
 static void div_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
     DivBackward *self = (DivBackward *)base;
-    
-    // da = grad * (1/b) = grad / b
+
     Tensor *da = tensor_div(grad_output, self->b);
     accumulate_grad(self->a, da);
     tensor_free(da);
-    
-    // db = grad * (-a / b^2) = -grad * a / (b*b)
-    // -grad
-    uint64_t *shape = malloc(grad_output->ndim * sizeof(uint64_t));
+
+    uint64_t *shape = (uint64_t *)malloc(grad_output->ndim * sizeof(uint64_t));
+    assert(shape != NULL);
     memcpy(shape, grad_output->shape, grad_output->ndim * sizeof(uint64_t));
+
     Tensor *zeros = tensor_zeros(shape, grad_output->ndim, false);
     free(shape);
+
     Tensor *neg_grad = tensor_sub(zeros, grad_output);
     tensor_free(zeros);
-    
+
     Tensor *num = tensor_mul(neg_grad, self->a);
     tensor_free(neg_grad);
-    
-    Tensor *denom = tensor_mul(self->b, self->b);
-    Tensor *db = tensor_div(num, denom);
+
+    Tensor *b_sq = tensor_mul(self->b, self->b);
+    Tensor *db = tensor_div(num, b_sq);
     tensor_free(num);
-    tensor_free(denom);
-    
+    tensor_free(b_sq);
+
     accumulate_grad(self->b, db);
     tensor_free(db);
 }
 
 GradFn *new_div_backward(Tensor *a, Tensor *b) {
-    DivBackward *fn = malloc(sizeof(DivBackward));
-    GradFn **next_fns = malloc(2 * sizeof(GradFn *));
+    assert(a != NULL);
+    assert(b != NULL);
+    DivBackward *fn = (DivBackward *)malloc(sizeof(DivBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
     int count = 0;
-    if (a->grad_fn) next_fns[count++] = a->grad_fn;
-    if (b->grad_fn) next_fns[count++] = b->grad_fn;
+    if (a->grad_fn)
+        next_fns[count++] = a->grad_fn;
+    if (b->grad_fn)
+        next_fns[count++] = b->grad_fn;
 
     grad_fn_init((GradFn *)fn, div_apply, next_fns, count, "DivBackward");
     fn->a = a;
     fn->b = b;
+    return (GradFn *)fn;
+}
+
+// MATMUL
+typedef struct {
+    GradFn base;
+    Tensor *a;
+    Tensor *b;
+} MatmulBackward;
+
+static void matmul_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    MatmulBackward *self = (MatmulBackward *)base;
+
+    Tensor *b_T = tensor_transpose(self->b, 0, 1);
+    Tensor *da = tensor_matmul(grad_output, b_T);
+    accumulate_grad(self->a, da);
+    tensor_free(b_T);
+    tensor_free(da);
+
+    Tensor *a_T = tensor_transpose(self->a, 0, 1);
+    Tensor *db = tensor_matmul(a_T, grad_output);
+    accumulate_grad(self->b, db);
+    tensor_free(a_T);
+    tensor_free(db);
+}
+
+GradFn *new_matmul_backward(Tensor *a, Tensor *b) {
+    assert(a != NULL);
+    assert(b != NULL);
+    MatmulBackward *fn = (MatmulBackward *)malloc(sizeof(MatmulBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (a->grad_fn)
+        next_fns[count++] = a->grad_fn;
+    if (b->grad_fn)
+        next_fns[count++] = b->grad_fn;
+
+    grad_fn_init((GradFn *)fn, matmul_apply, next_fns, count, "MatmulBackward");
+    fn->a = a;
+    fn->b = b;
+    return (GradFn *)fn;
+}
+
+// SUM
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    int64_t dim_idx;
+    bool keepdims;
+} SumBackward;
+
+static void sum_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    SumBackward *self = (SumBackward *)base;
+
+    Tensor *grad_expanded = grad_output;
+    bool needs_free = false;
+
+    if (!self->keepdims) {
+        int ndim = self->input->ndim;
+        int64_t new_shape[MAX_NDIM];
+        int g = 0;
+        int64_t target_dim = (self->dim_idx < 0) ? (self->dim_idx + ndim) : self->dim_idx;
+
+        for (int i = 0; i < ndim; i++) {
+            if (i == target_dim) {
+                new_shape[i] = 1;
+            } else {
+                new_shape[i] = (int64_t)grad_output->shape[g++];
+            }
+        }
+
+        grad_expanded = tensor_reshape(grad_output, new_shape, ndim);
+        needs_free = true;
+    }
+
+    accumulate_grad(self->input, grad_expanded);
+
+    if (needs_free) {
+        tensor_free(grad_expanded);
+    }
+}
+
+GradFn *new_sum_backward(Tensor *input, int64_t dim_idx, bool keepdims) {
+    assert(input != NULL);
+    SumBackward *fn = (SumBackward *)malloc(sizeof(SumBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (input->grad_fn)
+        next_fns[count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, sum_apply, next_fns, count, "SumBackward");
+    fn->input = input;
+    fn->dim_idx = dim_idx;
+    fn->keepdims = keepdims;
+    return (GradFn *)fn;
+}
+
+// RELU
+typedef struct {
+    GradFn base;
+    Tensor *input;
+} ReluBackward;
+
+static void relu_apply(GradFn *base, Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    ReluBackward *self = (ReluBackward *)base;
+
+    assert(grad_output->size == self->input->size && "ReLU grad shape mismatch");
+    Tensor *grad_input = tensor_zeros(grad_output->shape, grad_output->ndim, false);
+
+    for (uint64_t i = 0; i < grad_output->size; i++) {
+        if (self->input->data[i] > 0.0f) {
+            grad_input->data[i] = grad_output->data[i];
+        } else {
+            grad_input->data[i] = 0.0f;
+        }
+    }
+
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+}
+
+GradFn *new_relu_backward(Tensor *input) {
+    assert(input != NULL);
+    ReluBackward *fn = (ReluBackward *)malloc(sizeof(ReluBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (input->grad_fn)
+        next_fns[count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, relu_apply, next_fns, count, "ReluBackward");
+    fn->input = input;
+    return (GradFn *)fn;
+}
+
+// SIGMOID
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *output;
+} SigmoidBackward;
+
+static void sigmoid_apply(GradFn *base, Tensor *grad_output) {
+    SigmoidBackward *self = (SigmoidBackward *)base;
+
+    Tensor *ones = tensor_zeros(self->output->shape, self->output->ndim, false);
+    for (uint64_t i = 0; i < ones->size; i++)
+        ones->data[i] = 1.0f;
+
+    Tensor *one_minus_out = tensor_sub(ones, self->output);
+    tensor_free(ones);
+
+    Tensor *d_sigmoid = tensor_mul(self->output, one_minus_out);
+    tensor_free(one_minus_out);
+
+    Tensor *grad_input = tensor_mul(grad_output, d_sigmoid);
+    tensor_free(d_sigmoid);
+
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+}
+
+GradFn *new_sigmoid_backward(Tensor *input, Tensor *output) {
+    SigmoidBackward *fn = (SigmoidBackward *)malloc(sizeof(SigmoidBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (input->grad_fn)
+        next_fns[count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, sigmoid_apply, next_fns, count, "SigmoidBackward");
+    fn->input = input;
+    fn->output = output;
+    return (GradFn *)fn;
+}
+
+// SOFTMAX
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *output;
+    int64_t dim;
+} SoftmaxBackward;
+
+static void softmax_apply(GradFn *base, Tensor *grad_output) {
+    SoftmaxBackward *self = (SoftmaxBackward *)base;
+
+    Tensor *prod = tensor_mul(grad_output, self->output);
+    Tensor *sum_prod = tensor_sum(prod, self->dim, true);
+    tensor_free(prod);
+
+    Tensor *sub = tensor_sub(grad_output, sum_prod);
+    tensor_free(sum_prod);
+
+    Tensor *grad_input = tensor_mul(self->output, sub);
+    tensor_free(sub);
+
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+}
+
+GradFn *new_softmax_backward(Tensor *input, Tensor *output, int64_t dim) {
+    SoftmaxBackward *fn = (SoftmaxBackward *)malloc(sizeof(SoftmaxBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (input->grad_fn)
+        next_fns[count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, softmax_apply, next_fns, count, "SoftmaxBackward");
+    fn->input = input;
+    fn->output = output;
+    fn->dim = dim;
     return (GradFn *)fn;
 }
