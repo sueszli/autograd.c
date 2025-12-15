@@ -20,7 +20,12 @@ static void accumulate_grad(Tensor *t, const Tensor *grad) {
     assert(grad->data != NULL);
 
     if (t->grad == NULL) {
-        t->grad = tensor_create(grad->data, grad->shape, grad->ndim, false);
+        // We must ensure t->grad has the same shape as t.
+        // If grad is smaller (e.g. from a sum operation), we need to broadcast it.
+        // The easiest way to do this correctly and robustly is to add it to a tensor of zeros of shape t.
+        Tensor *zeros = tensor_zeros(t->shape, t->ndim, false);
+        t->grad = tensor_add(zeros, grad); // tensor_add handles broadcasting
+        tensor_free(zeros);
     } else {
         Tensor *new_grad = tensor_add(t->grad, grad);
         tensor_free(t->grad);

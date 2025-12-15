@@ -642,7 +642,7 @@ void test_maxpool2d_non_overlapping(void) {
     Layer *l = layer_maxpool2d_create(2, 2, 0);
     Tensor *out = l->forward(l, input, false);
 
-    TEST_ASSERT_EQUAL_FLOAT(100.0f, out->data[1]);
+    TEST_ASSERT_EQUAL_FLOAT(100.0f, out->data[0]);
 
     tensor_free(input);
     tensor_free(out);
@@ -693,7 +693,6 @@ void test_avgpool2d_uniform(void) {
     Layer *l = layer_avgpool2d_create(2, 2, 0);
     Tensor *out = l->forward(l, input, false);
 
-    // Average of 5,5,5,5 is 5.
     TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[1]);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[2]);

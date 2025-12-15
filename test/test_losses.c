@@ -303,7 +303,6 @@ void test_mse_loss_alternating_signs(void) {
     Tensor *pred = create_tensor_1d(p_data, 4);
     Tensor *target = create_tensor_1d(t_data, 4);
     float32_t loss = mse_loss(pred, target);
-    // diff is 2 or -2, squared is 4. avg is 4.
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 4.0f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -323,7 +322,6 @@ void test_mse_loss_all_negative(void) {
 void test_mse_loss_increasing_diff(void) {
     float32_t p_data[] = {1.0f, 2.0f, 3.0f};
     float32_t t_data[] = {2.0f, 4.0f, 6.0f};
-    // diffs: -1, -2, -3. sq: 1, 4, 9. sum=14. avg=14/3 = 4.666
     Tensor *pred = create_tensor_1d(p_data, 3);
     Tensor *target = create_tensor_1d(t_data, 3);
     float32_t loss = mse_loss(pred, target);
@@ -349,8 +347,6 @@ void test_mse_loss_sub_epsilon(void) {
     Tensor *pred = create_tensor_1d(p_data, 1);
     Tensor *target = create_tensor_1d(t_data, 1);
     float32_t loss = mse_loss(pred, target);
-    // Should be distinguishable from 0 if we were strict, but float precision might squash it
-    // Just checking it runs and is small
     TEST_ASSERT_TRUE(loss < 1e-10f);
     tensor_free(pred);
     tensor_free(target);
@@ -372,16 +368,12 @@ void test_cross_entropy_single_item_batch(void) {
     Tensor *logits = create_tensor_2d(l_data, 1, 3);
     Tensor *targets = create_tensor_1d(t_data, 1);
     float32_t loss = cross_entropy_loss(logits, targets);
-    // max_logit = 2.0. sum_exp = exp(0) + exp(-1) + exp(-1.9) = 1 + 0.3678 + 0.1495 = 1.5173
-    // log_sum_exp = log(1.5173) + 2.0 = 0.4169 + 2.0 = 2.4169
-    // correct_logit = 2.0. loss = -(2.0 - 2.4169) = 0.4169
     TEST_ASSERT_FLOAT_WITHIN(2e-4, 0.4170f, loss);
     tensor_free(logits);
     tensor_free(targets);
 }
 
 void test_cross_entropy_large_batch(void) {
-    // 10 items, 2 classes. All perfect predictions.
     uint64_t batch_size = 10;
     uint64_t num_classes = 2;
     float32_t *l_data = (float32_t *)malloc(batch_size * num_classes * sizeof(float32_t));
@@ -401,15 +393,14 @@ void test_cross_entropy_large_batch(void) {
 
     tensor_free(logits);
     tensor_free(targets);
-    free(l_data); // create_tensor copies data, so we must free our local buffer
+    free(l_data);
     free(t_data);
 }
 
 void test_cross_entropy_high_dimension_classes(void) {
-    // 1 item, 100 classes. Target is 50.
     uint64_t num_classes = 100;
     float32_t *l_data = (float32_t *)calloc(num_classes, sizeof(float32_t));
-    l_data[50] = 100.0f; // High confidence on correct class
+    l_data[50] = 100.0f;
     float32_t t_data[] = {50.0f};
 
     Tensor *logits = create_tensor_2d(l_data, 1, num_classes);
@@ -446,12 +437,11 @@ void test_cross_entropy_target_last(void) {
 }
 
 void test_cross_entropy_logits_all_equal(void) {
-    float32_t l_data[] = {5.0f, 5.0f, 5.0f, 5.0f}; // 4 classes
+    float32_t l_data[] = {5.0f, 5.0f, 5.0f, 5.0f};
     float32_t t_data[] = {1.0f};
     Tensor *logits = create_tensor_2d(l_data, 1, 4);
     Tensor *targets = create_tensor_1d(t_data, 1);
     float32_t loss = cross_entropy_loss(logits, targets);
-    // Should be log(4) approx 1.386
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.38629f, loss);
     tensor_free(logits);
     tensor_free(targets);
@@ -459,11 +449,10 @@ void test_cross_entropy_logits_all_equal(void) {
 
 void test_cross_entropy_distinct_logits(void) {
     float32_t l_data[] = {1.0f, 2.0f, 3.0f};
-    float32_t t_data[] = {2.0f}; // target is the largest
+    float32_t t_data[] = {2.0f};
     Tensor *logits = create_tensor_2d(l_data, 1, 3);
     Tensor *targets = create_tensor_1d(t_data, 1);
     float32_t loss = cross_entropy_loss(logits, targets);
-    // Expected to be small but not zero
     TEST_ASSERT_TRUE(loss < 1.0f);
     TEST_ASSERT_TRUE(loss >= 0.0f);
     tensor_free(logits);
@@ -476,7 +465,6 @@ void test_cross_entropy_very_large_logits(void) {
     Tensor *logits = create_tensor_2d(l_data, 1, 2);
     Tensor *targets = create_tensor_1d(t_data, 1);
     float32_t loss = cross_entropy_loss(logits, targets);
-    // Should be near 0
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, loss);
     tensor_free(logits);
     tensor_free(targets);
@@ -488,7 +476,6 @@ void test_cross_entropy_very_small_logits(void) {
     Tensor *logits = create_tensor_2d(l_data, 1, 2);
     Tensor *targets = create_tensor_1d(t_data, 1);
     float32_t loss = cross_entropy_loss(logits, targets);
-    // Should be log(2)
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0.69314f, loss);
     tensor_free(logits);
     tensor_free(targets);
@@ -522,7 +509,6 @@ void test_bce_loss_scalar(void) {
     Tensor *pred = create_tensor_1d(p_data, 1);
     Tensor *target = create_tensor_1d(t_data, 1);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // -log(0.8) approx 0.22314
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0.22314f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -556,7 +542,6 @@ void test_bce_loss_pred_epsilon(void) {
     Tensor *pred = create_tensor_1d(p_data, 1);
     Tensor *target = create_tensor_1d(t_data, 1);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // Should be small, -log(1-eps) approx eps
     TEST_ASSERT_TRUE(loss < 1e-6f);
     tensor_free(pred);
     tensor_free(target);
@@ -579,9 +564,6 @@ void test_bce_loss_soft_labels(void) {
     Tensor *pred = create_tensor_1d(p_data, 1);
     Tensor *target = create_tensor_1d(t_data, 1);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // -(0.5 * log(0.8) + 0.5 * log(0.2)) = -0.5 * (log(0.16))
-    // log(0.16) approx -1.83258
-    // loss approx 0.91629
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0.91629f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -593,7 +575,6 @@ void test_bce_loss_soft_labels_pred_match(void) {
     Tensor *pred = create_tensor_1d(p_data, 1);
     Tensor *target = create_tensor_1d(t_data, 1);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // -(0.5 * log(0.5) + 0.5 * log(0.5)) = -log(0.5) = 0.69314
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0.69314f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -605,12 +586,6 @@ void test_bce_loss_unbalanced_batch(void) {
     Tensor *pred = create_tensor_1d(p_data, 3);
     Tensor *target = create_tensor_1d(t_data, 3);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // 1: -log(0.9)
-    // 2: -log(0.9)
-    // 3: -log(0.5)
-    // avg = - (log(0.81) + log(0.5)) / 3 = - log(0.405) / 3
-    // log(0.405) = -0.9038
-    // loss = 0.3012
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.3012f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -622,7 +597,6 @@ void test_bce_loss_alternating(void) {
     Tensor *pred = create_tensor_1d(p_data, 4);
     Tensor *target = create_tensor_1d(t_data, 4);
     float32_t loss = binary_cross_entropy_loss(pred, target);
-    // All correct with same confidence. -log(0.9) approx 0.10536
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0.10536f, loss);
     tensor_free(pred);
     tensor_free(target);
@@ -682,8 +656,6 @@ int main(void) {
     RUN_TEST(test_cross_entropy_logits_max_shift_invariance);
     RUN_TEST(test_cross_entropy_single_class);
     RUN_TEST(test_binary_cross_entropy_boundary_handling);
-
-    // New MSE Tests
     RUN_TEST(test_mse_loss_scalar);
     RUN_TEST(test_mse_loss_3d_tensor);
     RUN_TEST(test_mse_loss_4d_tensor);
@@ -694,8 +666,6 @@ int main(void) {
     RUN_TEST(test_mse_loss_large_diff);
     RUN_TEST(test_mse_loss_sub_epsilon);
     RUN_TEST(test_mse_loss_identity);
-
-    // New Cross Entropy Tests
     RUN_TEST(test_cross_entropy_single_item_batch);
     RUN_TEST(test_cross_entropy_large_batch);
     RUN_TEST(test_cross_entropy_high_dimension_classes);
@@ -707,10 +677,7 @@ int main(void) {
     RUN_TEST(test_cross_entropy_very_small_logits);
     RUN_TEST(test_cross_entropy_mixed_logits);
     RUN_TEST(test_cross_entropy_soft_max_dominance);
-
     RUN_TEST(test_cross_entropy_soft_max_dominance);
-
-    // New BCE Tests
     RUN_TEST(test_bce_loss_scalar);
     RUN_TEST(test_bce_loss_target_0_pred_0);
     RUN_TEST(test_bce_loss_target_1_pred_1);
@@ -722,6 +689,5 @@ int main(void) {
     RUN_TEST(test_bce_loss_alternating);
     RUN_TEST(test_bce_loss_large_batch_zeros);
     RUN_TEST(test_bce_loss_large_batch_ones);
-
     return UNITY_END();
 }

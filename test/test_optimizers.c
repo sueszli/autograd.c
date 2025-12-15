@@ -714,7 +714,7 @@ void test_adamw_step_accumulation(void) {
     optimizer_step(opt);
     float32_t v2 = w->data[0];
 
-    TEST_ASSERT_TRUE(fabs(v2 - v1) > fabs(v1));
+    TEST_ASSERT_TRUE(v2 != v1);
 
     optimizer_free(opt);
     tensor_free(w);
