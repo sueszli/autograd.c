@@ -179,6 +179,9 @@ void tensor_free(Tensor *t) {
     if (t->grad) {
         tensor_free(t->grad);
     }
+    if (t->grad_fn) {
+        grad_fn_free(t->grad_fn);
+    }
     free(t);
 }
 
