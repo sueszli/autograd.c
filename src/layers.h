@@ -3,10 +3,6 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-//
-// base layer interface
-//
-
 // vtable polymorphism
 typedef struct Layer Layer;
 typedef Tensor *(*LayerForwardFunc)(Layer *layer, const Tensor *input, bool training);

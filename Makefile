@@ -29,7 +29,7 @@ download:
 
 .PHONY: lint
 lint:
-	cppcheck --enable=all --std=c23 --language=c --suppress=missingIncludeSystem --suppress=checkersReport --check-level=exhaustive --inconclusive --inline-suppr -I src/ src/
+	cppcheck --enable=all --std=c23 --language=c --suppress=missingIncludeSystem --suppress=checkersReport --suppressions-list=.cppcheck_suppressions --check-level=exhaustive --inconclusive --inline-suppr -I src/ src/
 
 .PHONY: fmt
 fmt:
