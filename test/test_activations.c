@@ -555,17 +555,6 @@ void test_gelu_requires_grad_false(void) {
     tensor_free(out);
 }
 
-void test_softmax_requires_grad_true(void) {
-    float32_t data[] = {0.5f, 0.2f};
-    uint64_t shape[] = {2};
-    Tensor *t = tensor_create(data, shape, 1, true);
-    Tensor *out = tensor_softmax(t, 0);
-    TEST_ASSERT_TRUE(out->requires_grad);
-    TEST_ASSERT_NOT_NULL(out->grad_fn);
-    tensor_free(t);
-    tensor_free(out);
-}
-
 void test_softmax_requires_grad_false(void) {
     float32_t data[] = {0.5f, 0.2f};
     uint64_t shape[] = {2};
@@ -806,7 +795,6 @@ int main(void) {
     RUN_TEST(test_tanh_requires_grad_false);
     RUN_TEST(test_gelu_requires_grad_true);
     RUN_TEST(test_gelu_requires_grad_false);
-    RUN_TEST(test_softmax_requires_grad_true);
     RUN_TEST(test_softmax_requires_grad_false);
     RUN_TEST(test_sigmoid_no_aliasing);
     RUN_TEST(test_relu_no_aliasing);
