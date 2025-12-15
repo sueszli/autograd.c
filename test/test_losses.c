@@ -692,7 +692,6 @@ void test_bce_loss_large_batch_zeros(void) {
     uint64_t size = 100;
     float32_t *p_data = (float32_t *)calloc(size, sizeof(float32_t));
     float32_t *t_data = (float32_t *)calloc(size, sizeof(float32_t));
-    // predictions 0.0, targets 0.0 -> loss 0
     Tensor *pred = create_tensor_1d(p_data, size);
     Tensor *target = create_tensor_1d(t_data, size);
     Tensor *loss = binary_cross_entropy_loss(pred, target);

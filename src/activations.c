@@ -69,15 +69,12 @@ Tensor *tensor_gelu(const Tensor *t) {
 
     Tensor *out = tensor_create(NULL, t->shape, t->ndim, t->requires_grad);
 
-    // GELU approximation: 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-    float32_t sqrt_2_over_pi = 0.7978845608f;
-    float32_t coeff = 0.044715f;
+    // GELU exact: 0.5 * x * (1 + erf(x / sqrt(2)))
+    float32_t sqrt_2_inv = 0.7071067811865476f; // 1/sqrt(2)
 
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
-        float32_t x3 = x * x * x;
-        float32_t tanh_arg = sqrt_2_over_pi * (x + coeff * x3);
-        out->data[i] = 0.5f * x * (1.0f + tanhf(tanh_arg));
+        out->data[i] = 0.5f * x * (1.0f + erff(x * sqrt_2_inv));
     }
 
     if (out->requires_grad) {
