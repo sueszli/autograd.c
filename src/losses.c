@@ -26,8 +26,7 @@ Tensor *mse_loss(const Tensor *predictions, const Tensor *targets) {
     }
     float32_t loss_val = sum_squared_error / (float32_t)predictions->size;
 
-    // Create scalar tensor
-    uint64_t shape[] = {1};
+    const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
 
     if (out->requires_grad) {
@@ -91,7 +90,7 @@ Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
     }
     float32_t loss_val = sum_loss / (float32_t)batch_size;
 
-    uint64_t shape[] = {1};
+    const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, logits->requires_grad);
 
     if (out->requires_grad) {
@@ -133,7 +132,7 @@ Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targe
     }
     float32_t loss_val = sum_loss / (float32_t)predictions->size;
 
-    uint64_t shape[] = {1};
+    const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
 
     if (out->requires_grad) {

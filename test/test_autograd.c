@@ -1,5 +1,6 @@
 #include "../src/activations.h"
 #include "../src/autograd.h"
+#include "../src/losses.h"
 #include "../src/tensor.h"
 #include "unity.h"
 #include <assert.h>
@@ -503,6 +504,116 @@ void test_complex_broadcast_add(void) {
     tensor_free(a);
 }
 
+void test_gelu_grad(void) {
+    Tensor *x = scalar(0.0f, true);
+    Tensor *y = tensor_gelu(x);
+    backward(y, NULL);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.5f, x->grad->data[0]);
+    tensor_free(y);
+    tensor_free(x);
+
+    x = scalar(1.0f, true);
+    y = tensor_gelu(x);
+    backward(y, NULL);
+
+    tensor_free(y);
+    tensor_free(x);
+}
+
+void test_transpose_grad(void) {
+    uint64_t shape[] = {2, 3};
+    Tensor *a = tensor_create(NULL, shape, 2, true);
+    for (int i = 0; i < 6; i++)
+        a->data[i] = (float)i;
+
+    Tensor *b = tensor_transpose(a, 0, 1);
+
+    Tensor *grad_b = tensor_create(NULL, (uint64_t[]){3, 2}, 2, false);
+    for (int i = 0; i < 6; i++)
+        grad_b->data[i] = (float)i;
+
+    backward(b, grad_b);
+
+    float expected[] = {0, 2, 4, 1, 3, 5};
+    for (int i = 0; i < 6; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, expected[i], a->grad->data[i]);
+    }
+
+    tensor_free(grad_b);
+    tensor_free(b);
+    tensor_free(a);
+}
+
+void test_getitem_grad(void) {
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_create(NULL, shape, 2, true);
+    a->data[0] = 1;
+    a->data[1] = 2;
+    a->data[2] = 3;
+    a->data[3] = 4;
+
+    uint64_t idx[] = {1, 0};
+    Tensor *y = tensor_get(a, idx);
+
+    backward(y, NULL);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, a->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, a->grad->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, a->grad->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, a->grad->data[3]);
+
+    tensor_free(y);
+    tensor_free(a);
+}
+
+void test_mse_backward(void) {
+    Tensor *pred = scalar(2.0f, true);
+    Tensor *target = scalar(1.0f, false);
+    Tensor *loss = mse_loss(pred, target);
+
+    backward(loss, NULL);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 2.0f, pred->grad->data[0]);
+
+    tensor_free(loss);
+    tensor_free(target);
+    tensor_free(pred);
+}
+
+void test_bce_backward(void) {
+    Tensor *pred = scalar(0.8f, true);
+    Tensor *target = scalar(1.0f, false);
+    Tensor *loss = binary_cross_entropy_loss(pred, target);
+
+    backward(loss, NULL);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -1.25f, pred->grad->data[0]);
+
+    tensor_free(loss);
+    tensor_free(target);
+    tensor_free(pred);
+}
+
+void test_crossentropy_backward(void) {
+    float l_data[] = {2.0f, 1.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *logits = tensor_create(l_data, shape, 2, true);
+
+    float t_data[] = {0.0f};
+    Tensor *targets = tensor_create(t_data, (uint64_t[]){1}, 1, false);
+
+    Tensor *loss = cross_entropy_loss(logits, targets);
+
+    backward(loss, NULL);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.268941f, logits->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.268941f, logits->grad->data[1]);
+
+    tensor_free(loss);
+    tensor_free(targets);
+    tensor_free(logits);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_add_simple);
@@ -528,5 +639,11 @@ int main(void) {
     RUN_TEST(test_multi_branch_reduction);
     RUN_TEST(test_disconnected_graph);
     RUN_TEST(test_complex_broadcast_add);
+    RUN_TEST(test_gelu_grad);
+    RUN_TEST(test_transpose_grad);
+    RUN_TEST(test_getitem_grad);
+    RUN_TEST(test_mse_backward);
+    RUN_TEST(test_bce_backward);
+    RUN_TEST(test_crossentropy_backward);
     return UNITY_END();
 }
