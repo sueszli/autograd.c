@@ -20,11 +20,8 @@ static void accumulate_grad(Tensor *t, const Tensor *grad) {
     assert(grad->data != NULL);
 
     if (t->grad == NULL) {
-        // We must ensure t->grad has the same shape as t.
-        // If grad is smaller (e.g. from a sum operation), we need to broadcast it.
-        // The easiest way to do this correctly and robustly is to add it to a tensor of zeros of shape t.
         Tensor *zeros = tensor_zeros(t->shape, t->ndim, false);
-        t->grad = tensor_add(zeros, grad); // tensor_add handles broadcasting
+        t->grad = tensor_add(zeros, grad);
         tensor_free(zeros);
     } else {
         Tensor *new_grad = tensor_add(t->grad, grad);
@@ -184,9 +181,6 @@ static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
 
     // 1. Reduce rank
     Tensor *curr = NULL;
-    // We start by "owning" a copy of grad if we modify it, or we create new ones.
-    // To simplify, let's just assert we always return a NEW tensor that the caller owns.
-    // If we don't need to reduce, we clone.
 
     bool made_copy = false;
 
@@ -201,15 +195,8 @@ static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
             curr = next;
         }
     } else {
-        // dimensions match rank, but check for 1s
         curr = (Tensor *)grad; // Cast const away temporarily, but we treat it as read-only until we copy
     }
-
-    // 2. Reduce dims where input has size 1
-    // If we haven't made a copy yet, we are reading from 'grad'.
-    // If we make a reduction, we get a new tensor and 'made_copy' becomes true (or we update 'curr' which we own).
-
-    // If 'curr' is still 'grad', we must be careful not to free it.
 
     for (uint64_t i = 0; i < input->ndim; i++) {
         // safely handle curr->shape vs input->shape
