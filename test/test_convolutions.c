@@ -213,26 +213,6 @@ void test_batchnorm2d_forward(void) {
     l->free(l);
 }
 
-void test_simplecnn_smoke(void) {
-    uint64_t in_shape[] = {2, 3, 32, 32};
-    Tensor *input = tensor_zeros(in_shape, 4, false);
-
-    Layer *l = simple_cnn_create(10);
-    Tensor *out = l->forward(l, input, false);
-
-    TEST_ASSERT_EQUAL_UINT64(2, out->ndim);
-    TEST_ASSERT_EQUAL_UINT64(2, out->shape[0]);
-    TEST_ASSERT_EQUAL_UINT64(2048, out->shape[1]);
-
-    TEST_ASSERT_EQUAL_UINT64(2, out->ndim);
-    TEST_ASSERT_EQUAL_UINT64(2, out->shape[0]);
-    TEST_ASSERT_EQUAL_UINT64(2048, out->shape[1]);
-
-    tensor_free(input);
-    tensor_free(out);
-    l->free(l);
-}
-
 void test_conv2d_3x3_stride1_pad1(void) {
     uint64_t in_shape[] = {1, 1, 3, 3};
     Tensor *input = tensor_zeros(in_shape, 4, false);
@@ -868,34 +848,6 @@ void test_batchnorm2d_manual_check(void) {
     l->free(l);
 }
 
-void test_simplecnn_variable_size(void) {
-    uint64_t in_shape[] = {1, 3, 16, 16};
-    Tensor *input = tensor_zeros(in_shape, 4, false);
-
-    Layer *l = simple_cnn_create(10);
-    Tensor *out = l->forward(l, input, false);
-
-    TEST_ASSERT_EQUAL_UINT64(512, out->shape[1]);
-
-    tensor_free(input);
-    tensor_free(out);
-    l->free(l);
-}
-
-void test_simplecnn_zero_prop(void) {
-    uint64_t in_shape[] = {1, 3, 32, 32};
-    Tensor *input = tensor_zeros(in_shape, 4, false);
-
-    Layer *l = simple_cnn_create(10);
-    Tensor *out = l->forward(l, input, false);
-
-    TEST_ASSERT_EQUAL_UINT64(2048, out->shape[1]);
-
-    tensor_free(input);
-    tensor_free(out);
-    l->free(l);
-}
-
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_conv2d_simple_forward);
@@ -906,7 +858,6 @@ int main(void) {
     RUN_TEST(test_maxpool2d_backward);
     RUN_TEST(test_avgpool2d_simple);
     RUN_TEST(test_batchnorm2d_forward);
-    RUN_TEST(test_simplecnn_smoke);
     RUN_TEST(test_conv2d_3x3_stride1_pad1);
     RUN_TEST(test_conv2d_kernel_larger_than_input_with_pad);
     RUN_TEST(test_conv2d_batch_size_multi);
@@ -937,7 +888,5 @@ int main(void) {
     RUN_TEST(test_batchnorm2d_gamma_beta);
     RUN_TEST(test_batchnorm2d_eps_stability);
     RUN_TEST(test_batchnorm2d_manual_check);
-    RUN_TEST(test_simplecnn_variable_size);
-    RUN_TEST(test_simplecnn_zero_prop);
     return UNITY_END();
 }

@@ -14,6 +14,3 @@ Tensor *avgpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
 
 Layer *layer_batchnorm2d_create(uint64_t num_features, float32_t eps, float32_t momentum);
 void batchnorm2d_backward(const Tensor *input, const Tensor *gamma, const Tensor *batch_mean, const Tensor *batch_var, float32_t eps, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_gamma, Tensor **out_grad_beta);
-
-// simple cnn model: conv->relu->pool -> conv->relu->pool -> flatten->linear
-Layer *simple_cnn_create(uint64_t num_classes);

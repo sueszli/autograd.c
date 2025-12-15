@@ -897,118 +897,120 @@ void batchnorm2d_backward(const Tensor *input, const Tensor *gamma, const Tensor
 // simple cnn
 //
 
-typedef struct {
-    Layer base;
-    Layer *conv1;
-    Layer *pool1;
-    Layer *conv2;
-    Layer *pool2;
-} SimpleCNNLayer;
+// simple cnn model: conv->relu->pool -> conv->relu->pool -> flatten->linear
 
-static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool training) {
-    SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
+// typedef struct {
+//     Layer base;
+//     Layer *conv1;
+//     Layer *pool1;
+//     Layer *conv2;
+//     Layer *pool2;
+// } SimpleCNNLayer;
 
-    // conv1
-    Tensor *x1 = layer_forward(l->conv1, input, training);
+// static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool training) {
+//     SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
 
-    // relu
-    for (uint64_t i = 0; i < x1->size; ++i) {
-        if (x1->data[i] < 0.0f) {
-            x1->data[i] = 0.0f;
-        }
-    }
+//     // conv1
+//     Tensor *x1 = layer_forward(l->conv1, input, training);
 
-    // pool1
-    Tensor *x2 = layer_forward(l->pool1, x1, training);
-    tensor_free(x1);
+//     // relu
+//     for (uint64_t i = 0; i < x1->size; ++i) {
+//         if (x1->data[i] < 0.0f) {
+//             x1->data[i] = 0.0f;
+//         }
+//     }
 
-    // conv2
-    Tensor *x3 = layer_forward(l->conv2, x2, training);
-    tensor_free(x2);
+//     // pool1
+//     Tensor *x2 = layer_forward(l->pool1, x1, training);
+//     tensor_free(x1);
 
-    // relu
-    for (uint64_t i = 0; i < x3->size; ++i) {
-        if (x3->data[i] < 0.0f) {
-            x3->data[i] = 0.0f;
-        }
-    }
+//     // conv2
+//     Tensor *x3 = layer_forward(l->conv2, x2, training);
+//     tensor_free(x2);
 
-    // pool2
-    Tensor *x4 = layer_forward(l->pool2, x3, training);
-    tensor_free(x3);
+//     // relu
+//     for (uint64_t i = 0; i < x3->size; ++i) {
+//         if (x3->data[i] < 0.0f) {
+//             x3->data[i] = 0.0f;
+//         }
+//     }
 
-    // flatten
-    uint64_t N = x4->shape[0];
-    uint64_t flat_size = x4->size / N;
+//     // pool2
+//     Tensor *x4 = layer_forward(l->pool2, x3, training);
+//     tensor_free(x3);
 
-    const int64_t flat_shape[] = {(int64_t)N, (int64_t)flat_size};
+//     // flatten
+//     uint64_t N = x4->shape[0];
+//     uint64_t flat_size = x4->size / N;
 
-    Tensor *out = tensor_reshape(x4, flat_shape, 2);
+//     const int64_t flat_shape[] = {(int64_t)N, (int64_t)flat_size};
 
-    tensor_free(x4);
+//     Tensor *out = tensor_reshape(x4, flat_shape, 2);
 
-    return out;
-}
+//     tensor_free(x4);
 
-static void simple_cnn_free(Layer *layer) {
-    SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
-    layer_free(l->conv1);
-    layer_free(l->pool1);
-    layer_free(l->conv2);
-    layer_free(l->pool2);
-    free(l);
-}
+//     return out;
+// }
 
-static void simple_cnn_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
-    SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
+// static void simple_cnn_free(Layer *layer) {
+//     SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
+//     layer_free(l->conv1);
+//     layer_free(l->pool1);
+//     layer_free(l->conv2);
+//     layer_free(l->pool2);
+//     free(l);
+// }
 
-    // collect params from sublayers
-    Tensor **p1, **p2;
-    size_t c1, c2;
+// static void simple_cnn_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
+//     SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
 
-    layer_parameters(l->conv1, &p1, &c1);
-    layer_parameters(l->conv2, &p2, &c2);
+//     // collect params from sublayers
+//     Tensor **p1, **p2;
+//     size_t c1, c2;
 
-    size_t total = c1 + c2;
-    *out_params = malloc(sizeof(Tensor *) * total);
-    assert(*out_params != NULL);
+//     layer_parameters(l->conv1, &p1, &c1);
+//     layer_parameters(l->conv2, &p2, &c2);
 
-    size_t idx = 0;
-    for (size_t i = 0; i < c1; ++i) {
-        (*out_params)[idx++] = p1[i];
-    }
-    for (size_t i = 0; i < c2; ++i) {
-        (*out_params)[idx++] = p2[i];
-    }
+//     size_t total = c1 + c2;
+//     *out_params = malloc(sizeof(Tensor *) * total);
+//     assert(*out_params != NULL);
 
-    if (p1) {
-        free(p1);
-    }
-    if (p2) {
-        free(p2);
-    }
+//     size_t idx = 0;
+//     for (size_t i = 0; i < c1; ++i) {
+//         (*out_params)[idx++] = p1[i];
+//     }
+//     for (size_t i = 0; i < c2; ++i) {
+//         (*out_params)[idx++] = p2[i];
+//     }
 
-    *out_count = total;
-}
+//     if (p1) {
+//         free(p1);
+//     }
+//     if (p2) {
+//         free(p2);
+//     }
 
-Layer *simple_cnn_create(uint64_t num_classes) {
-    (void)num_classes;
-    SimpleCNNLayer *l = calloc(1, sizeof(SimpleCNNLayer));
-    assert(l != NULL);
-    l->base.forward = simple_cnn_forward;
-    l->base.free = simple_cnn_free;
-    l->base.parameters = simple_cnn_parameters;
-    l->base.name = "SimpleCNN";
+//     *out_count = total;
+// }
 
-    // conv1: 3 -> 16, 3x3, pad 1
-    l->conv1 = layer_conv2d_create(3, 16, 3, 1, 1, true);
-    // pool1: 2x2, stride 2
-    l->pool1 = layer_maxpool2d_create(2, 2, 0);
+// Layer *simple_cnn_create(uint64_t num_classes) {
+//     (void)num_classes;
+//     SimpleCNNLayer *l = calloc(1, sizeof(SimpleCNNLayer));
+//     assert(l != NULL);
+//     l->base.forward = simple_cnn_forward;
+//     l->base.free = simple_cnn_free;
+//     l->base.parameters = simple_cnn_parameters;
+//     l->base.name = "SimpleCNN";
 
-    // conv2: 16 -> 32, 3x3, pad 1
-    l->conv2 = layer_conv2d_create(16, 32, 3, 1, 1, true);
-    // pool2: 2x2, stride 2
-    l->pool2 = layer_maxpool2d_create(2, 2, 0);
+//     // conv1: 3 -> 16, 3x3, pad 1
+//     l->conv1 = layer_conv2d_create(3, 16, 3, 1, 1, true);
+//     // pool1: 2x2, stride 2
+//     l->pool1 = layer_maxpool2d_create(2, 2, 0);
 
-    return (Layer *)l;
-}
+//     // conv2: 16 -> 32, 3x3, pad 1
+//     l->conv2 = layer_conv2d_create(16, 32, 3, 1, 1, true);
+//     // pool2: 2x2, stride 2
+//     l->pool2 = layer_maxpool2d_create(2, 2, 0);
+
+//     return (Layer *)l;
+// }
