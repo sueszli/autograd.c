@@ -5,18 +5,27 @@
 
 struct Tensor;
 
+// gradient function node in the computational graph
 typedef struct GradFn {
-    void (*apply)(struct GradFn *self, const struct Tensor *grad_output);
-    struct GradFn **next_fns;
-    int64_t num_next;
-    struct Tensor *out_tensor;
-    char *name;
+    void (*apply)(struct GradFn *self, const struct Tensor *grad_output); // backward pass function
+    struct GradFn **next_fns;                                             // gradient functions for inputs
+    int64_t num_next;                                                     // number of inputs
+    struct Tensor *out_tensor;                                            // output tensor
+    char *name;                                                           // operation name for debugging
 } GradFn;
 
+// performs backpropagation from root tensor
 void backward(struct Tensor *root, const struct Tensor *grad);
 
+// initializes gradient function
 void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), GradFn **next_fns, int64_t num_next, const char *name);
+
+// frees gradient function resources
 void grad_fn_free(GradFn *fn);
+
+//
+// backward constructors
+//
 
 GradFn *new_add_backward(struct Tensor *a, struct Tensor *b);
 GradFn *new_sub_backward(struct Tensor *a, struct Tensor *b);
