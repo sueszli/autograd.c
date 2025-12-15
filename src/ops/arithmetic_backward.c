@@ -65,6 +65,25 @@ Tensor *tensor_add_backward_b(const Tensor *grad_output, const Tensor *b) {
     return unbroadcast(grad_output, b);
 }
 
+void add_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+
+    Tensor *a = fn->inputs[0];
+    Tensor *b = fn->inputs[1];
+
+    if (a != NULL && a->requires_grad) {
+        Tensor *grad_a = tensor_add_backward_a(grad_output, a);
+        accumulate_grad(a, grad_a);
+    }
+
+    if (b != NULL && b->requires_grad) {
+        Tensor *grad_b = tensor_add_backward_b(grad_output, b);
+        accumulate_grad(b, grad_b);
+    }
+}
+
 //
 // sub
 //

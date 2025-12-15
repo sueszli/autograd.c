@@ -100,35 +100,9 @@ Tensor *tensor_binary_op(const Tensor *a, const Tensor *b, binary_op_t op) {
 }
 
 static float32_t op_add(float32_t a, float32_t b) { return a + b; }
-
-// ------------------------------------------------------------------------------
-// BEGIN AUTOGRAD STUFF
-// ------------------------------------------------------------------------------
-
-// this can be moved to arithmetic_backward.c
-static void add_backward(Function *fn, const Tensor *grad_output) {
-    assert(fn != NULL);
-    assert(grad_output != NULL);
-    assert(fn->num_inputs == 2);
-
-    Tensor *a = fn->inputs[0];
-    Tensor *b = fn->inputs[1];
-
-    if (a != NULL && a->requires_grad) {
-        Tensor *grad_a = tensor_add_backward_a(grad_output, a);
-        accumulate_grad(a, grad_a);
-    }
-
-    if (b != NULL && b->requires_grad) {
-        Tensor *grad_b = tensor_add_backward_b(grad_output, b);
-        accumulate_grad(b, grad_b);
-    }
-}
-
 Tensor *tensor_add(const Tensor *a, const Tensor *b) {
     Tensor *result = tensor_binary_op(a, b, op_add);
 
-    // set up autograd if needed
     if (result->requires_grad) {
         Function *fn = arena_alloc_function();
         fn->apply = add_backward;
@@ -138,15 +112,12 @@ Tensor *tensor_add(const Tensor *a, const Tensor *b) {
         fn->inputs[1] = (Tensor *)b;
         fn->pending_count = 0;
         fn->ctx = NULL;
-
-        // increment pending_count for parents with grad_fn
         if (a->grad_fn != NULL) {
             a->grad_fn->pending_count++;
         }
         if (b->grad_fn != NULL) {
             b->grad_fn->pending_count++;
         }
-
         result->grad_fn = fn;
     }
 
