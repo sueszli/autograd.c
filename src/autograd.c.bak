@@ -1,3 +1,4 @@
+#include "ops/arithmetic.h"
 #include "autograd.h"
 #include "tensor.h"
 #include <assert.h>

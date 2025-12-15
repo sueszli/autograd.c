@@ -1,4 +1,5 @@
 #include "layers.h"
+#include "ops/arithmetic.h"
 #include "tensor.h"
 #include <assert.h>
 #include <math.h>

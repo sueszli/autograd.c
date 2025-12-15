@@ -1,3 +1,4 @@
+#include "ops/arithmetic.h"
 #include "ops/activations.h"
 #include "tensor.h"
 #include "utils/cifar10.h"
