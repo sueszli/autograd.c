@@ -560,6 +560,610 @@ void test_sequential_linear_dropout_linear(void) {
     layer_free(seq);
 }
 
+void test_linear_bias_init_zero(void) {
+    Layer *l = layer_linear_create(10, 5, true);
+    Tensor **params;
+    size_t count;
+    layer_parameters(l, &params, &count);
+    Tensor *b = params[1];
+    for (uint64_t i = 0; i < b->size; ++i) {
+        TEST_ASSERT_EQUAL_FLOAT(0.0f, b->data[i]);
+    }
+    if (params)
+        free(params);
+    layer_free(l);
+}
+
+void test_linear_input_requires_grad(void) {
+    Layer *l = layer_linear_create(2, 2, false);
+    uint64_t shape[] = {1, 2};
+    Tensor *input = tensor_zeros(shape, 2, true);
+    Tensor *out = layer_forward(l, input, false);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_input_no_grad(void) {
+    Layer *l = layer_linear_create(2, 2, false);
+    uint64_t shape[] = {1, 2};
+    Tensor *input = tensor_zeros(shape, 2, false);
+    // Linear layer weights require grad by default, so output should require grad
+    Tensor *out = layer_forward(l, input, false);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_scalar(void) {
+    Layer *l = layer_linear_create(1, 1, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = 2.0f;
+    if (params)
+        free(params);
+
+    float32_t val[] = {3.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(6.0f, out->data[0]);
+    TEST_ASSERT_EQUAL_UINT64(2, out->ndim);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_vector_to_scalar(void) {
+    Layer *l = layer_linear_create(3, 1, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = 1.0f;
+    params[0]->data[1] = 1.0f;
+    params[0]->data[2] = 1.0f;
+    if (params)
+        free(params);
+
+    float32_t val[] = {1.0f, 2.0f, 3.0f};
+    uint64_t shape[] = {1, 3};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(6.0f, out->data[0]);
+    TEST_ASSERT_EQUAL_UINT64(1, out->shape[1]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_scalar_to_vector(void) {
+    Layer *l = layer_linear_create(1, 3, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = 1.0f;
+    params[0]->data[1] = 2.0f;
+    params[0]->data[2] = 3.0f;
+    if (params)
+        free(params);
+
+    float32_t val[] = {2.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, out->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(4.0f, out->data[1]);
+    TEST_ASSERT_EQUAL_FLOAT(6.0f, out->data[2]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_nan_input(void) {
+    Layer *l = layer_linear_create(2, 2, false);
+    float32_t val[] = {NAN, 1.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_TRUE(isnan(out->data[0]) || isnan(out->data[1]));
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_inf_input(void) {
+    Layer *l = layer_linear_create(1, 1, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = 1.0f;
+    if (params)
+        free(params);
+
+    float32_t val[] = {INFINITY};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_TRUE(isinf(out->data[0]));
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_reuse(void) {
+    Layer *l = layer_linear_create(2, 2, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = 1;
+    params[0]->data[1] = 0;
+    params[0]->data[2] = 0;
+    params[0]->data[3] = 1;
+    if (params)
+        free(params);
+
+    float32_t val[] = {1.0f, 2.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+
+    for (int i = 0; i < 3; i++) {
+        Tensor *out = layer_forward(l, input, false);
+        TEST_ASSERT_EQUAL_FLOAT(1.0f, out->data[0]);
+        TEST_ASSERT_EQUAL_FLOAT(2.0f, out->data[1]);
+        tensor_free(out);
+    }
+
+    tensor_free(input);
+    layer_free(l);
+}
+
+void test_linear_negative_input(void) {
+    Layer *l = layer_linear_create(1, 1, false);
+    Tensor **params;
+    size_t c;
+    layer_parameters(l, &params, &c);
+    params[0]->data[0] = -1.0f;
+    if (params)
+        free(params);
+
+    float32_t val[] = {-5.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_dropout_inference_p01(void) {
+    Layer *l = layer_dropout_create(0.1f);
+    float32_t val[] = {1.0f, 2.0f, 3.0f};
+    uint64_t shape[] = {1, 3};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    // Inference mode (training=false). Should be identity.
+    Tensor *out = layer_forward(l, input, false);
+    for (int i = 0; i < 3; i++) {
+        TEST_ASSERT_EQUAL_FLOAT(val[i], out->data[i]);
+    }
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_dropout_randomness(void) {
+    Layer *l = layer_dropout_create(0.5f);
+    uint64_t size = 100;
+    uint64_t shape[] = {size};
+    float32_t *data = (float32_t *)malloc(size * sizeof(float32_t));
+    for (uint64_t i = 0; i < size; i++)
+        data[i] = 1.0f;
+    Tensor *input = create_tensor_from_data(data, shape, 1);
+    free(data);
+
+    Tensor *out1 = layer_forward(l, input, true);
+    Tensor *out2 = layer_forward(l, input, true);
+
+    // Check they are not exactly same (extremely unlikely to be same for 100 elements)
+    int diff_count = 0;
+    for (uint64_t i = 0; i < size; i++) {
+        if (out1->data[i] != out2->data[i])
+            diff_count++;
+    }
+    TEST_ASSERT_TRUE(diff_count > 0);
+
+    tensor_free(input);
+    tensor_free(out1);
+    tensor_free(out2);
+    layer_free(l);
+}
+
+void test_dropout_output_shape(void) {
+    Layer *l = layer_dropout_create(0.5f);
+    uint64_t shape[] = {2, 3, 4};
+    Tensor *input = tensor_zeros(shape, 3, false);
+    Tensor *out = layer_forward(l, input, true);
+
+    TEST_ASSERT_EQUAL_UINT64(3, out->ndim);
+    TEST_ASSERT_EQUAL_UINT64(2, out->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(3, out->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(4, out->shape[2]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_dropout_requires_grad_propagation(void) {
+    Layer *l = layer_dropout_create(0.5f);
+    uint64_t shape[] = {1};
+    Tensor *input = tensor_zeros(shape, 1, true);
+    Tensor *out = layer_forward(l, input, true);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_dropout_all_zeros(void) {
+    Layer *l = layer_dropout_create(0.5f);
+    uint64_t shape[] = {10};
+    Tensor *input = tensor_zeros(shape, 1, false);
+    Tensor *out = layer_forward(l, input, true);
+    for (int i = 0; i < 10; i++) {
+        TEST_ASSERT_EQUAL_FLOAT(0.0f, out->data[i]);
+    }
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_dropout_nan_propagation(void) {
+    Layer *l = layer_dropout_create(0.0f); // p=0 means no dropout, so identity in training
+    float32_t val[] = {NAN};
+    uint64_t shape[] = {1};
+    Tensor *input = create_tensor_from_data(val, shape, 1);
+    Tensor *out = layer_forward(l, input, true);
+    TEST_ASSERT_TRUE(isnan(out->data[0]));
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+
+    // Now p=0.5. NaN might be dropped (zeroed) or scaled (NaN). 0 * NaN is NaN usually, but logic is `mask * input`.
+    // If mask is 0, 0 * NaN = NaN? In C, 0.0 * NAN is NAN.
+    // So output should definitely be NaN.
+    l = layer_dropout_create(0.5f);
+    input = create_tensor_from_data(val, shape, 1);
+    out = layer_forward(l, input, true);
+    TEST_ASSERT_TRUE(isnan(out->data[0]));
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_sequential_single_layer(void) {
+    Layer *l1 = layer_linear_create(2, 2, false);
+    Layer **arr = (Layer **)malloc(sizeof(Layer *));
+    arr[0] = l1;
+    Layer *seq = layer_sequential_create(arr, 1);
+    free(arr);
+
+    float32_t val[] = {1.0f, 2.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+
+    // Set weights to identity
+    Tensor **params;
+    size_t c;
+    layer_parameters(l1, &params, &c);
+    params[0]->data[0] = 1;
+    params[0]->data[1] = 0;
+    params[0]->data[2] = 0;
+    params[0]->data[3] = 1;
+    if (params)
+        free(params);
+
+    Tensor *out = layer_forward(seq, input, false);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, out->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, out->data[1]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_sequential_param_count_correct(void) {
+    Layer *l1 = layer_linear_create(2, 2, true);  // 2 params (w, b)
+    Layer *l2 = layer_linear_create(2, 2, false); // 1 param (w)
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    Tensor **params;
+    size_t count;
+    layer_parameters(seq, &params, &count);
+    TEST_ASSERT_EQUAL_UINT64(3, count);
+    if (params)
+        free(params);
+    layer_free(seq);
+}
+
+void test_sequential_with_dropout_only(void) {
+    Layer *l1 = layer_dropout_create(0.5f);
+    Layer *l2 = layer_dropout_create(0.5f);
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    uint64_t shape[] = {100};
+    Tensor *input = tensor_zeros(shape, 1, false);
+    Tensor *out = layer_forward(seq, input, true);
+    // Just check it runs and returns correct shape
+    TEST_ASSERT_EQUAL_UINT64(1, out->ndim);
+    TEST_ASSERT_EQUAL_UINT64(100, out->shape[0]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_sequential_training_mode_propagation(void) {
+    // If training=true, dropout should be active (randomness/scaling).
+    // Use dropout p=1.0, so output should be 0.
+    Layer *l1 = layer_dropout_create(1.0f);
+    Layer **arr = (Layer **)malloc(sizeof(Layer *));
+    arr[0] = l1;
+    Layer *seq = layer_sequential_create(arr, 1);
+    free(arr);
+
+    float32_t val[] = {1.0f};
+    uint64_t shape[] = {1};
+    Tensor *input = create_tensor_from_data(val, shape, 1);
+
+    Tensor *out = layer_forward(seq, input, true); // Training
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, out->data[0]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_sequential_inference_mode_propagation(void) {
+    // If training=false, dropout should be identity.
+    Layer *l1 = layer_dropout_create(1.0f);
+    Layer **arr = (Layer **)malloc(sizeof(Layer *));
+    arr[0] = l1;
+    Layer *seq = layer_sequential_create(arr, 1);
+    free(arr);
+
+    float32_t val[] = {5.0f};
+    uint64_t shape[] = {1};
+    Tensor *input = create_tensor_from_data(val, shape, 1);
+
+    Tensor *out = layer_forward(seq, input, false); // Inference
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_layer_free_null(void) {
+    // Should not crash
+    layer_free(NULL);
+    TEST_ASSERT_TRUE(true);
+}
+
+void test_sequential_param_pointers_distinct(void) {
+    Layer *l1 = layer_linear_create(1, 1, false);
+    Layer *l2 = layer_linear_create(1, 1, false);
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    Tensor **params;
+    size_t count;
+    layer_parameters(seq, &params, &count);
+
+    TEST_ASSERT_EQUAL_UINT64(2, count);
+    if (count >= 2) {
+        TEST_ASSERT_NOT_EQUAL(params[0], params[1]);
+    }
+
+    if (params)
+        free(params);
+    layer_free(seq);
+}
+
+void test_sequential_shape_consistency(void) {
+    Layer *l1 = layer_linear_create(10, 5, false);
+    Layer *l2 = layer_linear_create(5, 2, false);
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    uint64_t shape[] = {4, 10};
+    Tensor *input = tensor_zeros(shape, 2, false);
+    Tensor *out = layer_forward(seq, input, false);
+
+    TEST_ASSERT_EQUAL_UINT64(2, out->ndim);
+    TEST_ASSERT_EQUAL_UINT64(4, out->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(2, out->shape[1]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_sequential_reuse(void) {
+    Layer *l1 = layer_linear_create(1, 1, false);
+    Layer **arr = (Layer **)malloc(sizeof(Layer *));
+    arr[0] = l1;
+    Layer *seq = layer_sequential_create(arr, 1);
+    free(arr);
+
+    float32_t val[] = {1.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+
+    for (int i = 0; i < 3; i++) {
+        Tensor *out = layer_forward(seq, input, false);
+        TEST_ASSERT_NOT_NULL(out);
+        tensor_free(out);
+    }
+    tensor_free(input);
+    layer_free(seq);
+}
+
+void test_sequential_large_chain(void) {
+    size_t count = 20;
+    Layer **arr = (Layer **)malloc(count * sizeof(Layer *));
+    for (size_t i = 0; i < count; i++) {
+        arr[i] = layer_linear_create(1, 1, false);
+        Tensor **p;
+        size_t c;
+        layer_parameters(arr[i], &p, &c);
+        p[0]->data[0] = 1.0f; // Identity weights
+        if (p)
+            free(p);
+    }
+    Layer *seq = layer_sequential_create(arr, count);
+    free(arr);
+
+    float32_t val[] = {7.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(seq, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(7.0f, out->data[0]);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_dropout_p05_stats(void) {
+    Layer *l = layer_dropout_create(0.5f);
+    uint64_t size = 1000;
+    uint64_t shape[] = {size};
+    Tensor *input = tensor_zeros(shape, 1, false);
+    for (uint64_t i = 0; i < size; i++) {
+        input->data[i] = 1.0f;
+    }
+
+    Tensor *out = layer_forward(l, input, true);
+    int zero_count = 0;
+    for (uint64_t i = 0; i < size; i++) {
+        if (out->data[i] == 0.0f)
+            zero_count++;
+    }
+    // Should be roughly 500
+    TEST_ASSERT_TRUE(zero_count > 400 && zero_count < 600);
+
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(l);
+}
+
+void test_linear_all_ones_weights(void) {
+    Layer *l = layer_linear_create(2, 1, false);
+    Tensor **p;
+    size_t c;
+    layer_parameters(l, &p, &c);
+    p[0]->data[0] = 1.0f;
+    p[0]->data[1] = 1.0f;
+    if (p)
+        free(p);
+
+    float32_t val[] = {2.0f, 3.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(l, input, false);
+
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
+
+    tensor_free(out);
+    tensor_free(input);
+    layer_free(l);
+}
+
+void test_sequential_linear_dropout(void) {
+    // Linear (Id) -> Dropout (p=0, Id)
+    Layer *l1 = layer_linear_create(1, 1, false);
+    Layer *l2 = layer_dropout_create(0.0f);
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    Tensor **p;
+    size_t c;
+    layer_parameters(l1, &p, &c);
+    p[0]->data[0] = 1.0f;
+    if (p)
+        free(p);
+
+    float32_t val[] = {5.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(seq, input, true);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
+void test_sequential_dropout_linear(void) {
+    // Dropout (p=0) -> Linear(Id)
+    Layer *l1 = layer_dropout_create(0.0f);
+    Layer *l2 = layer_linear_create(1, 1, false);
+    Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
+    arr[0] = l1;
+    arr[1] = l2;
+    Layer *seq = layer_sequential_create(arr, 2);
+    free(arr);
+
+    Tensor **p;
+    size_t c;
+    layer_parameters(l2, &p, &c);
+    p[0]->data[0] = 1.0f;
+    if (p)
+        free(p);
+
+    float32_t val[] = {9.0f};
+    uint64_t shape[] = {1, 1};
+    Tensor *input = create_tensor_from_data(val, shape, 2);
+    Tensor *out = layer_forward(seq, input, true);
+    TEST_ASSERT_EQUAL_FLOAT(9.0f, out->data[0]);
+    tensor_free(input);
+    tensor_free(out);
+    layer_free(seq);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_linear_creation);
@@ -582,5 +1186,42 @@ int main(void) {
     RUN_TEST(test_sequential_nested);
     RUN_TEST(test_sequential_deep);
     RUN_TEST(test_sequential_linear_dropout_linear);
+
+    // New Linear Tests
+    RUN_TEST(test_linear_bias_init_zero);
+    RUN_TEST(test_linear_input_requires_grad);
+    RUN_TEST(test_linear_input_no_grad);
+    RUN_TEST(test_linear_scalar);
+    RUN_TEST(test_linear_vector_to_scalar);
+    RUN_TEST(test_linear_scalar_to_vector);
+    RUN_TEST(test_linear_nan_input);
+    RUN_TEST(test_linear_inf_input);
+    RUN_TEST(test_linear_reuse);
+    RUN_TEST(test_linear_negative_input);
+
+    // New Dropout Tests
+    RUN_TEST(test_dropout_inference_p01);
+    RUN_TEST(test_dropout_randomness);
+    RUN_TEST(test_dropout_output_shape);
+    RUN_TEST(test_dropout_requires_grad_propagation);
+    RUN_TEST(test_dropout_all_zeros);
+    RUN_TEST(test_dropout_nan_propagation);
+
+    // New Sequential & Edge Tests
+    RUN_TEST(test_sequential_single_layer);
+    RUN_TEST(test_sequential_param_count_correct);
+    RUN_TEST(test_sequential_with_dropout_only);
+    RUN_TEST(test_sequential_training_mode_propagation);
+    RUN_TEST(test_sequential_inference_mode_propagation);
+    RUN_TEST(test_layer_free_null);
+    RUN_TEST(test_sequential_param_pointers_distinct);
+    RUN_TEST(test_sequential_shape_consistency);
+    RUN_TEST(test_sequential_reuse);
+    RUN_TEST(test_sequential_large_chain);
+    RUN_TEST(test_dropout_p05_stats);
+    RUN_TEST(test_linear_all_ones_weights);
+    RUN_TEST(test_sequential_linear_dropout);
+    RUN_TEST(test_sequential_dropout_linear);
+
     return UNITY_END();
 }

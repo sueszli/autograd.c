@@ -35,3 +35,5 @@ GradFn *new_sum_backward(struct Tensor *input, int64_t dim_idx, bool keepdims);
 GradFn *new_relu_backward(struct Tensor *input);
 GradFn *new_sigmoid_backward(struct Tensor *input, struct Tensor *output);
 GradFn *new_softmax_backward(struct Tensor *input, struct Tensor *output, int64_t dim);
+
+GradFn *new_reshape_backward(struct Tensor *input, const uint64_t *old_shape, uint64_t old_ndim);
