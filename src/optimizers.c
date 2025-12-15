@@ -5,7 +5,7 @@
 #include <string.h>
 
 //
-// shared optimizer interface
+// base implementation
 //
 
 void optimizer_zero_grad(Optimizer *opt) {
