@@ -26,6 +26,8 @@ TODO:
 simplify convolutions.c
 use forward and backward in main and see if it leaks
 
+decouple ops from tensors
+
 
 - autograd.c -> improve code quality based on @CONTRIBUTING.md
     - make backward functions for everything - ie. activations_backward, tensors_backward, losses_backward, etc.

@@ -110,7 +110,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     t->grad = NULL;
     t->shape = NULL;
     t->strides = NULL;
-    t->grad_fn = NULL;
 
     // scalar
     if (ndim == 0) {

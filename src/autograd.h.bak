@@ -38,7 +38,3 @@ GradFn *new_transpose_backward(struct Tensor *input, uint64_t dim0, uint64_t dim
 GradFn *new_getitem_backward(struct Tensor *input, const uint64_t *multidim);
 GradFn *new_mean_backward(struct Tensor *input, int64_t dim_idx, bool keepdims);
 GradFn *new_max_backward(struct Tensor *input, struct Tensor *output, int64_t dim_idx, bool keepdims);
-GradFn *new_conv2d_backward(struct Tensor *input, struct Tensor *weight, struct Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size);
-GradFn *new_maxpool2d_backward(struct Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding);
-GradFn *new_avgpool2d_backward(struct Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding);
-GradFn *new_batchnorm2d_backward(struct Tensor *input, struct Tensor *gamma, struct Tensor *batch_mean, struct Tensor *batch_var, float32_t eps);
