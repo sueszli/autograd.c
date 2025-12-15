@@ -1,5 +1,4 @@
 #include "activations.h"
-#include "autograd.h"
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>

@@ -1,4 +1,4 @@
-#include "../src/losses.h"
+#include "../src/ops/losses.h"
 #include "../src/tensor.h"
 #include "unity.h"
 #include <float.h>

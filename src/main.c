@@ -1,6 +1,7 @@
-#include "dataloader/cifar10.h"
 #include "ops/activations.h"
+#include "ops/losses.h"
 #include "tensor.h"
+#include "utils/cifar10.h"
 #include "utils/tqdm.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -21,20 +22,18 @@ int32_t main(void) {
         const float32_t *img_data = &images->data[i * INPUT_SIZE];
         Tensor *t = tensor_create(img_data, shape, CHANNELS, false);
 
-        tensor_print(t);
+        Tensor *t2 = binary_cross_entropy_loss(t, t);
+        tensor_print(t2);
+        tensor_free(t2);
+
         printf("\n");
+
         tensor_print(t);
         tensor_free(t);
     }
 
     tensor_free(images);
     tensor_free(labels);
-
-    // demo tqdm
-    for (uint64_t i = 0; i < 30; i++) {
-        tqdm((i + 1), 30);
-        usleep(10000);
-    }
 
     return EXIT_SUCCESS;
 }

@@ -1,5 +1,4 @@
 #include "losses.h"
-#include "autograd.h"
 #include <assert.h>
 #include <float.h>
 #include <math.h>
@@ -27,10 +26,6 @@ Tensor *mse_loss(const Tensor *predictions, const Tensor *targets) {
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
 
-    if (out->requires_grad) {
-        out->grad_fn = new_mse_backward((Tensor *)predictions, (Tensor *)targets);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }
 
@@ -40,7 +35,6 @@ Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
     assert(logits->data != NULL || logits->size == 0);
     assert(targets->data != NULL || targets->size == 0);
     assert(logits->ndim == 2);
-    // targets can be [batch] (1D) or [batch, 1] (2D)
     assert(targets->ndim == 1 || (targets->ndim == 2 && targets->shape[1] == 1));
     assert(logits->shape[0] == targets->shape[0]);
 
@@ -90,11 +84,6 @@ Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
 
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, logits->requires_grad);
-
-    if (out->requires_grad) {
-        out->grad_fn = new_crossentropy_backward((Tensor *)logits, (Tensor *)targets);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }
 
@@ -134,10 +123,5 @@ Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targe
 
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
-
-    if (out->requires_grad) {
-        out->grad_fn = new_bce_backward((Tensor *)predictions, (Tensor *)targets);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }
