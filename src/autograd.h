@@ -16,7 +16,6 @@ typedef struct GradFn {
 void backward(struct Tensor *root, const struct Tensor *grad);
 
 void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), GradFn **next_fns, int num_next, const char *name);
-
 void grad_fn_free(GradFn *fn);
 
 GradFn *new_add_backward(struct Tensor *a, struct Tensor *b);
