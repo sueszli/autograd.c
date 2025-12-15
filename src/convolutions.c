@@ -26,7 +26,7 @@ typedef struct {
  */
 static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value) {
     if (padding == 0) {
-        return tensor_create(input->data, input->shape, input->ndim, false); // Copy
+        return tensor_create(input->data, input->shape, input->ndim, false); // copy
     }
 
     uint64_t N = input->shape[0];
@@ -41,12 +41,12 @@ static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value
     Tensor *padded = tensor_create(NULL, out_shape, 4, false); // manual fill
     assert(padded != NULL && "failed to allocate padded tensor");
 
-    // Fill with value
+    // fill with value
     for (uint64_t i = 0; i < padded->size; ++i) {
         padded->data[i] = value;
     }
 
-    // Copy input into center
+    // copy input into center
     for (uint64_t n = 0; n < N; ++n) {
         for (uint64_t c = 0; c < C; ++c) {
             for (uint64_t h = 0; h < H; ++h) {
@@ -80,10 +80,10 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad || weight->requires_grad);
     assert(output != NULL && "failed to allocate output tensor");
 
-    // Apply padding
+    // apply padding
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
 
-    // Explicit loops
+    // explicit loops
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t out_ch = 0; out_ch < out_channels; ++out_ch) {
             for (uint64_t out_h = 0; out_h < out_height; ++out_h) {
@@ -145,8 +145,9 @@ static Tensor *conv2d_forward(Layer *layer, const Tensor *input, bool training) 
 static void conv2d_free(Layer *layer) {
     Conv2dLayer *l = (Conv2dLayer *)layer;
     tensor_free(l->weight);
-    if (l->bias)
+    if (l->bias) {
         tensor_free(l->bias);
+    }
     free(l);
 }
 
@@ -155,8 +156,9 @@ static void conv2d_parameters(Layer *layer, Tensor ***out_params, size_t *out_co
     size_t count = (l->bias != NULL) ? 2 : 1;
     *out_params = malloc(sizeof(Tensor *) * count);
     (*out_params)[0] = l->weight;
-    if (l->bias)
+    if (l->bias) {
         (*out_params)[1] = l->bias;
+    }
     *out_count = count;
 }
 
@@ -183,17 +185,12 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
     float32_t *w_data = malloc(w_size * sizeof(float32_t));
     assert(w_data != NULL && "failed to allocate weight data");
     for (uint64_t i = 0; i < w_size; ++i) {
-        // approximate normal distribution or just uniform?
-        // Reference uses np.random.normal(0, std).
-        // Using uniform approx [-std*sqrt(3), std*sqrt(3)] for similar variance?
-        // Or Box-Muller. Let's use simple uniform range that resembles He.
-        // Actually, let's use a simple uniform roughly matching the scale.
-        // limit = sqrt(6 / fan_in) is Xavier. He is normal(0, 2/fan_in).
-        // Let's implement Box-Muller for normal dist.
+        // box muller for normal dist.
         float32_t u1 = (float32_t)rand() / RAND_MAX;
         float32_t u2 = (float32_t)rand() / RAND_MAX;
-        if (u1 < 1e-6f)
+        if (u1 < 1e-6f) {
             u1 = 1e-6f;
+        }
         float32_t z0 = sqrtf(-2.0f * logf(u1)) * cosf(2.0f * (float32_t)M_PI * u2);
         w_data[i] = z0 * std;
     }
@@ -248,14 +245,14 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
                                 uint64_t in_h = in_h_start + k_h;
                                 uint64_t in_w = in_w_start + k_w;
 
-                                // Grad w.r.t weight
+                                // Grad wrt. weight
                                 uint64_t padded_idx = b * padded_input->strides[0] + in_ch * padded_input->strides[1] + in_h * padded_input->strides[2] + in_w * padded_input->strides[3];
                                 float32_t p_val = padded_input->data[padded_idx];
 
                                 uint64_t w_idx = out_ch * (*out_grad_w)->strides[0] + in_ch * (*out_grad_w)->strides[1] + k_h * (*out_grad_w)->strides[2] + k_w * (*out_grad_w)->strides[3];
                                 (*out_grad_w)->data[w_idx] += p_val * grad_val;
 
-                                // Grad w.r.t input
+                                // Grad wrt. input
                                 uint64_t w_val_idx = out_ch * weight->strides[0] + in_ch * weight->strides[1] + k_h * weight->strides[2] + k_w * weight->strides[3];
                                 float32_t w_val = weight->data[w_val_idx];
 

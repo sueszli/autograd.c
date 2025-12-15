@@ -26,9 +26,9 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
  * @param padding       padding used in forward pass
  * @param kernel_size   kernel size used in forward pass
  * @param grad_output   gradient flowing back from next layer
- * @param out_grad_in   output gradient w.r.t input (newly allocated)
- * @param out_grad_w    output gradient w.r.t weight (newly allocated)
- * @param out_grad_b    output gradient w.r.t bias (newly allocated, can be NULL)
+ * @param out_grad_in   output gradient wrt. input (newly allocated)
+ * @param out_grad_w    output gradient wrt. weight (newly allocated)
+ * @param out_grad_b    output gradient wrt. bias (newly allocated, can be NULL)
  */
 void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_w, Tensor **out_grad_b);
 
@@ -51,7 +51,7 @@ Layer *layer_maxpool2d_create(uint64_t kernel_size, uint64_t stride, uint64_t pa
  * @param stride        stride
  * @param padding       padding
  * @param grad_output   gradient from next layer
- * @return              gradient w.r.t input (newly allocated)
+ * @return              gradient wrt. input (newly allocated)
  */
 Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding, const Tensor *grad_output);
 
