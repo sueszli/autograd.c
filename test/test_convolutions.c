@@ -214,7 +214,7 @@ void test_batchnorm2d_forward(void) {
 }
 
 void test_simplecnn_smoke(void) {
-    uint64_t in_shape[] = {2, 3, 32, 32}; // Batch 2, 32x32 RGB
+    uint64_t in_shape[] = {2, 3, 32, 32};
     Tensor *input = tensor_zeros(in_shape, 4, false);
 
     Layer *l = simple_cnn_create(10);

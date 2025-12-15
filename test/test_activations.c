@@ -377,6 +377,83 @@ void test_softmax_3d_tensor(void) {
     tensor_free(out);
 }
 
+void test_sigmoid_symmetry(void) {
+    float32_t data[] = {-0.5f, 0.5f, -2.0f, 2.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
+    Tensor *out = tensor_sigmoid(t);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[0] + out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[2] + out->data[3]);
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_idempotence(void) {
+    float32_t data[] = {-1.0f, 1.0f, -2.0f, 2.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
+    Tensor *out1 = tensor_relu(t);
+    Tensor *out2 = tensor_relu(out1);
+
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, out1->data[i], out2->data[i]);
+    }
+
+    tensor_free(t);
+    tensor_free(out1);
+    tensor_free(out2);
+}
+
+void test_tanh_bounds(void) {
+    float32_t data[] = {100.0f, -100.0f, 0.0f, 0.5f, -0.5f};
+    Tensor *t = create_tensor_from_data(data, 5);
+    Tensor *out = tensor_tanh(t);
+
+    for (int i = 0; i < 5; i++) {
+        TEST_ASSERT_TRUE(out->data[i] >= -1.0f && out->data[i] <= 1.0f);
+    }
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_single_element(void) {
+    float32_t data[] = {123.456f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_softmax(t, 0);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[0]);
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_extreme_diff(void) {
+    float32_t data[] = {1e5f, -1e5f};
+    uint64_t shape[] = {2};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_softmax(t, 0);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_large_negative(void) {
+    float32_t data[] = {-10.0f, -20.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_gelu(t);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+
+    tensor_free(t);
+    tensor_free(out);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_sigmoid_standard_values);
@@ -404,5 +481,11 @@ int main(void) {
     RUN_TEST(test_softmax_2d_axis_1);
     RUN_TEST(test_softmax_nan);
     RUN_TEST(test_softmax_3d_tensor);
+    RUN_TEST(test_sigmoid_symmetry);
+    RUN_TEST(test_relu_idempotence);
+    RUN_TEST(test_tanh_bounds);
+    RUN_TEST(test_softmax_single_element);
+    RUN_TEST(test_softmax_extreme_diff);
+    RUN_TEST(test_gelu_large_negative);
     return UNITY_END();
 }
