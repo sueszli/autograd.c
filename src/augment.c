@@ -69,7 +69,7 @@ void random_crop(Tensor *t, uint64_t target_h, uint64_t target_w, uint64_t paddi
         uint64_t top = max_top > 0 ? ((uint64_t)rand() % (max_top + 1)) : 0;
         uint64_t left = max_left > 0 ? ((uint64_t)rand() % (max_left + 1)) : 0;
 
-        uint64_t out_shape[2] = {target_h, target_w};
+        const uint64_t out_shape[2] = {target_h, target_w};
         Tensor *out = tensor_zeros(out_shape, 2, t->requires_grad);
         assert(out != NULL);
 

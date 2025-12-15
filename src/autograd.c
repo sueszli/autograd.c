@@ -1354,7 +1354,10 @@ typedef struct {
  * Helper to compute softmax probability for a single element.
  * Uses numerically stable softmax with max subtraction.
  */
-static inline float32_t compute_softmax_prob(const float32_t *logits, uint64_t class_count, uint64_t offset, float32_t max_val, float32_t sum_exp, uint64_t class_idx) { return expf(logits[offset + class_idx] - max_val) / sum_exp; }
+static inline float32_t compute_softmax_prob(const float32_t *logits, const uint64_t class_count, uint64_t offset, float32_t max_val, float32_t sum_exp, uint64_t class_idx) {
+    (void) class_count;
+    return expf(logits[offset + class_idx] - max_val) / sum_exp;
+}
 
 static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
     assert(base != NULL);
