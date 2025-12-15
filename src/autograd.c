@@ -67,54 +67,54 @@ static void accumulate_grad(Tensor *tensor_mut, const Tensor *grad) {
  */
 typedef struct {
     GradFn **data;
-    uint64_t size;
+    uint64_t count;
     uint64_t capacity;
 } PtrArray;
 
-static void ptr_array_init(PtrArray *arr) {
-    assert(arr != NULL);
-    arr->size = 0;
-    arr->capacity = INITIAL_ARRAY_CAPACITY;
-    arr->data = (GradFn **)malloc(arr->capacity * sizeof(GradFn *));
-    assert(arr->data != NULL && "malloc failed");
+static void ptr_array_init(PtrArray *array) {
+    assert(array != NULL);
+    array->count = 0;
+    array->capacity = INITIAL_ARRAY_CAPACITY;
+    array->data = (GradFn **)malloc(array->capacity * sizeof(GradFn *));
+    assert(array->data != NULL && "malloc failed");
 }
 
-static void ptr_array_free(PtrArray *arr) {
-    assert(arr != NULL);
-    if (arr->data) {
-        free(arr->data);
-        arr->data = NULL;
+static void ptr_array_free(PtrArray *array) {
+    assert(array != NULL);
+    if (array->data) {
+        free(array->data);
+        array->data = NULL;
     }
-    arr->size = 0;
-    arr->capacity = 0;
+    array->count = 0;
+    array->capacity = 0;
 }
 
-static void ptr_array_append(PtrArray *arr, GradFn *grad_fn) {
-    assert(arr != NULL);
+static void ptr_array_append(PtrArray *array, GradFn *grad_fn) {
+    assert(array != NULL);
     assert(grad_fn != NULL);
 
-    if (arr->size >= arr->capacity) {
-        // check for overflow
-        if (arr->capacity > UINT64_MAX / ARRAY_GROWTH_FACTOR) {
+    if (array->count >= array->capacity) {
+        // check for overflow to prevent security vulnerabilities
+        if (array->capacity > UINT64_MAX / ARRAY_GROWTH_FACTOR) {
             assert(false && "PtrArray capacity overflow");
         }
-        uint64_t new_capacity = arr->capacity * ARRAY_GROWTH_FACTOR;
-        // check max limit
+        uint64_t new_capacity = array->capacity * ARRAY_GROWTH_FACTOR;
+        // enforce upper bound on memory usage
         assert(new_capacity <= MAX_ARRAY_SIZE && "Array capacity exceeds maximum limit");
 
-        GradFn **new_data = (GradFn **)realloc(arr->data, new_capacity * sizeof(GradFn *));
+        GradFn **new_data = (GradFn **)realloc(array->data, new_capacity * sizeof(GradFn *));
         assert(new_data != NULL && "realloc failed");
-        arr->data = new_data;
-        arr->capacity = new_capacity;
+        array->data = new_data;
+        array->capacity = new_capacity;
     }
-    arr->data[arr->size++] = grad_fn;
+    array->data[array->count++] = grad_fn;
 }
 
-static bool ptr_array_contains(const PtrArray *arr, const GradFn *grad_fn) {
-    assert(arr != NULL);
-    // Linear search is O(N), acceptable for expected graph sizes
-    for (uint64_t idx = 0; idx < arr->size; idx++) {
-        if (arr->data[idx] == grad_fn) {
+static bool ptr_array_contains(const PtrArray *array, const GradFn *grad_fn) {
+    assert(array != NULL);
+    // Linear search is O(N), acceptable for expected graph sizes (bounded by MAX_ARRAY_SIZE)
+    for (uint64_t idx = 0; idx < array->count; idx++) {
+        if (array->data[idx] == grad_fn) {
             return true;
         }
     }
@@ -124,6 +124,11 @@ static bool ptr_array_contains(const PtrArray *arr, const GradFn *grad_fn) {
 /*
  * Recursive helper for topological sort via DFS.
  * Post-order traversal ensures dependencies come before dependents.
+ *
+ * grad_fn: current node in the computation graph.
+ * topo:    list to append nodes to in topological order.
+ * visited: set of visited nodes to avoid cycles/revisiting.
+ * depth:   current recursion depth for stack overflow protection.
  */
 static void build_topo_recursive(GradFn *grad_fn, PtrArray *topo, PtrArray *visited, uint64_t depth) {
     assert(depth < MAX_RECURSION_DEPTH && "Recursion depth exceeded: graph too deep");
@@ -136,8 +141,8 @@ static void build_topo_recursive(GradFn *grad_fn, PtrArray *topo, PtrArray *visi
     }
     ptr_array_append(visited, grad_fn);
 
-    // visit children first (post-order traversal)
-    for (int64_t child_idx = 0; child_idx < grad_fn->num_next; child_idx++) {
+    // ensure dependencies are processed before dependents via post-order traversal
+    for (int64_t child_idx = 0; child_idx < grad_fn->next_fn_count; child_idx++) {
         if (grad_fn->next_fns[child_idx]) {
             build_topo_recursive(grad_fn->next_fns[child_idx], topo, visited, depth + 1);
         }
@@ -197,8 +202,8 @@ void backward(Tensor *root, const Tensor *grad) {
     build_topo_recursive(root->grad_fn, &topo, &visited, 0);
 
     // propagate gradients in reverse topological order (outputs to inputs)
-    for (int64_t topo_idx = (int64_t)topo.size - 1; topo_idx >= 0; topo_idx--) {
-        GradFn *grad_fn = topo.data[topo_idx];
+    for (int64_t node_index = (int64_t)topo.count - 1; node_index >= 0; node_index--) {
+        GradFn *grad_fn = topo.data[node_index];
         assert(grad_fn != NULL);
 
         Tensor *output_tensor = grad_fn->out_tensor;
@@ -212,15 +217,15 @@ void backward(Tensor *root, const Tensor *grad) {
     ptr_array_free(&visited);
 }
 
-void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), void (*destroy)(GradFn *), GradFn **next_fns, int64_t num_next, const char *name) {
+void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), void (*destroy)(GradFn *), GradFn **next_fns, int64_t next_fn_count, const char *name) {
     assert(fn != NULL);
     assert(apply != NULL);
-    // next_fns can be NULL if num_next is 0
+    // next_fns can be NULL if next_fn_count is 0
 
     fn->apply = apply;
     fn->destroy = destroy;
     fn->next_fns = next_fns;
-    fn->num_next = num_next;
+    fn->next_fn_count = next_fn_count;
     fn->name = name ? strdup(name) : NULL;
     fn->out_tensor = NULL;
 }
@@ -263,43 +268,43 @@ static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
         return NULL;
     }
 
-    const Tensor *curr_grad = grad;
-    bool owns_tensor = false;
+    const Tensor *current_grad = grad;
+    bool owns_current_grad = false;
 
     // broadcasting adds dimensions on the left, so collapse extra leading dimensions
     // example: grad (2,3,4) with input (3,4) -> sum axis 0 -> (3,4)
-    while (curr_grad->ndim > input->ndim) {
-        Tensor *summed = tensor_sum(curr_grad, 0, false);
-        if (owns_tensor) {
-            tensor_free((Tensor *)curr_grad);
+    while (current_grad->ndim > input->ndim) {
+        Tensor *summed = tensor_sum(current_grad, 0, false);
+        if (owns_current_grad) {
+            tensor_free((Tensor *)current_grad);
         }
-        curr_grad = summed;
-        owns_tensor = true;
+        current_grad = summed;
+        owns_current_grad = true;
     }
 
     // now dimensions match; collapse any dims where input had size 1
     // example: grad (2,3) with input (2,1) -> sum axis 1 with keepdim -> (2,1)
-    assert(curr_grad->ndim == input->ndim);
+    assert(current_grad->ndim == input->ndim);
     assert(input->ndim < MAX_NDIM && "Number of dimensions exceeds maximum");
 
     for (uint64_t dim_idx = 0; dim_idx < input->ndim; dim_idx++) {
         // dimension was broadcasted from 1 to N, so sum back to 1
-        if (input->shape[dim_idx] == 1 && curr_grad->shape[dim_idx] > 1) {
-            Tensor *summed = tensor_sum(curr_grad, (int64_t)dim_idx, true);
-            if (owns_tensor) {
-                tensor_free((Tensor *)curr_grad);
+        if (input->shape[dim_idx] == 1 && current_grad->shape[dim_idx] > 1) {
+            Tensor *summed = tensor_sum(current_grad, (int64_t)dim_idx, true);
+            if (owns_current_grad) {
+                tensor_free((Tensor *)current_grad);
             }
-            curr_grad = summed;
-            owns_tensor = true;
+            current_grad = summed;
+            owns_current_grad = true;
         }
     }
 
     // caller expects to own result, so clone if we never created a new tensor
-    if (!owns_tensor) {
+    if (!owns_current_grad) {
         return tensor_create(grad->data, grad->shape, grad->ndim, false);
     }
 
-    return (Tensor *)curr_grad;
+    return (Tensor *)current_grad;
 }
 
 static void accumulate_grad_unbroadcast(Tensor *t, const Tensor *grad) {
@@ -1382,7 +1387,7 @@ typedef struct {
  * Helper to compute softmax probability for a single element.
  * Uses numerically stable softmax with max subtraction.
  */
-static inline float32_t compute_softmax_prob(const float32_t *logits, uint64_t class_count, uint64_t offset, float32_t max_val, float32_t sum_exp, uint64_t class_idx) { return expf(logits[offset + class_idx] - max_val) / sum_exp; }
+static inline float32_t compute_softmax_prob(const float32_t *logits, uint64_t offset, float32_t max_val, float32_t sum_exp, uint64_t class_idx) { return expf(logits[offset + class_idx] - max_val) / sum_exp; }
 
 static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
     assert(base != NULL);
@@ -1423,7 +1428,7 @@ static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
         uint64_t target_class_idx = (uint64_t)self->targets->data[batch_idx];
 
         for (uint64_t class_idx = 0; class_idx < class_count; class_idx++) {
-            float32_t prob = compute_softmax_prob(self->logits->data, class_count, offset, max_logit, exp_sum, class_idx);
+            float32_t prob = compute_softmax_prob(self->logits->data, offset, max_logit, exp_sum, class_idx);
             float32_t one_hot_target = (class_idx == target_class_idx) ? 1.0f : 0.0f;
 
             grad_logits->data[offset + class_idx] = grad_scalar * (prob - one_hot_target) / batch_size_f32;

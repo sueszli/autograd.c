@@ -10,7 +10,7 @@ typedef struct GradFn {
     void (*apply)(struct GradFn *self, const struct Tensor *grad_output); // backward pass function
     void (*destroy)(struct GradFn *self);                                 // destructor for subclass-specific cleanup
     struct GradFn **next_fns;                                             // gradient functions for inputs
-    int64_t num_next;                                                     // number of inputs
+    int64_t next_fn_count;                                                // number of inputs
     struct Tensor *out_tensor;                                            // output tensor
     char *name;                                                           // operation name for debugging
 } GradFn;
@@ -19,7 +19,7 @@ typedef struct GradFn {
 void backward(struct Tensor *root, const struct Tensor *grad);
 
 // initializes gradient function
-void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), void (*destroy)(GradFn *), GradFn **next_fns, int64_t num_next, const char *name);
+void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), void (*destroy)(GradFn *), GradFn **next_fns, int64_t next_fn_count, const char *name);
 
 // frees gradient function resources
 void grad_fn_free(GradFn *fn);
