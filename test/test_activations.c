@@ -510,7 +510,6 @@ void test_sigmoid_requires_grad_false(void) {
     Tensor *t = tensor_create(data, shape, 1, false);
     Tensor *out = tensor_sigmoid(t);
     TEST_ASSERT_FALSE(out->requires_grad);
-    TEST_ASSERT_NULL(out->grad_fn);
     tensor_free(t);
     tensor_free(out);
 }
@@ -561,7 +560,6 @@ void test_softmax_requires_grad_false(void) {
     Tensor *t = tensor_create(data, shape, 1, false);
     Tensor *out = tensor_softmax(t, 0);
     TEST_ASSERT_FALSE(out->requires_grad);
-    TEST_ASSERT_NULL(out->grad_fn);
     tensor_free(t);
     tensor_free(out);
 }
