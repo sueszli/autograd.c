@@ -1,0 +1,952 @@
+
+=================================================================
+==6625==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f64da6 in new_div_backward /app/src/tensor_autograd.c:266
+    #2 0x564b48f4e9d2 in tensor_div /app/src/tensor.c:400
+    #3 0x564b48f42b3e in tensor_softmax /app/src/activations.c:99
+    #4 0x564b48f31b33 in test_softmax_simple /app/test/test_autograd.c:212
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d89b in main /app/test/test_autograd.c:629
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Direct leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f34199 in test_sum_all /app/test/test_autograd.c:331
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Direct leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f34cf4 in test_sum_keepdims /app/test/test_autograd.c:356
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 128 byte(s) in 2 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 128 byte(s) in 2 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 72 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656a0 in new_sum_backward /app/src/tensor_autograd.c:388
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f357d2 in test_multi_branch_reduction /app/test/test_autograd.c:450
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 72 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656a0 in new_sum_backward /app/src/tensor_autograd.c:388
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 72 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656a0 in new_sum_backward /app/src/tensor_autograd.c:388
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 72 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656a0 in new_sum_backward /app/src/tensor_autograd.c:388
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f34b49 in test_sum_keepdims /app/test/test_autograd.c:349
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e572 in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f357d2 in test_multi_branch_reduction /app/test/test_autograd.c:450
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f35666 in test_multi_branch_reduction /app/test/test_autograd.c:445
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f4441c in backward /app/src/autograd.c:172
+    #3 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f44531 in backward /app/src/autograd.c:163
+    #3 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f33ffc in test_sum_all /app/test/test_autograd.c:325
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b59f in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b59f in tensor_create /app/src/tensor.c:119
+    #3 0x564b48f4cb39 in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f4cb39 in tensor_binary_op /app/src/tensor.c:345
+    #5 0x564b48f4e794 in tensor_mul /app/src/tensor.c:390
+    #6 0x564b48f357e8 in test_multi_branch_reduction /app/test/test_autograd.c:452
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b59f in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b59f in tensor_create /app/src/tensor.c:119
+    #3 0x564b48f44531 in backward /app/src/autograd.c:163
+    #4 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f4cb39 in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f4cb39 in tensor_binary_op /app/src/tensor.c:345
+    #4 0x564b48f4e3f4 in tensor_add /app/src/tensor.c:374
+    #5 0x564b48f43b9c in accumulate_grad /app/src/autograd.c:43
+    #6 0x564b48f43b9c in accumulate_grad /app/src/autograd.c:27
+    #7 0x564b48f63267 in accumulate_grad_unbroadcast /app/src/tensor_autograd.c:86
+    #8 0x564b48f63267 in accumulate_grad_unbroadcast /app/src/tensor_autograd.c:79
+    #9 0x564b48f63bac in mul_apply /app/src/tensor_autograd.c:199
+    #10 0x564b48f44293 in backward /app/src/autograd.c:202
+    #11 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #12 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #13 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #14 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #15 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #16 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f35666 in test_multi_branch_reduction /app/test/test_autograd.c:445
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f64926 in new_mul_backward /app/src/tensor_autograd.c:207
+    #2 0x564b48f4e802 in tensor_mul /app/src/tensor.c:392
+    #3 0x564b48f357e8 in test_multi_branch_reduction /app/test/test_autograd.c:452
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f34cf4 in test_sum_keepdims /app/test/test_autograd.c:356
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f4441c in backward /app/src/autograd.c:172
+    #4 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e572 in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f34b49 in test_sum_keepdims /app/test/test_autograd.c:349
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f4cb39 in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f4cb39 in tensor_binary_op /app/src/tensor.c:345
+    #4 0x564b48f4e794 in tensor_mul /app/src/tensor.c:390
+    #5 0x564b48f357e8 in test_multi_branch_reduction /app/test/test_autograd.c:452
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f33ffc in test_sum_all /app/test/test_autograd.c:325
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b59f in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b59f in tensor_create /app/src/tensor.c:119
+    #3 0x564b48f4cb39 in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f4cb39 in tensor_binary_op /app/src/tensor.c:345
+    #5 0x564b48f4e3f4 in tensor_add /app/src/tensor.c:374
+    #6 0x564b48f43b9c in accumulate_grad /app/src/autograd.c:43
+    #7 0x564b48f43b9c in accumulate_grad /app/src/autograd.c:27
+    #8 0x564b48f63267 in accumulate_grad_unbroadcast /app/src/tensor_autograd.c:86
+    #9 0x564b48f63267 in accumulate_grad_unbroadcast /app/src/tensor_autograd.c:79
+    #10 0x564b48f63bac in mul_apply /app/src/tensor_autograd.c:199
+    #11 0x564b48f44293 in backward /app/src/autograd.c:202
+    #12 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #13 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #14 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #15 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #16 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #17 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f4441c in backward /app/src/autograd.c:172
+    #4 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b59f in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b59f in tensor_create /app/src/tensor.c:119
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f357d2 in test_multi_branch_reduction /app/test/test_autograd.c:450
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d09d58 in aligned_alloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:113
+    #1 0x564b48f4b6c8 in safe_aligned_alloc /app/src/tensor.c:29
+    #2 0x564b48f4b6c8 in tensor_create /app/src/tensor.c:150
+    #3 0x564b48f34199 in test_sum_all /app/test/test_autograd.c:331
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f4441c in backward /app/src/autograd.c:172
+    #3 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b135 in tensor_create /app/src/tensor.c:106
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 24 byte(s) in 2 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 24 byte(s) in 2 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f357f9 in test_multi_branch_reduction /app/test/test_autograd.c:454
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f34b49 in test_sum_keepdims /app/test/test_autograd.c:349
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f35666 in test_multi_branch_reduction /app/test/test_autograd.c:445
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f35666 in test_multi_branch_reduction /app/test/test_autograd.c:445
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #4 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #5 0x564b48f5e572 in sum_apply /app/src/tensor_autograd.c:378
+    #6 0x564b48f44293 in backward /app/src/autograd.c:202
+    #7 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #8 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #9 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #10 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #11 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #12 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e3ca in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:39
+    #3 0x564b48f43ca3 in accumulate_grad /app/src/autograd.c:27
+    #4 0x564b48f5e572 in sum_apply /app/src/tensor_autograd.c:378
+    #5 0x564b48f44293 in backward /app/src/autograd.c:202
+    #6 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #7 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #8 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #9 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #10 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #11 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f4441c in backward /app/src/autograd.c:172
+    #4 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f33ffc in test_sum_all /app/test/test_autograd.c:325
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f4441c in backward /app/src/autograd.c:172
+    #3 0x564b48f34dc3 in test_sum_keepdims /app/test/test_autograd.c:360
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f34cf4 in test_sum_keepdims /app/test/test_autograd.c:356
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f34cf4 in test_sum_keepdims /app/test/test_autograd.c:356
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f64dbc in new_div_backward /app/src/tensor_autograd.c:269
+    #2 0x564b48f4e9d2 in tensor_div /app/src/tensor.c:400
+    #3 0x564b48f42b3e in tensor_softmax /app/src/activations.c:99
+    #4 0x564b48f31b33 in test_softmax_simple /app/test/test_autograd.c:212
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d89b in main /app/test/test_autograd.c:629
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f6493c in new_mul_backward /app/src/tensor_autograd.c:210
+    #2 0x564b48f4e802 in tensor_mul /app/src/tensor.c:392
+    #3 0x564b48f357e8 in test_multi_branch_reduction /app/test/test_autograd.c:452
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f33ffc in test_sum_all /app/test/test_autograd.c:325
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f34b49 in test_sum_keepdims /app/test/test_autograd.c:349
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f6574e in new_sum_backward /app/src/tensor_autograd.c:398
+    #3 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #4 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f6574e in new_sum_backward /app/src/tensor_autograd.c:398
+    #3 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #4 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f64a6b in new_mul_backward /app/src/tensor_autograd.c:219
+    #3 0x564b48f4e802 in tensor_mul /app/src/tensor.c:392
+    #4 0x564b48f357e8 in test_multi_branch_reduction /app/test/test_autograd.c:452
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f64eeb in new_div_backward /app/src/tensor_autograd.c:278
+    #3 0x564b48f4e9d2 in tensor_div /app/src/tensor.c:400
+    #4 0x564b48f42b3e in tensor_softmax /app/src/activations.c:99
+    #5 0x564b48f31b33 in test_softmax_simple /app/test/test_autograd.c:212
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d89b in main /app/test/test_autograd.c:629
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f6574e in new_sum_backward /app/src/tensor_autograd.c:398
+    #3 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #4 0x564b48f357d2 in test_multi_branch_reduction /app/test/test_autograd.c:450
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 12 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d044e8 in strdup ../../../../src/libsanitizer/asan/asan_interceptors.cpp:578
+    #1 0x564b48f44ca1 in grad_fn_init /app/src/autograd.c:219
+    #2 0x564b48f6574e in new_sum_backward /app/src/tensor_autograd.c:398
+    #3 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #4 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656b6 in new_sum_backward /app/src/tensor_autograd.c:391
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f357ba in test_multi_branch_reduction /app/test/test_autograd.c:449
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656b6 in new_sum_backward /app/src/tensor_autograd.c:391
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f4441c in backward /app/src/autograd.c:172
+    #4 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #4 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #5 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #6 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #7 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #8 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #9 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #10 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f4441c in backward /app/src/autograd.c:172
+    #3 0x564b48f3426c in test_sum_all /app/test/test_autograd.c:335
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b393 in strides /app/src/tensor.c:86
+    #2 0x564b48f4b393 in tensor_create /app/src/tensor.c:136
+    #3 0x564b48f34199 in test_sum_all /app/test/test_autograd.c:331
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656b6 in new_sum_backward /app/src/tensor_autograd.c:391
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f357d2 in test_multi_branch_reduction /app/test/test_autograd.c:450
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d98b in main /app/test/test_autograd.c:639
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f656b6 in new_sum_backward /app/src/tensor_autograd.c:391
+    #2 0x564b48f541b3 in tensor_sum /app/src/tensor.c:716
+    #3 0x564b48f34ca3 in test_sum_keepdims /app/test/test_autograd.c:354
+    #4 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #5 0x564b48f2d913 in main /app/test/test_autograd.c:634
+    #6 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f34199 in test_sum_all /app/test/test_autograd.c:331
+    #3 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #4 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #5 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #6 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #7 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+Indirect leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f24d7d0a9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x564b48f4b274 in tensor_create /app/src/tensor.c:132
+    #2 0x564b48f537db in tensor_zeros /app/src/tensor.c:164
+    #3 0x564b48f537db in tensor_sum /app/src/tensor.c:682
+    #4 0x564b48f3415d in test_sum_all /app/test/test_autograd.c:329
+    #5 0x564b48f4070a in UnityDefaultTestRun /app/build/_deps/unity-src/src/unity.c:2203
+    #6 0x564b48f2d8fb in main /app/test/test_autograd.c:633
+    #7 0x7f24d73261c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #8 0x7f24d732628a in __libc_start_main_impl ../csu/libc-start.c:360
+    #9 0x564b48f2dc34 in _start (/app/build/test_autograd_binary+0x70c34) (BuildId: d9e5063325a0ca289de366faed5ef5beedbe6325)
+
+SUMMARY: AddressSanitizer: 3224 byte(s) leaked in 82 allocation(s).

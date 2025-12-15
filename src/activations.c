@@ -62,6 +62,10 @@ Tensor *tensor_tanh(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         out->data[i] = tanhf(t->data[i]);
     }
+    if (out->requires_grad) {
+        out->grad_fn = new_tanh_backward((Tensor *)t, out);
+        out->grad_fn->out_tensor = out;
+    }
     return out;
 }
 
@@ -102,6 +106,12 @@ Tensor *tensor_softmax(const Tensor *t, int64_t dim) {
     tensor_free(sum_exp);
 
     if (out->requires_grad) {
+        // Free the DivBackward grad_fn created by tensor_div
+        // This is necessary because we are replacing it with SoftmaxBackward,
+        // and DivBackward holds dangling pointers to shifted and sum_exp (which are freed).
+        if (out->grad_fn) {
+            grad_fn_free(out->grad_fn);
+        }
         out->grad_fn = new_softmax_backward((Tensor *)t, out, dim);
         out->grad_fn->out_tensor = out;
     }
