@@ -3,10 +3,6 @@
 #include "tensor.h"
 #include <stdbool.h>
 
-//
-// base optimizer interface
-//
-
 // vtable polymorphism
 typedef struct Optimizer Optimizer;
 typedef void (*OptimizerStepFunc)(Optimizer *opt);

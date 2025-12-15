@@ -52,11 +52,6 @@ static void sgd_free(Optimizer *opt) {
         }
         free(sgd->momentum_buffers);
     }
-    // params array is just a reference, caller owns the tensors.
-    // but the array itself 'opt->params' was allocated by us in create?
-    // The base struct has 'Tensor **params'.
-    // We need to manage the allocation of the base struct parts too?
-    // In create function we will allocate 'params' copy.
     if (opt->params) {
         free(opt->params);
     }
