@@ -12,10 +12,11 @@ void optimizer_zero_grad(Optimizer *opt) {
     assert(opt != NULL);
     for (size_t i = 0; i < opt->param_count; ++i) {
         Tensor *param = opt->params[i];
-        if (param->grad != NULL) {
-            tensor_free(param->grad);
-            param->grad = NULL;
+        if (param->grad == NULL) {
+            continue;
         }
+        tensor_free(param->grad);
+        param->grad = NULL;
     }
 }
 
@@ -59,11 +60,12 @@ static void sgd_free(Optimizer *opt) {
 }
 
 static void sgd_ensure_buffer(SGD *sgd, size_t param_idx, size_t elem_count) {
-    if (sgd->momentum_buffers[param_idx] == NULL) {
-        float32_t *buf = calloc(elem_count, sizeof(float32_t));
-        assert(buf != NULL);
-        sgd->momentum_buffers[param_idx] = buf;
+    if (sgd->momentum_buffers[param_idx] != NULL) {
+        return;
     }
+    float32_t *buf = calloc(elem_count, sizeof(float32_t));
+    assert(buf != NULL);
+    sgd->momentum_buffers[param_idx] = buf;
 }
 
 static void sgd_step(Optimizer *opt) {

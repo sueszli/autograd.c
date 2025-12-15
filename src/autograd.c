@@ -1085,6 +1085,271 @@ GradFn *new_bce_backward(Tensor *predictions, Tensor *targets) {
     return (GradFn *)fn;
 }
 
+// --- Tanh ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *output;
+} TanhBackward;
+
+static void tanh_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    TanhBackward *self = (TanhBackward *)base;
+
+    // grad_input = grad_output * (1 - tanh(x)^2)
+    //            = grad_output * (1 - output^2)
+
+    // output^2
+    Tensor *output_sq = tensor_mul(self->output, self->output);
+
+    // 1 (tensor)
+    Tensor *ones = tensor_zeros(self->output->shape, self->output->ndim, false);
+    for (uint64_t elem_idx = 0; elem_idx < ones->size; elem_idx++)
+        ones->data[elem_idx] = 1.0f;
+
+    // (1 - output^2)
+    Tensor *one_minus_out_sq = tensor_sub(ones, output_sq);
+    tensor_free(ones);
+    tensor_free(output_sq);
+
+    // grad_output * (1 - output^2)
+    Tensor *grad_input = tensor_mul(grad_output, one_minus_out_sq);
+    tensor_free(one_minus_out_sq);
+
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+}
+
+GradFn *new_tanh_backward(Tensor *input, Tensor *output) {
+    assert(input != NULL);
+    assert(output != NULL);
+
+    TanhBackward *fn = (TanhBackward *)malloc(sizeof(TanhBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, tanh_apply, next_fns, next_fn_count, "TanhBackward");
+    fn->input = input;
+    fn->output = output;
+    return (GradFn *)fn;
+}
+
+// --- Mean ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    int64_t dim_idx;
+    bool keepdims;
+} MeanBackward;
+
+static void mean_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    MeanBackward *self = (MeanBackward *)base;
+
+    // Mean is sum / N, so gradient is distributed: grad_input = grad_output / N
+    // Similar to sum backward but divide by dimension size
+
+    const Tensor *grad_expanded = grad_output;
+    bool needs_free = false;
+
+    if (!self->keepdims) {
+        int64_t ndim = (int64_t)self->input->ndim;
+        int64_t new_shape[MAX_NDIM] = {0};
+
+        int64_t target_dim = (self->dim_idx < 0) ? (self->dim_idx + ndim) : self->dim_idx;
+        assert(target_dim >= 0 && target_dim < ndim && "target_dim out of bounds");
+
+        int64_t grad_dim_idx = 0;
+        for (int64_t dim_idx = 0; dim_idx < ndim; dim_idx++) {
+            if (dim_idx == target_dim) {
+                new_shape[dim_idx] = 1;
+            } else {
+                new_shape[dim_idx] = (int64_t)grad_output->shape[grad_dim_idx++];
+            }
+        }
+
+        grad_expanded = tensor_reshape(grad_output, new_shape, (uint64_t)ndim);
+        needs_free = true;
+    }
+
+    // Get the size of the dimension we averaged over
+    int64_t ndim = (int64_t)self->input->ndim;
+    int64_t target_dim = (self->dim_idx < 0) ? (self->dim_idx + ndim) : self->dim_idx;
+    assert(target_dim >= 0 && target_dim < ndim);
+    uint64_t dim_size = self->input->shape[target_dim];
+
+    // Divide gradient by dimension size
+    Tensor *dim_size_tensor = tensor_zeros(grad_expanded->shape, grad_expanded->ndim, false);
+    for (uint64_t elem_idx = 0; elem_idx < dim_size_tensor->size; elem_idx++)
+        dim_size_tensor->data[elem_idx] = (float32_t)dim_size;
+
+    Tensor *grad_scaled = tensor_div(grad_expanded, dim_size_tensor);
+    tensor_free(dim_size_tensor);
+
+    // Now grad_scaled has the shape of input (with 1s in averaged dims).
+    // Broadcasting handles the expansion.
+    accumulate_grad(self->input, grad_scaled);
+
+    tensor_free(grad_scaled);
+    if (needs_free) {
+        tensor_free((Tensor *)grad_expanded);
+    }
+}
+
+GradFn *new_mean_backward(Tensor *input, int64_t dim_idx, bool keepdims) {
+    assert(input != NULL);
+
+    MeanBackward *fn = (MeanBackward *)malloc(sizeof(MeanBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, mean_apply, next_fns, next_fn_count, "MeanBackward");
+    fn->input = input;
+    fn->dim_idx = dim_idx;
+    fn->keepdims = keepdims;
+    return (GradFn *)fn;
+}
+
+// --- Max ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *output;
+    int64_t dim_idx;
+    bool keepdims;
+} MaxBackward;
+
+static void max_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    MaxBackward *self = (MaxBackward *)base;
+
+    // Gradient flows only to the maximum elements
+    // For each slice along dim_idx, find which elements == max, distribute gradient to them
+
+    const Tensor *grad_expanded = grad_output;
+    bool needs_free_expanded = false;
+
+    if (!self->keepdims) {
+        int64_t ndim = (int64_t)self->input->ndim;
+        int64_t new_shape[MAX_NDIM] = {0};
+
+        int64_t target_dim = (self->dim_idx < 0) ? (self->dim_idx + ndim) : self->dim_idx;
+        assert(target_dim >= 0 && target_dim < ndim && "target_dim out of bounds");
+
+        int64_t grad_dim_idx = 0;
+        for (int64_t dim_idx = 0; dim_idx < ndim; dim_idx++) {
+            if (dim_idx == target_dim) {
+                new_shape[dim_idx] = 1;
+            } else {
+                new_shape[dim_idx] = (int64_t)grad_output->shape[grad_dim_idx++];
+            }
+        }
+
+        grad_expanded = tensor_reshape(grad_output, new_shape, (uint64_t)ndim);
+        needs_free_expanded = true;
+    }
+
+    // Expand output to match input shape (if keepdims was false, it's now expanded via reshape)
+    const Tensor *output_expanded = self->output;
+    bool needs_free_output = false;
+
+    if (!self->keepdims) {
+        int64_t ndim = (int64_t)self->input->ndim;
+        int64_t new_shape[MAX_NDIM] = {0};
+
+        int64_t target_dim = (self->dim_idx < 0) ? (self->dim_idx + ndim) : self->dim_idx;
+
+        int64_t output_dim_idx = 0;
+        for (int64_t dim_idx = 0; dim_idx < ndim; dim_idx++) {
+            if (dim_idx == target_dim) {
+                new_shape[dim_idx] = 1;
+            } else {
+                new_shape[dim_idx] = (int64_t)self->output->shape[output_dim_idx++];
+            }
+        }
+
+        output_expanded = tensor_reshape(self->output, new_shape, (uint64_t)ndim);
+        needs_free_output = true;
+    }
+
+    // Create gradient for input
+    Tensor *grad_input = tensor_zeros(self->input->shape, self->input->ndim, false);
+
+    // For each element, if it equals the max value, pass through the gradient
+    // This requires broadcasting logic
+    assert(self->input->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
+
+    for (uint64_t elem_idx = 0; elem_idx < self->input->size; elem_idx++) {
+        // Get corresponding index in output_expanded and grad_expanded (with broadcasting)
+        // Calculate the broadcasted index
+        uint64_t remaining = elem_idx;
+        uint64_t broadcast_idx = 0;
+        uint64_t broadcast_stride = 1;
+
+        for (int64_t dim = (int64_t)self->input->ndim - 1; dim >= 0; dim--) {
+            uint64_t idx_in_dim = remaining % self->input->shape[dim];
+            remaining /= self->input->shape[dim];
+
+            // For output, if dimension is 1 (broadcasted), use index 0
+            uint64_t out_idx_in_dim = (output_expanded->shape[dim] == 1) ? 0 : idx_in_dim;
+            broadcast_idx += out_idx_in_dim * broadcast_stride;
+            broadcast_stride *= output_expanded->shape[dim];
+        }
+
+        // Check if this input element is the maximum
+        if (fabsf(self->input->data[elem_idx] - output_expanded->data[broadcast_idx]) < EPSILON) {
+            grad_input->data[elem_idx] = grad_expanded->data[broadcast_idx];
+        }
+    }
+
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+
+    if (needs_free_expanded) {
+        tensor_free((Tensor *)grad_expanded);
+    }
+    if (needs_free_output) {
+        tensor_free((Tensor *)output_expanded);
+    }
+}
+
+GradFn *new_max_backward(Tensor *input, Tensor *output, int64_t dim_idx, bool keepdims) {
+    assert(input != NULL);
+    assert(output != NULL);
+
+    MaxBackward *fn = (MaxBackward *)malloc(sizeof(MaxBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, max_apply, next_fns, next_fn_count, "MaxBackward");
+    fn->input = input;
+    fn->output = output;
+    fn->dim_idx = dim_idx;
+    fn->keepdims = keepdims;
+    return (GradFn *)fn;
+}
+
 // --- CrossEntropy ---
 typedef struct {
     GradFn base;
@@ -1155,5 +1420,255 @@ GradFn *new_crossentropy_backward(Tensor *logits, Tensor *targets) {
     grad_fn_init((GradFn *)fn, crossentropy_apply, next_fns, next_fn_count, "CrossEntropyBackward");
     fn->logits = logits;
     fn->targets = targets;
+    return (GradFn *)fn;
+}
+
+// --- Conv2d ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *weight;
+    Tensor *bias;
+    uint64_t stride;
+    uint64_t padding;
+    uint64_t kernel_size;
+} Conv2dBackward;
+
+static void conv2d_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    Conv2dBackward *self = (Conv2dBackward *)base;
+
+    // Call the existing conv2d_backward function from convolutions.c
+    Tensor *grad_input = NULL;
+    Tensor *grad_weight = NULL;
+    Tensor *grad_bias = NULL;
+
+    // Import the function declaration (we'll need to include convolutions.h)
+    extern void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_w, Tensor **out_grad_b);
+
+    conv2d_backward(self->input, self->weight, self->bias, self->stride, self->padding, self->kernel_size, grad_output, &grad_input, &grad_weight, &grad_bias);
+
+    // Accumulate gradients
+    if (grad_input) {
+        accumulate_grad(self->input, grad_input);
+        tensor_free(grad_input);
+    }
+
+    if (grad_weight) {
+        accumulate_grad(self->weight, grad_weight);
+        tensor_free(grad_weight);
+    }
+
+    if (grad_bias && self->bias) {
+        accumulate_grad(self->bias, grad_bias);
+        tensor_free(grad_bias);
+    }
+}
+
+GradFn *new_conv2d_backward(Tensor *input, Tensor *weight, Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size) {
+    assert(input != NULL);
+    assert(weight != NULL);
+
+    Conv2dBackward *fn = (Conv2dBackward *)malloc(sizeof(Conv2dBackward));
+    assert(fn != NULL);
+
+    // Allocate space for up to 3 next_fns (input, weight, bias)
+    GradFn **next_fns = (GradFn **)malloc(3 * sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+    if (weight->grad_fn)
+        next_fns[next_fn_count++] = weight->grad_fn;
+    if (bias && bias->grad_fn)
+        next_fns[next_fn_count++] = bias->grad_fn;
+
+    grad_fn_init((GradFn *)fn, conv2d_apply, next_fns, next_fn_count, "Conv2dBackward");
+    fn->input = input;
+    fn->weight = weight;
+    fn->bias = bias;
+    fn->stride = stride;
+    fn->padding = padding;
+    fn->kernel_size = kernel_size;
+    return (GradFn *)fn;
+}
+
+// --- MaxPool2d ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    uint64_t *output_shape;
+    uint64_t kernel_size;
+    uint64_t stride;
+    uint64_t padding;
+} MaxPool2dBackward;
+
+static void maxpool2d_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    MaxPool2dBackward *self = (MaxPool2dBackward *)base;
+
+    // Call the existing maxpool2d_backward function from convolutions.c
+    extern Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding, const Tensor *grad_output);
+
+    Tensor *grad_input = maxpool2d_backward(self->input, self->output_shape, self->kernel_size, self->stride, self->padding, grad_output);
+
+    if (grad_input) {
+        accumulate_grad(self->input, grad_input);
+        tensor_free(grad_input);
+    }
+}
+
+GradFn *new_maxpool2d_backward(Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding) {
+    assert(input != NULL);
+    assert(output_shape != NULL);
+
+    MaxPool2dBackward *fn = (MaxPool2dBackward *)malloc(sizeof(MaxPool2dBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, maxpool2d_apply, next_fns, next_fn_count, "MaxPool2dBackward");
+    fn->input = input;
+    fn->kernel_size = kernel_size;
+    fn->stride = stride;
+    fn->padding = padding;
+
+    // Store a copy of the output_shape (assuming 4D tensor)
+    fn->output_shape = (uint64_t *)malloc(4 * sizeof(uint64_t));
+    assert(fn->output_shape != NULL);
+    memcpy(fn->output_shape, output_shape, 4 * sizeof(uint64_t));
+
+    return (GradFn *)fn;
+}
+
+// --- AvgPool2d ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    uint64_t *output_shape;
+    uint64_t kernel_size;
+    uint64_t stride;
+    uint64_t padding;
+} AvgPool2dBackward;
+
+static void avgpool2d_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    AvgPool2dBackward *self = (AvgPool2dBackward *)base;
+
+    // Call the existing avgpool2d_backward function from convolutions.c
+    extern Tensor *avgpool2d_backward(const Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding, const Tensor *grad_output);
+
+    Tensor *grad_input = avgpool2d_backward(self->input, self->output_shape, self->kernel_size, self->stride, self->padding, grad_output);
+
+    if (grad_input) {
+        accumulate_grad(self->input, grad_input);
+        tensor_free(grad_input);
+    }
+}
+
+GradFn *new_avgpool2d_backward(Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding) {
+    assert(input != NULL);
+    assert(output_shape != NULL);
+
+    AvgPool2dBackward *fn = (AvgPool2dBackward *)malloc(sizeof(AvgPool2dBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, avgpool2d_apply, next_fns, next_fn_count, "AvgPool2dBackward");
+    fn->input = input;
+    fn->kernel_size = kernel_size;
+    fn->stride = stride;
+    fn->padding = padding;
+
+    // Store a copy of the output_shape (assuming 4D tensor)
+    fn->output_shape = (uint64_t *)malloc(4 * sizeof(uint64_t));
+    assert(fn->output_shape != NULL);
+    memcpy(fn->output_shape, output_shape, 4 * sizeof(uint64_t));
+
+    return (GradFn *)fn;
+}
+
+// --- BatchNorm2d ---
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    Tensor *gamma;
+    Tensor *batch_mean;
+    Tensor *batch_var;
+    float32_t eps;
+} BatchNorm2dBackward;
+
+static void batchnorm2d_apply(GradFn *base, const Tensor *grad_output) {
+    assert(base != NULL);
+    assert(grad_output != NULL);
+    BatchNorm2dBackward *self = (BatchNorm2dBackward *)base;
+
+    // Call the existing batchnorm2d_backward function from convolutions.c
+    Tensor *grad_input = NULL;
+    Tensor *grad_gamma = NULL;
+    Tensor *grad_beta = NULL;
+
+    extern void batchnorm2d_backward(const Tensor *input, const Tensor *gamma, const Tensor *batch_mean, const Tensor *batch_var, float32_t eps, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_gamma, Tensor **out_grad_beta);
+
+    batchnorm2d_backward(self->input, self->gamma, self->batch_mean, self->batch_var, self->eps, grad_output, &grad_input, &grad_gamma, &grad_beta);
+
+    // Accumulate gradients
+    if (grad_input) {
+        accumulate_grad(self->input, grad_input);
+        tensor_free(grad_input);
+    }
+
+    if (grad_gamma && self->gamma) {
+        accumulate_grad(self->gamma, grad_gamma);
+        tensor_free(grad_gamma);
+    }
+
+    if (grad_beta) {
+        // Note: beta gradient would accumulate to a beta parameter if it exists
+        // For now we just free it since we don't track beta in the backward context
+        tensor_free(grad_beta);
+    }
+}
+
+GradFn *new_batchnorm2d_backward(Tensor *input, Tensor *gamma, Tensor *batch_mean, Tensor *batch_var, float32_t eps) {
+    assert(input != NULL);
+    assert(gamma != NULL);
+    assert(batch_mean != NULL);
+    assert(batch_var != NULL);
+
+    BatchNorm2dBackward *fn = (BatchNorm2dBackward *)malloc(sizeof(BatchNorm2dBackward));
+    assert(fn != NULL);
+
+    // Allocate space for up to 2 next_fns (input, gamma)
+    GradFn **next_fns = (GradFn **)malloc(2 * sizeof(GradFn *));
+    assert(next_fns != NULL);
+
+    int64_t next_fn_count = 0;
+    if (input->grad_fn)
+        next_fns[next_fn_count++] = input->grad_fn;
+    if (gamma->grad_fn)
+        next_fns[next_fn_count++] = gamma->grad_fn;
+
+    grad_fn_init((GradFn *)fn, batchnorm2d_apply, next_fns, next_fn_count, "BatchNorm2dBackward");
+    fn->input = input;
+    fn->gamma = gamma;
+    fn->batch_mean = batch_mean;
+    fn->batch_var = batch_var;
+    fn->eps = eps;
     return (GradFn *)fn;
 }

@@ -30,10 +30,10 @@ void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
 
     if (layer != NULL && layer->parameters != NULL) {
         layer->parameters(layer, out_params, out_count);
-    } else {
-        *out_params = NULL;
-        *out_count = 0;
+        return;
     }
+    *out_params = NULL;
+    *out_count = 0;
 }
 
 //
@@ -194,9 +194,10 @@ static Tensor *dropout_forward(const Layer *layer, const Tensor *input, bool tra
 }
 
 static void dropout_free(Layer *layer) {
-    if (layer != NULL) {
-        free(layer);
+    if (layer == NULL) {
+        return;
     }
+    free(layer);
 }
 
 static void dropout_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
