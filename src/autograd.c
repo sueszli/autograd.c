@@ -664,3 +664,48 @@ GradFn *new_softmax_backward(Tensor *input, Tensor *output, int64_t dim) {
     fn->dim = dim;
     return (GradFn *)fn;
 }
+
+// RESHAPE
+typedef struct {
+    GradFn base;
+    Tensor *input;
+    uint64_t *old_shape;
+    uint64_t old_ndim;
+} ReshapeBackward;
+
+static void reshape_apply(GradFn *base, const Tensor *grad_output) {
+    ReshapeBackward *self = (ReshapeBackward *)base;
+    assert(base != NULL);
+    assert(grad_output != NULL);
+
+    int64_t signed_shape[MAX_NDIM] = {0};
+    for (uint64_t i = 0; i < self->old_ndim; i++) {
+        signed_shape[i] = (int64_t)self->old_shape[i];
+    }
+
+    Tensor *grad_input = tensor_reshape(grad_output, signed_shape, self->old_ndim);
+    accumulate_grad(self->input, grad_input);
+    tensor_free(grad_input);
+}
+
+GradFn *new_reshape_backward(Tensor *input, const uint64_t *old_shape, uint64_t old_ndim) {
+    assert(input != NULL);
+    assert(old_shape != NULL);
+    ReshapeBackward *fn = (ReshapeBackward *)malloc(sizeof(ReshapeBackward));
+    assert(fn != NULL);
+
+    GradFn **next_fns = (GradFn **)malloc(sizeof(GradFn *));
+    assert(next_fns != NULL);
+    int count = 0;
+    if (input->grad_fn)
+        next_fns[count++] = input->grad_fn;
+
+    grad_fn_init((GradFn *)fn, reshape_apply, next_fns, count, "ReshapeBackward");
+    fn->input = input;
+    fn->old_ndim = old_ndim;
+    fn->old_shape = (uint64_t *)malloc(old_ndim * sizeof(uint64_t));
+    assert(fn->old_shape != NULL);
+    memcpy(fn->old_shape, old_shape, old_ndim * sizeof(uint64_t));
+
+    return (GradFn *)fn;
+}

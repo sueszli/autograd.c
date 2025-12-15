@@ -803,6 +803,418 @@ void test_tensor_get_3d(void) {
     tensor_free(val);
 }
 
+void test_tensor_create_large(void) {
+    uint64_t shape[] = {100, 100, 100};
+    Tensor *t = tensor_zeros(shape, 3, false);
+    TEST_ASSERT_NOT_NULL(t);
+    TEST_ASSERT_EQUAL_UINT64(1000000, t->size);
+    tensor_free(t);
+}
+
+void test_tensor_create_scalar_zeros(void) {
+    Tensor *t = tensor_zeros(NULL, 0, false);
+    TEST_ASSERT_NOT_NULL(t);
+    TEST_ASSERT_EQUAL_UINT64(0, t->ndim);
+    TEST_ASSERT_EQUAL_UINT64(1, t->size);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, t->data[0]);
+    tensor_free(t);
+}
+
+void test_tensor_create_odd_shape(void) {
+    uint64_t shape[] = {1, 3, 1, 5, 1};
+    Tensor *t = tensor_zeros(shape, 5, false);
+    TEST_ASSERT_NOT_NULL(t);
+    TEST_ASSERT_EQUAL_UINT64(5, t->ndim);
+    TEST_ASSERT_EQUAL_UINT64(15, t->size);
+    tensor_free(t);
+}
+
+void test_tensor_create_scalar_val(void) {
+    float32_t val = 123.456f;
+    Tensor *t = tensor_create(&val, NULL, 0, false);
+    TEST_ASSERT_EQUAL_FLOAT(123.456f, t->data[0]);
+    tensor_free(t);
+}
+
+void test_tensor_zeros_large(void) {
+    uint64_t shape[] = {1000, 1000};
+    Tensor *t = tensor_zeros(shape, 2, false);
+    TEST_ASSERT_NOT_NULL(t);
+    TEST_ASSERT_EQUAL_UINT64(1000000, t->size);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, t->data[999999]);
+    tensor_free(t);
+}
+
+void test_tensor_add_negatives(void) {
+    float32_t val_a = -5.0f;
+    Tensor *a = tensor_create(&val_a, NULL, 0, false);
+    float32_t val_b = -10.0f;
+    Tensor *b = tensor_create(&val_b, NULL, 0, false);
+    Tensor *c = tensor_add(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(-15.0f, c->data[0]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_sub_self_is_zero(void) {
+    uint64_t shape[] = {2, 2};
+    float32_t data[] = {1, 2, 3, 4};
+    Tensor *a = tensor_create(data, shape, 2, false);
+    Tensor *c = tensor_sub(a, a);
+    for (int i = 0; i < 4; i++)
+        TEST_ASSERT_EQUAL_FLOAT(0.0f, c->data[i]);
+    tensor_free(a);
+    tensor_free(c);
+}
+
+void test_tensor_mul_by_zero(void) {
+    float32_t val_a = 5.0f;
+    Tensor *a = tensor_create(&val_a, NULL, 0, false);
+    float32_t val_b = 0.0f;
+    Tensor *b = tensor_create(&val_b, NULL, 0, false);
+    Tensor *c = tensor_mul(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, c->data[0]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_div_by_one(void) {
+    float32_t val_a = 17.0f;
+    Tensor *a = tensor_create(&val_a, NULL, 0, false);
+    float32_t val_b = 1.0f;
+    Tensor *b = tensor_create(&val_b, NULL, 0, false);
+    Tensor *c = tensor_div(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(17.0f, c->data[0]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_add_broadcast_3d_1d_leading(void) {
+    uint64_t shape_a[] = {2, 2, 2};
+    Tensor *a = tensor_zeros(shape_a, 3, false);
+    float32_t data_b[] = {1, 2};
+    uint64_t shape_b[] = {2};
+    Tensor *b = tensor_create(data_b, shape_b, 1, false);
+
+    Tensor *c = tensor_add(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, c->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, c->data[1]);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, c->data[2]);
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_mul_broadcast_3d_2d_trailing(void) {
+    uint64_t shape_a[] = {2, 3, 4};
+    Tensor *a = tensor_zeros(shape_a, 3, false);
+    for (int i = 0; i < 24; i++)
+        a->data[i] = 1.0f;
+
+    uint64_t shape_b[] = {3, 4};
+    Tensor *b = tensor_zeros(shape_b, 2, false);
+    for (int i = 0; i < 12; i++)
+        b->data[i] = 2.0f;
+
+    Tensor *c = tensor_mul(a, b);
+    TEST_ASSERT_EQUAL_UINT64(3, c->ndim);
+    TEST_ASSERT_EQUAL_UINT64(2, c->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(3, c->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(4, c->shape[2]);
+
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, c->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, c->data[23]);
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_sub_broadcast_scalar_negative(void) {
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_zeros(shape, 2, false);
+    float32_t val = -5.0f;
+    Tensor *b = tensor_create(&val, NULL, 0, false);
+
+    Tensor *c = tensor_sub(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, c->data[0]);
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_div_broadcast_middle_dim(void) {
+    uint64_t shape_a[] = {2, 3, 4};
+    Tensor *a = tensor_zeros(shape_a, 3, false);
+    for (int i = 0; i < 24; i++)
+        a->data[i] = 10.0f;
+
+    uint64_t shape_b[] = {3, 1};
+    float32_t data_b[] = {2, 5, 2};
+    Tensor *b = tensor_create(data_b, shape_b, 2, false);
+
+    Tensor *c = tensor_div(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, c->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, c->data[4]);
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_complex_broadcast_shapes(void) {
+    uint64_t shape_a[] = {1, 5, 1};
+    Tensor *a = tensor_zeros(shape_a, 3, false);
+    uint64_t shape_b[] = {4, 1, 6};
+    Tensor *b = tensor_zeros(shape_b, 3, false);
+
+    Tensor *c = tensor_add(a, b);
+    TEST_ASSERT_EQUAL_UINT64(3, c->ndim);
+    TEST_ASSERT_EQUAL_UINT64(4, c->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(5, c->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(6, c->shape[2]);
+    TEST_ASSERT_EQUAL_UINT64(120, c->size);
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_arithmetic_chaining(void) {
+    float32_t val1 = 1.0f;
+    Tensor *t1 = tensor_create(&val1, NULL, 0, false);
+    float32_t val2 = 2.0f;
+    Tensor *t2 = tensor_create(&val2, NULL, 0, false);
+    float32_t val3 = 3.0f;
+    Tensor *t3 = tensor_create(&val3, NULL, 0, false);
+
+    Tensor *tmp = tensor_add(t1, t2);
+    Tensor *res = tensor_mul(tmp, t3);
+
+    TEST_ASSERT_EQUAL_FLOAT(9.0f, res->data[0]);
+
+    tensor_free(t1);
+    tensor_free(t2);
+    tensor_free(t3);
+    tensor_free(tmp);
+    tensor_free(res);
+}
+
+void test_tensor_matmul_zeros(void) {
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_zeros(shape, 2, false);
+    Tensor *b = tensor_zeros(shape, 2, false);
+    Tensor *c = tensor_matmul(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, c->data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, c->data[3]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_matmul_negatives(void) {
+    float32_t data_a[] = {-1, -1, -1, -1};
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_create(data_a, shape, 2, false);
+    float32_t data_b[] = {1, 1, 1, 1};
+    Tensor *b = tensor_create(data_b, shape, 2, false);
+    Tensor *c = tensor_matmul(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(-2.0f, c->data[0]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_matmul_large_values(void) {
+    float32_t data[] = {1000.0f, 1000.0f, 1000.0f, 1000.0f};
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_create(data, shape, 2, false);
+    Tensor *b = tensor_create(data, shape, 2, false);
+    Tensor *c = tensor_matmul(a, b);
+    TEST_ASSERT_EQUAL_FLOAT(2000000.0f, c->data[0]);
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+}
+
+void test_tensor_matmul_transposed_inputs(void) {
+    float32_t data_a[] = {1, 2, 3, 4, 5, 6};
+    uint64_t shape_a[] = {2, 3};
+    Tensor *a = tensor_create(data_a, shape_a, 2, false);
+
+    Tensor *at = tensor_transpose(a, 0, 1);
+
+    Tensor *c = tensor_matmul(at, a);
+    TEST_ASSERT_EQUAL_UINT64(3, c->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(3, c->shape[1]);
+
+    TEST_ASSERT_EQUAL_FLOAT(17.0f, c->data[0]);
+
+    tensor_free(a);
+    tensor_free(at);
+    tensor_free(c);
+}
+
+void test_tensor_matmul_associativity_check(void) {
+    float32_t data[] = {1, 2, 3, 4};
+    uint64_t shape[] = {2, 2};
+    Tensor *a = tensor_create(data, shape, 2, false);
+    Tensor *b = tensor_create(data, shape, 2, false);
+    Tensor *c = tensor_create(data, shape, 2, false);
+
+    Tensor *ab = tensor_matmul(a, b);
+    Tensor *res1 = tensor_matmul(ab, c);
+
+    Tensor *bc = tensor_matmul(b, c);
+    Tensor *res2 = tensor_matmul(a, bc);
+
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_EQUAL_FLOAT(res1->data[i], res2->data[i]);
+    }
+
+    tensor_free(a);
+    tensor_free(b);
+    tensor_free(c);
+    tensor_free(ab);
+    tensor_free(res1);
+    tensor_free(bc);
+    tensor_free(res2);
+}
+
+void test_tensor_reshape_flatten_3d_to_1d(void) {
+    uint64_t shape[] = {2, 2, 2};
+    float32_t data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Tensor *t = tensor_create(data, shape, 3, false);
+    int64_t new_shape[] = {-1};
+    Tensor *r = tensor_reshape(t, new_shape, 1);
+    TEST_ASSERT_EQUAL_UINT64(1, r->ndim);
+    TEST_ASSERT_EQUAL_UINT64(8, r->shape[0]);
+    TEST_ASSERT_EQUAL_FLOAT(8.0f, r->data[7]);
+    tensor_free(t);
+    tensor_free(r);
+}
+
+void test_tensor_reshape_expand_1d_to_3d(void) {
+    uint64_t shape[] = {8};
+    float32_t data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    int64_t new_shape[] = {2, 2, 2};
+    Tensor *r = tensor_reshape(t, new_shape, 3);
+    TEST_ASSERT_EQUAL_UINT64(3, r->ndim);
+    TEST_ASSERT_EQUAL_FLOAT(8.0f, r->data[7]);
+    tensor_free(t);
+    tensor_free(r);
+}
+
+void test_tensor_reshape_auto_dim_middle(void) {
+    uint64_t shape[] = {24};
+    float32_t data[24] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    int64_t new_shape[] = {2, -1, 4};
+    Tensor *r = tensor_reshape(t, new_shape, 3);
+    TEST_ASSERT_EQUAL_UINT64(3, r->shape[1]);
+    tensor_free(t);
+    tensor_free(r);
+}
+
+void test_tensor_transpose_double_swap(void) {
+    uint64_t shape[] = {2, 3, 4};
+    Tensor *t = tensor_zeros(shape, 3, false);
+    Tensor *t1 = tensor_transpose(t, 0, 1);
+    Tensor *t2 = tensor_transpose(t1, 1, 2);
+    TEST_ASSERT_EQUAL_UINT64(3, t2->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(4, t2->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(2, t2->shape[2]);
+    tensor_free(t);
+    tensor_free(t1);
+    tensor_free(t2);
+}
+
+void test_tensor_transpose_4d_dims(void) {
+    uint64_t shape[] = {1, 2, 3, 4};
+    Tensor *t = tensor_zeros(shape, 4, false);
+    t->data[1] = 5.0f;
+
+    Tensor *t2 = tensor_transpose(t, 1, 3);
+    TEST_ASSERT_EQUAL_UINT64(1, t2->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(4, t2->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(3, t2->shape[2]);
+    TEST_ASSERT_EQUAL_UINT64(2, t2->shape[3]);
+
+    tensor_free(t);
+    tensor_free(t2);
+}
+
+void test_tensor_sum_keepdims_middle(void) {
+    uint64_t shape[] = {2, 2, 2};
+    float32_t data[] = {1, 1, 1, 1, 1, 1, 1, 1};
+    Tensor *t = tensor_create(data, shape, 3, false);
+    Tensor *s = tensor_sum(t, 1, true);
+    TEST_ASSERT_EQUAL_UINT64(2, s->shape[0]);
+    TEST_ASSERT_EQUAL_UINT64(1, s->shape[1]);
+    TEST_ASSERT_EQUAL_UINT64(2, s->shape[2]);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, s->data[0]);
+    tensor_free(t);
+    tensor_free(s);
+}
+
+void test_tensor_mean_negative_values(void) {
+    float32_t data[] = {-2, -4};
+    uint64_t shape[] = {2};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *m = tensor_mean(t, 0, false);
+    TEST_ASSERT_EQUAL_FLOAT(-3.0f, m->data[0]);
+    tensor_free(t);
+    tensor_free(m);
+}
+
+void test_tensor_max_all_same(void) {
+    float32_t data[] = {7, 7, 7};
+    uint64_t shape[] = {3};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *m = tensor_max(t, 0, false);
+    TEST_ASSERT_EQUAL_FLOAT(7.0f, m->data[0]);
+    tensor_free(t);
+    tensor_free(m);
+}
+
+void test_tensor_strides_check_after_transpose(void) {
+    uint64_t shape[] = {2, 3};
+    Tensor *t = tensor_zeros(shape, 2, false);
+    Tensor *t2 = tensor_transpose(t, 0, 1);
+    TEST_ASSERT_EQUAL_UINT64(2, t2->strides[0]);
+    TEST_ASSERT_EQUAL_UINT64(1, t2->strides[1]);
+    tensor_free(t);
+    tensor_free(t2);
+}
+
+void test_tensor_get_boundary_values(void) {
+    float32_t data[] = {1, 2, 3, 4};
+    uint64_t shape[] = {4};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    uint64_t idx[] = {3};
+    Tensor *v = tensor_get(t, idx);
+    TEST_ASSERT_EQUAL_FLOAT(4.0f, v->data[0]);
+    tensor_free(t);
+    tensor_free(v);
+}
+
+void test_tensor_scalar_reduction(void) {
+    float32_t val = 5.0f;
+    uint64_t shape[] = {1};
+    Tensor *t1 = tensor_create(&val, shape, 1, false);
+    Tensor *s = tensor_sum(t1, 0, false);
+    TEST_ASSERT_EQUAL_UINT64(0, s->ndim);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, s->data[0]);
+    tensor_free(t1);
+    tensor_free(s);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_tensor_create);
@@ -847,5 +1259,36 @@ int main(void) {
     RUN_TEST(test_tensor_max_keepdims_3d);
     RUN_TEST(test_tensor_get_1d);
     RUN_TEST(test_tensor_get_3d);
+    RUN_TEST(test_tensor_create_large);
+    RUN_TEST(test_tensor_create_scalar_zeros);
+    RUN_TEST(test_tensor_create_odd_shape);
+    RUN_TEST(test_tensor_create_scalar_val);
+    RUN_TEST(test_tensor_zeros_large);
+    RUN_TEST(test_tensor_add_negatives);
+    RUN_TEST(test_tensor_sub_self_is_zero);
+    RUN_TEST(test_tensor_mul_by_zero);
+    RUN_TEST(test_tensor_div_by_one);
+    RUN_TEST(test_tensor_add_broadcast_3d_1d_leading);
+    RUN_TEST(test_tensor_mul_broadcast_3d_2d_trailing);
+    RUN_TEST(test_tensor_sub_broadcast_scalar_negative);
+    RUN_TEST(test_tensor_div_broadcast_middle_dim);
+    RUN_TEST(test_tensor_complex_broadcast_shapes);
+    RUN_TEST(test_tensor_arithmetic_chaining);
+    RUN_TEST(test_tensor_matmul_zeros);
+    RUN_TEST(test_tensor_matmul_negatives);
+    RUN_TEST(test_tensor_matmul_large_values);
+    RUN_TEST(test_tensor_matmul_transposed_inputs);
+    RUN_TEST(test_tensor_matmul_associativity_check);
+    RUN_TEST(test_tensor_reshape_flatten_3d_to_1d);
+    RUN_TEST(test_tensor_reshape_expand_1d_to_3d);
+    RUN_TEST(test_tensor_reshape_auto_dim_middle);
+    RUN_TEST(test_tensor_transpose_double_swap);
+    RUN_TEST(test_tensor_transpose_4d_dims);
+    RUN_TEST(test_tensor_sum_keepdims_middle);
+    RUN_TEST(test_tensor_mean_negative_values);
+    RUN_TEST(test_tensor_max_all_same);
+    RUN_TEST(test_tensor_strides_check_after_transpose);
+    RUN_TEST(test_tensor_get_boundary_values);
+    RUN_TEST(test_tensor_scalar_reduction);
     return UNITY_END();
 }

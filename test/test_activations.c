@@ -454,6 +454,348 @@ void test_gelu_large_negative(void) {
     tensor_free(out);
 }
 
+void test_sigmoid_empty(void) {
+    float32_t *data = NULL;
+    uint64_t shape[] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_sigmoid(t);
+    TEST_ASSERT_EQUAL_UINT64(0, out->size);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_empty(void) {
+    float32_t *data = NULL;
+    uint64_t shape[] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_relu(t);
+    TEST_ASSERT_EQUAL_UINT64(0, out->size);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_empty(void) {
+    float32_t *data = NULL;
+    uint64_t shape[] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_tanh(t);
+    TEST_ASSERT_EQUAL_UINT64(0, out->size);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_empty(void) {
+    float32_t *data = NULL;
+    uint64_t shape[] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_gelu(t);
+    TEST_ASSERT_EQUAL_UINT64(0, out->size);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_empty(void) {
+    float32_t *data = NULL;
+    uint64_t shape[] = {0};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_softmax(t, 0);
+    TEST_ASSERT_EQUAL_UINT64(0, out->size);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_sigmoid_requires_grad_true(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, true);
+    Tensor *out = tensor_sigmoid(t);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    TEST_ASSERT_NOT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_sigmoid_requires_grad_false(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_sigmoid(t);
+    TEST_ASSERT_FALSE(out->requires_grad);
+    TEST_ASSERT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_requires_grad_true(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, true);
+    Tensor *out = tensor_relu(t);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    TEST_ASSERT_NOT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_requires_grad_false(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_relu(t);
+    TEST_ASSERT_FALSE(out->requires_grad);
+    TEST_ASSERT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_requires_grad_true(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, true);
+    Tensor *out = tensor_tanh(t);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_requires_grad_false(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_tanh(t);
+    TEST_ASSERT_FALSE(out->requires_grad);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_requires_grad_true(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, true);
+    Tensor *out = tensor_gelu(t);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_requires_grad_false(void) {
+    float32_t data[] = {0.5f};
+    uint64_t shape[] = {1};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_gelu(t);
+    TEST_ASSERT_FALSE(out->requires_grad);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_requires_grad_true(void) {
+    float32_t data[] = {0.5f, 0.2f};
+    uint64_t shape[] = {2};
+    Tensor *t = tensor_create(data, shape, 1, true);
+    Tensor *out = tensor_softmax(t, 0);
+    TEST_ASSERT_TRUE(out->requires_grad);
+    TEST_ASSERT_NOT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_requires_grad_false(void) {
+    float32_t data[] = {0.5f, 0.2f};
+    uint64_t shape[] = {2};
+    Tensor *t = tensor_create(data, shape, 1, false);
+    Tensor *out = tensor_softmax(t, 0);
+    TEST_ASSERT_FALSE(out->requires_grad);
+    TEST_ASSERT_NULL(out->grad_fn);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_sigmoid_no_aliasing(void) {
+    float32_t data[] = {0.5f};
+    Tensor *t = create_tensor_from_data(data, 1);
+    Tensor *out = tensor_sigmoid(t);
+    TEST_ASSERT_NOT_EQUAL(t->data, out->data);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_no_aliasing(void) {
+    float32_t data[] = {0.5f};
+    Tensor *t = create_tensor_from_data(data, 1);
+    Tensor *out = tensor_relu(t);
+    TEST_ASSERT_NOT_EQUAL(t->data, out->data);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_no_aliasing(void) {
+    float32_t data[] = {0.5f};
+    Tensor *t = create_tensor_from_data(data, 1);
+    Tensor *out = tensor_tanh(t);
+    TEST_ASSERT_NOT_EQUAL(t->data, out->data);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_no_aliasing(void) {
+    float32_t data[] = {0.5f};
+    Tensor *t = create_tensor_from_data(data, 1);
+    Tensor *out = tensor_gelu(t);
+    TEST_ASSERT_NOT_EQUAL(t->data, out->data);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_no_aliasing(void) {
+    float32_t data[] = {0.5f};
+    Tensor *t = create_tensor_from_data(data, 1);
+    Tensor *out = tensor_softmax(t, 0);
+    TEST_ASSERT_NOT_EQUAL(t->data, out->data);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_sigmoid_zeros(void) {
+    float32_t data[] = {0.0f, 0.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_sigmoid(t);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, out->data[1]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_zeros(void) {
+    float32_t data[] = {0.0f, 0.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_relu(t);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_zeros(void) {
+    float32_t data[] = {0.0f, 0.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_tanh(t);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_zeros(void) {
+    float32_t data[] = {0.0f, 0.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_gelu(t);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[1]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_uniform(void) {
+    float32_t data[] = {2.0f, 2.0f, 2.0f, 2.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
+    Tensor *out = tensor_softmax(t, 0);
+    for (int i = 0; i < 4; ++i) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.25f, out->data[i]);
+    }
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_dim_large(void) {
+    float32_t data[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    uint64_t shape[] = {2, 2};
+    Tensor *t = tensor_create(data, shape, 2, false);
+    Tensor *out = tensor_softmax(t, 1);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.2689414f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.7310586f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.2689414f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.7310586f, out->data[3]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_tanh_relation_sigmoid(void) {
+    float32_t data[] = {0.5f, -0.5f, 1.0f, -1.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
+    Tensor *out_tanh = tensor_tanh(t);
+
+    for (int i = 0; i < 4; ++i) {
+        float32_t x = data[i];
+        float32_t sig2x = 1.0f / (1.0f + expf(-2.0f * x));
+        float32_t expected = 2.0f * sig2x - 1.0f;
+        TEST_ASSERT_FLOAT_WITHIN(1e-5, expected, out_tanh->data[i]);
+    }
+    tensor_free(t);
+    tensor_free(out_tanh);
+}
+
+void test_sigmoid_inverse_identity(void) {
+    float32_t data[] = {0.0f, 1.0f, -1.0f};
+    Tensor *t = create_tensor_from_data(data, 3);
+    Tensor *out = tensor_sigmoid(t);
+
+    for (int i = 0; i < 3; ++i) {
+        float32_t y = out->data[i];
+        float32_t recovered_x = logf(y / (1.0f - y));
+        TEST_ASSERT_FLOAT_WITHIN(1e-5, data[i], recovered_x);
+    }
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_relu_negative_input(void) {
+    float32_t data[] = {-5.0f, -100.0f, -0.0001f};
+    Tensor *t = create_tensor_from_data(data, 3);
+    Tensor *out = tensor_relu(t);
+    for (int i = 0; i < 3; ++i) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[i]);
+    }
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_gelu_non_linearity(void) {
+    float32_t data[] = {1.0f, -1.0f};
+    Tensor *t = create_tensor_from_data(data, 2);
+    Tensor *out = tensor_gelu(t);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8458f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1542f, out->data[1]);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_sum_prob(void) {
+    float32_t data[] = {1.2f, 3.4f, -0.5f, 0.0f};
+    Tensor *t = create_tensor_from_data(data, 4);
+    Tensor *out = tensor_softmax(t, 0);
+    float32_t sum = 0.0f;
+    for (int i = 0; i < 4; ++i)
+        sum += out->data[i];
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.0f, sum);
+    tensor_free(t);
+    tensor_free(out);
+}
+
+void test_softmax_high_rank(void) {
+    float32_t data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    uint64_t shape[] = {2, 2, 2};
+    Tensor *t = tensor_create(data, shape, 3, false);
+    Tensor *out = tensor_softmax(t, 2);
+
+    for (int i = 0; i < 4; ++i) {
+        float32_t s = out->data[2 * i] + out->data[2 * i + 1];
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.0f, s);
+    }
+    tensor_free(t);
+    tensor_free(out);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_sigmoid_standard_values);
@@ -487,5 +829,37 @@ int main(void) {
     RUN_TEST(test_softmax_single_element);
     RUN_TEST(test_softmax_extreme_diff);
     RUN_TEST(test_gelu_large_negative);
+    RUN_TEST(test_sigmoid_empty);
+    RUN_TEST(test_relu_empty);
+    RUN_TEST(test_tanh_empty);
+    RUN_TEST(test_gelu_empty);
+    RUN_TEST(test_softmax_empty);
+    RUN_TEST(test_sigmoid_requires_grad_true);
+    RUN_TEST(test_sigmoid_requires_grad_false);
+    RUN_TEST(test_relu_requires_grad_true);
+    RUN_TEST(test_relu_requires_grad_false);
+    RUN_TEST(test_tanh_requires_grad_true);
+    RUN_TEST(test_tanh_requires_grad_false);
+    RUN_TEST(test_gelu_requires_grad_true);
+    RUN_TEST(test_gelu_requires_grad_false);
+    RUN_TEST(test_softmax_requires_grad_true);
+    RUN_TEST(test_softmax_requires_grad_false);
+    RUN_TEST(test_sigmoid_no_aliasing);
+    RUN_TEST(test_relu_no_aliasing);
+    RUN_TEST(test_tanh_no_aliasing);
+    RUN_TEST(test_gelu_no_aliasing);
+    RUN_TEST(test_softmax_no_aliasing);
+    RUN_TEST(test_sigmoid_zeros);
+    RUN_TEST(test_relu_zeros);
+    RUN_TEST(test_tanh_zeros);
+    RUN_TEST(test_gelu_zeros);
+    RUN_TEST(test_softmax_uniform);
+    RUN_TEST(test_softmax_dim_large);
+    RUN_TEST(test_tanh_relation_sigmoid);
+    RUN_TEST(test_sigmoid_inverse_identity);
+    RUN_TEST(test_relu_negative_input);
+    RUN_TEST(test_gelu_non_linearity);
+    RUN_TEST(test_softmax_sum_prob);
+    RUN_TEST(test_softmax_high_rank);
     return UNITY_END();
 }

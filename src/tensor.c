@@ -492,6 +492,11 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     free(resolved_shape);
     assert(result != NULL);
     assert(result->size == t->size);
+
+    if (result->requires_grad) {
+        result->grad_fn = new_reshape_backward((Tensor *)t, t->shape, t->ndim);
+        result->grad_fn->out_tensor = result;
+    }
     return result;
 }
 
@@ -629,7 +634,7 @@ static uint64_t reduction_multidim_to_linear(const Tensor *t, const uint64_t *mu
 
         offset += idx_val * t->strides[d];
     }
-    assert(offset < t->size && "offset out of bounds");
+    assert((t->size == 0 || offset < t->size) && "offset out of bounds");
     return offset;
 }
 
