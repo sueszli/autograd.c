@@ -157,35 +157,11 @@ static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
 Tensor *tensor_sub(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_sub); }
 
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
-
-// ------------------------------------------------------------------------------
-// END AUTOGRAD STUFF
-// ------------------------------------------------------------------------------
-
-// Backward function for mul: d(a*b)/da = b, d(a*b)/db = a
-static void mul_backward(Function *fn, const Tensor *grad_output) {
-    assert(fn != NULL);
-    assert(grad_output != NULL);
-    assert(fn->num_inputs == 2);
-
-    Tensor *a = fn->inputs[0];
-    Tensor *b = fn->inputs[1];
-
-    if (a != NULL && a->requires_grad) {
-        Tensor *grad_a = tensor_mul_backward_a(grad_output, a, b);
-        accumulate_grad(a, grad_a);
-    }
-
-    if (b != NULL && b->requires_grad) {
-        Tensor *grad_b = tensor_mul_backward_b(grad_output, a, b);
-        accumulate_grad(b, grad_b);
-    }
-}
-
 Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
+    // actual op
     Tensor *result = tensor_binary_op(a, b, op_mul);
 
-    // Set up autograd if needed
+    // autograd setup
     if (result->requires_grad) {
         Function *fn = arena_alloc_function();
         fn->apply = mul_backward;
@@ -195,18 +171,14 @@ Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
         fn->inputs[1] = (Tensor *)b;
         fn->pending_count = 0;
         fn->ctx = NULL;
-
-        // Increment pending_count for parents with grad_fn
         if (a->grad_fn != NULL) {
             a->grad_fn->pending_count++;
         }
         if (b->grad_fn != NULL) {
             b->grad_fn->pending_count++;
         }
-
         result->grad_fn = fn;
     }
-
     return result;
 }
 

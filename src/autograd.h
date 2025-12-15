@@ -35,7 +35,7 @@ typedef struct Tensor Tensor;
  *    after forward pass in neural net, traverse graph backward from loss
  *    calling each Function's apply() to compute gradients
  *    to find the contribution of each operation to the final loss.
- * 
+ *
  *    results can then be retrieved from each Tensor's grad field.
  */
 typedef struct Function {
