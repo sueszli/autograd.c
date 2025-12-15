@@ -32,19 +32,11 @@ typedef struct Tensor Tensor;
  *    }
  *
  * backward:
- *    loss.grad = 1
- *    queue = [loss->grad_fn]
- *
- *    while queue not empty:
- *        fn = pop(queue)
- *        fn->apply(fn, fn->output->grad)          // compute grads for inputs
- *        for parent in fn->inputs:
- *            if parent->grad_fn:
- *                // decrement: one more downstream consumer (in forward) is done
- *                if (--parent->grad_fn->pending_count == 0):
- *                    push(queue, parent->grad_fn) // safe to process now
- *
- *    accumulate_grad merges multiple gradient contributions into parent->grad.
+ *    after forward pass in neural net, traverse graph backward from loss
+ *    calling each Function's apply() to compute gradients
+ *    to find the contribution of each operation to the final loss.
+ * 
+ *    results can then be retrieved from each Tensor's grad field.
  */
 typedef struct Function {
     void (*apply)(struct Function *self, const Tensor *grad_output); // callback to compute gradients
@@ -55,16 +47,17 @@ typedef struct Function {
     void *ctx;                                                       // extra metadata storage, used by complex operations
 } Function;
 
-// memory arena for allocations
+// memory arena to store Function structs for all ops in a thread
 typedef struct Arena {
     void *memory;
     size_t capacity;
     size_t offset;
 } Arena;
-
 Function *arena_alloc_function(void);
 void arena_free(void);
 
-// public api
+// traverse computation graph backward from loss tensor
 void backward(Tensor *loss);
+
+// add a new gradient to tensor->grad
 void accumulate_grad(Tensor *tensor, Tensor *new_grad);

@@ -167,7 +167,6 @@ static bool shapes_equal(const Tensor *a, const Tensor *b) {
     return true;
 }
 
-// used when a tensor receives multiple gradient contributions
 void accumulate_grad(Tensor *tensor, Tensor *new_grad) {
     assert(tensor != NULL);
     assert(new_grad != NULL);
@@ -181,8 +180,6 @@ void accumulate_grad(Tensor *tensor, Tensor *new_grad) {
         return;
     }
 
-    // accumulate_grad is the only place gradients are summed
-    // otherwise, sum with existing gradient
     Tensor *summed = tensor_zeros(tensor->shape, tensor->ndim, false);
     for (uint64_t i = 0; i < tensor->size; i++) {
         summed->data[i] = tensor->grad->data[i] + new_grad->data[i];
