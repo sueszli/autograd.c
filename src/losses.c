@@ -7,7 +7,7 @@
 
 #define EPSILON 1e-7f
 
-float32_t mse_loss(const Tensor *predictions, const Tensor *targets) {
+Tensor *mse_loss(const Tensor *predictions, const Tensor *targets) {
     assert(predictions != NULL);
     assert(targets != NULL);
     assert(predictions->data != NULL || predictions->size == 0);
@@ -23,22 +23,33 @@ float32_t mse_loss(const Tensor *predictions, const Tensor *targets) {
         float32_t diff = predictions->data[i] - targets->data[i];
         sum_squared_error += diff * diff;
     }
-    return sum_squared_error / (float32_t)predictions->size;
+    float32_t loss_val = sum_squared_error / (float32_t)predictions->size;
+
+    // Create scalar tensor
+    uint64_t shape[] = {1};
+    Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
+
+    if (out->requires_grad) {
+        out->grad_fn = new_mse_backward((Tensor *)predictions, (Tensor *)targets);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
 }
 
-float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
+Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
     assert(logits != NULL);
     assert(targets != NULL);
     assert(logits->data != NULL || logits->size == 0);
     assert(targets->data != NULL || targets->size == 0);
     assert(logits->ndim == 2);
-    assert(targets->ndim == 1);
+    // targets can be [batch] (1D) or [batch, 1] (2D)
+    assert(targets->ndim == 1 || (targets->ndim == 2 && targets->shape[1] == 1));
     assert(logits->shape[0] == targets->shape[0]);
 
     uint64_t batch_size = logits->shape[0];
     uint64_t num_classes = logits->shape[1];
     if (num_classes == 0) {
-        return 0.0f;
+        return tensor_zeros(NULL, 0, false);
     }
     assert(num_classes > 0);
 
@@ -77,10 +88,19 @@ float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
         float32_t loss = -(correct_logit - log_sum_exp);
         sum_loss += loss;
     }
-    return sum_loss / (float32_t)batch_size;
+    float32_t loss_val = sum_loss / (float32_t)batch_size;
+
+    uint64_t shape[] = {1};
+    Tensor *out = tensor_create(&loss_val, shape, 0, logits->requires_grad);
+
+    if (out->requires_grad) {
+        out->grad_fn = new_crossentropy_backward((Tensor *)logits, (Tensor *)targets);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
 }
 
-float32_t binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targets) {
+Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targets) {
     assert(predictions != NULL);
     assert(targets != NULL);
     assert(predictions->data != NULL || predictions->size == 0);
@@ -110,5 +130,14 @@ float32_t binary_cross_entropy_loss(const Tensor *predictions, const Tensor *tar
         float32_t term2 = (1.0f - target) * logf(1.0f - pred);
         sum_loss += -(term1 + term2);
     }
-    return sum_loss / (float32_t)predictions->size;
+    float32_t loss_val = sum_loss / (float32_t)predictions->size;
+
+    uint64_t shape[] = {1};
+    Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
+
+    if (out->requires_grad) {
+        out->grad_fn = new_bce_backward((Tensor *)predictions, (Tensor *)targets);
+        out->grad_fn->out_tensor = out;
+    }
+    return out;
 }
