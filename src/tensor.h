@@ -17,7 +17,7 @@ typedef struct Tensor {
     uint64_t size;          // total number of elements
     bool requires_grad;     // whether to track operations for autograd
     struct Tensor *grad;    // accumulated gradient (del loss / del tensor) during backprop
-    struct GradFn *grad_fn; // function that created this tensor (if any)
+    struct GradFn *grad_fn; // function that created this tensor (if any)  --------------- TODO: drop this later
 } Tensor;
 
 // memory management
