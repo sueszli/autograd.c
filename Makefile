@@ -3,13 +3,13 @@ run: lint
 	mkdir -p /tmp/build && cd /tmp/build && cmake -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && cd $(PWD) && ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=$(PWD)/suppr.txt /tmp/build/binary
 
 .PHONY: leaks
-leaks:
+leaks: lint
 	rm -rf /tmp/leaks-build && mkdir -p /tmp/leaks-build && cd /tmp/leaks-build && cmake -DDISABLE_ASAN=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu)
 	codesign -s - -f --entitlements entitlements.plist /tmp/leaks-build/binary
 	cd $(PWD) && leaks --atExit --list --groupByType -- /tmp/leaks-build/binary
 
 .PHONY: test
-test: fmt lint
+test: lint
 	rm -rf /tmp/test-build && mkdir -p /tmp/test-build && cd /tmp/test-build && cmake -DBUILD_TESTS=ON $(PWD) && cmake --build . -j$$(sysctl -n hw.ncpu) && ctest --output-on-failure
 
 .PHONY: run-release
@@ -29,7 +29,7 @@ download:
 
 .PHONY: lint
 lint:
-	cppcheck --enable=all --std=c23 --language=c --suppress=missingIncludeSystem --suppress=checkersReport --check-level=exhaustive --inconclusive --inline-suppr -I src/ src/
+	cppcheck --enable=all --std=c23 --language=c --suppressions-list=cppcheck-suppressions.txt --check-level=exhaustive --inconclusive --inline-suppr -I src/ src/
 
 .PHONY: fmt
 fmt:

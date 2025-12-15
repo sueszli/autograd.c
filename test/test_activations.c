@@ -207,12 +207,12 @@ void test_gelu_standard_values(void) {
     Tensor *out = tensor_gelu(t);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, out->data[0]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8458f, out->data[1]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1542f, out->data[2]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.9357f, out->data[3]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0643f, out->data[4]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 2.9819f, out->data[5]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0180f, out->data[6]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8413f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1586f, out->data[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.9545f, out->data[3]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0455f, out->data[4]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 2.9959f, out->data[5]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.0040f, out->data[6]);
 
     tensor_free(t);
     tensor_free(out);
@@ -764,8 +764,8 @@ void test_gelu_non_linearity(void) {
     Tensor *t = create_tensor_from_data(data, 2);
     Tensor *out = tensor_gelu(t);
 
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8458f, out->data[0]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1542f, out->data[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.8413447f, out->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.1586553f, out->data[1]);
     tensor_free(t);
     tensor_free(out);
 }

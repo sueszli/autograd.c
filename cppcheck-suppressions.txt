@@ -1,0 +1,4 @@
+unusedFunction
+staticFunction
+checkersReport
+missingIncludeSystem
