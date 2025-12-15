@@ -14,9 +14,4 @@ $ make run
 
 $ cat references.txt
 
-    - https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/
-
-
-autograd currently implemented and tested for:
-
-    - ops/arithmetic
+    - https://github.com/harvard-edge/cs249r_book/tree/dev/tinytorch/src
