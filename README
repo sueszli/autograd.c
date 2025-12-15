@@ -23,7 +23,6 @@ $ cat references.txt
 
 TODO:
 
-check if arithmetic leaks
 write arithmetic backward
 repeat for reshapes and reductions
 
