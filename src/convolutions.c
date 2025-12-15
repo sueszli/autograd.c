@@ -385,8 +385,9 @@ static Tensor *maxpool2d_forward(Layer *layer, const Tensor *input, bool trainin
 }
 
 static void maxpool2d_free(Layer *layer) {
-    if (layer)
+    if (layer) {
         free(layer);
+    }
 }
 
 static void maxpool2d_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
@@ -556,8 +557,9 @@ static Tensor *avgpool2d_forward(Layer *layer, const Tensor *input, bool trainin
 }
 
 static void avgpool2d_free(Layer *layer) {
-    if (layer)
+    if (layer) {
         free(layer);
+    }
 }
 
 static void avgpool2d_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
@@ -722,8 +724,9 @@ Layer *layer_batchnorm2d_create(uint64_t num_features, float32_t eps, float32_t 
     // gamma = 1
     l->gamma = tensor_create(NULL, shape, 1, true); // create creates uninitialized
     // fill gamma with 1
-    for (size_t i = 0; i < l->gamma->size; ++i)
+    for (size_t i = 0; i < l->gamma->size; ++i) {
         l->gamma->data[i] = 1.0f;
+    }
 
     // beta = 0
     l->beta = tensor_zeros(shape, 1, true);
@@ -733,8 +736,9 @@ Layer *layer_batchnorm2d_create(uint64_t num_features, float32_t eps, float32_t 
 
     // running_var = 1 (no grad)
     l->running_var = tensor_create(NULL, shape, 1, false);
-    for (size_t i = 0; i < l->running_var->size; ++i)
+    for (size_t i = 0; i < l->running_var->size; ++i) {
         l->running_var->data[i] = 1.0f;
+    }
 
     return (Layer *)l;
 }
@@ -759,8 +763,9 @@ static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool traini
 
     // relu
     for (uint64_t i = 0; i < x1->size; ++i) {
-        if (x1->data[i] < 0.0f)
+        if (x1->data[i] < 0.0f) {
             x1->data[i] = 0.0f;
+        }
     }
 
     // pool1
@@ -773,8 +778,9 @@ static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool traini
 
     // relu
     for (uint64_t i = 0; i < x3->size; ++i) {
-        if (x3->data[i] < 0.0f)
+        if (x3->data[i] < 0.0f) {
             x3->data[i] = 0.0f;
+        }
     }
 
     // pool2
@@ -818,15 +824,19 @@ static void simple_cnn_parameters(Layer *layer, Tensor ***out_params, size_t *ou
     assert(*out_params != NULL);
 
     size_t idx = 0;
-    for (size_t i = 0; i < c1; ++i)
+    for (size_t i = 0; i < c1; ++i) {
         (*out_params)[idx++] = p1[i];
-    for (size_t i = 0; i < c2; ++i)
+    }
+    for (size_t i = 0; i < c2; ++i) {
         (*out_params)[idx++] = p2[i];
+    }
 
-    if (p1)
+    if (p1) {
         free(p1);
-    if (p2)
+    }
+    if (p2) {
         free(p2);
+    }
 
     *out_count = total;
 }
