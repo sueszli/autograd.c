@@ -14,10 +14,10 @@ typedef void (*LayerFreeFunc)(Layer *layer);
 typedef void (*LayerParametersFunc)(Layer *layer, Tensor ***out_params, size_t *out_count);
 
 struct Layer {
-    LayerForwardFunc forward;
-    LayerFreeFunc free;
-    LayerParametersFunc parameters;
-    char *name;
+    LayerForwardFunc forward;       // forward pass
+    LayerFreeFunc free;             // free resources
+    LayerParametersFunc parameters; // retrieve parameters
+    char *name;                     // name (for debugging)
 };
 
 /**
@@ -41,7 +41,7 @@ void layer_free(Layer *layer);
  * retrieves trainable parameters (weights, biases).
  *
  * @param layer      layer instance
- * @param out_params output pointer to array of tensor pointers (caller must not free the tensors, but may need to free the array if it was dynamically allocated - in this api we will return a copy of pointers or reference internal list. let's specify: caller frees the array, not the tensors.)
+ * @param out_params output pointer to array of tensor pointers (caller frees the array, not the tensors)
  * @param out_count  output number of parameters
  */
 void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count);
