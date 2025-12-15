@@ -17,16 +17,9 @@ struct Optimizer {
     OptimizerFreeFunc free; // implementation of resource cleanup
 };
 
-// resets gradients of all parameters to zero (frees the grad tensors).
-// should be called before backward pass.
-void optimizer_zero_grad(Optimizer *opt);
-
-// performs a single optimization step (updates parameters).
-void optimizer_step(Optimizer *opt);
-
-// frees the optimizer and its internal resources.
-// note: does NOT free the parameters themselves, only internal buffers.
-void optimizer_free(Optimizer *opt);
+void optimizer_zero_grad(Optimizer *opt); // resets all params to zero, called before backward pass
+void optimizer_step(Optimizer *opt);      // performs a single optimization step, updates params
+void optimizer_free(Optimizer *opt);      // frees optimizer
 
 //
 // initializers
