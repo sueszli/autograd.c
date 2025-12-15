@@ -114,7 +114,6 @@ Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targe
             pred = 1.0f - EPSILON;
         }
 
-        // BCE: -(target * log(pred) + (1 - target) * log(1 - pred))
         float32_t term1 = target * logf(pred);
         float32_t term2 = (1.0f - target) * logf(1.0f - pred);
         sum_loss += -(term1 + term2);
