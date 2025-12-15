@@ -186,6 +186,66 @@ void test_binary_cross_entropy_mixed(void) {
     tensor_free(target);
 }
 
+void test_mse_loss_small_diff(void) {
+    float32_t p_data[] = {1.000001f};
+    float32_t t_data[] = {1.0f};
+    Tensor *pred = create_tensor_1d(p_data, 1);
+    Tensor *target = create_tensor_1d(t_data, 1);
+    float32_t loss = mse_loss(pred, target);
+    TEST_ASSERT_FLOAT_WITHIN(1e-13, 1e-12, loss);
+    tensor_free(pred);
+    tensor_free(target);
+}
+
+void test_cross_entropy_logits_max_shift_invariance(void) {
+    float32_t l_data1[] = {1.0f, 2.0f, 3.0f};
+    float32_t l_data2[] = {101.0f, 102.0f, 103.0f};
+    float32_t t_data[] = {2.0f};
+
+    Tensor *logits1 = create_tensor_2d(l_data1, 1, 3);
+    Tensor *logits2 = create_tensor_2d(l_data2, 1, 3);
+    Tensor *targets = create_tensor_1d(t_data, 1);
+
+    float32_t loss1 = cross_entropy_loss(logits1, targets);
+    float32_t loss2 = cross_entropy_loss(logits2, targets);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, loss1, loss2);
+
+    tensor_free(logits1);
+    tensor_free(logits2);
+    tensor_free(targets);
+}
+
+void test_cross_entropy_single_class(void) {
+    float32_t l_data[] = {10.0f, -5.0f};
+    float32_t t_data[] = {0.0f, 0.0f};
+
+    Tensor *logits = create_tensor_2d(l_data, 2, 1);
+    Tensor *targets = create_tensor_1d(t_data, 2);
+
+    float32_t loss = cross_entropy_loss(logits, targets);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, loss);
+
+    tensor_free(logits);
+    tensor_free(targets);
+}
+
+void test_binary_cross_entropy_boundary_handling(void) {
+    float32_t p_data[] = {-0.5f, 0.0f, 1.0f, 1.5f};
+    float32_t t_data[] = {0.0f, 0.0f, 1.0f, 1.0f};
+
+    Tensor *pred = create_tensor_1d(p_data, 4);
+    Tensor *target = create_tensor_1d(t_data, 4);
+
+    float32_t loss = binary_cross_entropy_loss(pred, target);
+
+    TEST_ASSERT_FALSE(isnan(loss));
+    TEST_ASSERT_FALSE(isinf(loss));
+
+    tensor_free(pred);
+    tensor_free(target);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_mse_loss_perfect_prediction);
@@ -203,5 +263,9 @@ int main(void) {
     RUN_TEST(test_binary_cross_entropy_clamping);
     RUN_TEST(test_binary_cross_entropy_50_50);
     RUN_TEST(test_binary_cross_entropy_mixed);
+    RUN_TEST(test_mse_loss_small_diff);
+    RUN_TEST(test_cross_entropy_logits_max_shift_invariance);
+    RUN_TEST(test_cross_entropy_single_class);
+    RUN_TEST(test_binary_cross_entropy_boundary_handling);
     return UNITY_END();
 }

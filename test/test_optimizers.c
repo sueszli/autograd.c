@@ -193,17 +193,114 @@ void test_sgd_multiple_params(void) {
     tensor_free(w2);
 }
 
-void test_optimizer_skip_null_grad(void) {
+void test_sgd_zero_learning_rate(void) {
     uint64_t shape[] = {1};
-    Tensor *w = tensor_create((float32_t[]){1.0f}, shape, 1, true);
-    // No gradient assigned: w->grad is NULL by default
+    Tensor *w = tensor_create((float32_t[]){10.0f}, shape, 1, true);
+    Tensor *grad = tensor_create((float32_t[]){1.0f}, shape, 1, false);
+    w->grad = grad;
+
+    Tensor *params[] = {w};
+    Optimizer *opt = optimizer_sgd_create(params, 1, 0.0f, 0.9f, 0.1f);
+
+    optimizer_step(opt);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 10.0f, w->data[0]);
+
+    optimizer_free(opt);
+    tensor_free(w);
+}
+
+void test_sgd_high_momentum(void) {
+    uint64_t shape[] = {1};
+    Tensor *w = tensor_create((float32_t[]){0.0f}, shape, 1, true);
+    Tensor *grad = tensor_create((float32_t[]){1.0f}, shape, 1, false);
+    w->grad = grad;
+
+    Tensor *params[] = {w};
+    Optimizer *opt = optimizer_sgd_create(params, 1, 0.1f, 0.99f, 0.0f);
+
+    optimizer_step(opt);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.1f, w->data[0]);
+
+    optimizer_step(opt);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.299f, w->data[0]);
+
+    optimizer_free(opt);
+    tensor_free(w);
+}
+
+void test_adam_alternate_betas(void) {
+    uint64_t shape[] = {1};
+    Tensor *w = tensor_create((float32_t[]){0.0f}, shape, 1, true);
+    Tensor *grad = tensor_create((float32_t[]){1.0f}, shape, 1, false);
+    w->grad = grad;
+
+    Tensor *params[] = {w};
+    Optimizer *opt = optimizer_adam_create(params, 1, 0.1f, 0.5f, 0.5f, 1e-8f, 0.0f);
+
+    optimizer_step(opt);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.1f, w->data[0]);
+
+    optimizer_free(opt);
+    tensor_free(w);
+}
+
+void test_adam_numerical_stability(void) {
+    uint64_t shape[] = {1};
+    Tensor *w = tensor_create((float32_t[]){0.0f}, shape, 1, true);
+    Tensor *grad = tensor_create((float32_t[]){1e-20f}, shape, 1, false);
+    w->grad = grad;
+
+    Tensor *params[] = {w};
+    Optimizer *opt = optimizer_adam_create(params, 1, 0.1f, 0.9f, 0.999f, 1e-8f, 0.0f);
+
+    optimizer_step(opt);
+
+    TEST_ASSERT_TRUE(!isnan(w->data[0]));
+    TEST_ASSERT_TRUE(!isinf(w->data[0]));
+
+    optimizer_free(opt);
+    tensor_free(w);
+}
+
+void test_optimizer_large_tensor(void) {
+    size_t size = 1000;
+    uint64_t shape[] = {size};
+    float32_t *data = calloc(size, sizeof(float32_t));
+    float32_t *g_data = calloc(size, sizeof(float32_t));
+    for (size_t i = 0; i < size; ++i) {
+        data[i] = 1.0f;
+        g_data[i] = 0.1f;
+    }
+
+    Tensor *w = tensor_create(data, shape, 1, true);
+    Tensor *grad = tensor_create(g_data, shape, 1, false);
+    w->grad = grad;
 
     Tensor *params[] = {w};
     Optimizer *opt = optimizer_sgd_create(params, 1, 0.1f, 0.0f, 0.0f);
 
     optimizer_step(opt);
 
-    // Should be unchanged
+    for (size_t i = 0; i < size; i += 100) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.99f, w->data[i]);
+    }
+
+    free(data);
+    free(g_data);
+    optimizer_free(opt);
+    tensor_free(w);
+}
+
+void test_optimizer_skip_null_grad(void) {
+    uint64_t shape[] = {1};
+    Tensor *w = tensor_create((float32_t[]){1.0f}, shape, 1, true);
+
+    Tensor *params[] = {w};
+    Optimizer *opt = optimizer_sgd_create(params, 1, 0.1f, 0.0f, 0.0f);
+
+    optimizer_step(opt);
+
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.0f, w->data[0]);
 
     optimizer_free(opt);
@@ -211,28 +308,17 @@ void test_optimizer_skip_null_grad(void) {
 }
 
 void test_sgd_integration(void) {
-    // Test interplay of momentum and weight decay
     uint64_t shape[] = {1};
     Tensor *w = tensor_create((float32_t[]){2.0f}, shape, 1, true);
     Tensor *g = tensor_create((float32_t[]){1.0f}, shape, 1, false);
     w->grad = g;
 
     Tensor *params[] = {w};
-    // lr=0.1, momentum=0.9, weight_decay=0.1
     Optimizer *opt = optimizer_sgd_create(params, 1, 0.1f, 0.9f, 0.1f);
 
-    // Step 1
-    // g_wd = 1.0 + 0.1*2.0 = 1.2
-    // v = 0.9*0 + 1.2 = 1.2
-    // w = 2.0 - 0.1*1.2 = 1.88
     optimizer_step(opt);
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.88f, w->data[0]);
 
-    // Step 2
-    // w is 1.88. Grad is still 1.0 (manually managed for test)
-    // g_wd = 1.0 + 0.1*1.88 = 1.188
-    // v = 0.9*1.2 + 1.188 = 1.08 + 1.188 = 2.268
-    // w = 1.88 - 0.1*2.268 = 1.88 - 0.2268 = 1.6532
     optimizer_step(opt);
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.6532f, w->data[0]);
 
@@ -242,13 +328,11 @@ void test_sgd_integration(void) {
 
 void test_adam_vs_adamw_difference(void) {
     uint64_t shape[] = {1};
-    
-    // Setup for Adam
+
     Tensor *w_adam = tensor_create((float32_t[]){2.0f}, shape, 1, true);
     Tensor *g_adam = tensor_create((float32_t[]){1.0f}, shape, 1, false);
     w_adam->grad = g_adam;
-    
-    // Setup for AdamW
+
     Tensor *w_adamw = tensor_create((float32_t[]){2.0f}, shape, 1, true);
     Tensor *g_adamw = tensor_create((float32_t[]){1.0f}, shape, 1, false);
     w_adamw->grad = g_adamw;
@@ -256,26 +340,15 @@ void test_adam_vs_adamw_difference(void) {
     Tensor *p_adam[] = {w_adam};
     Tensor *p_adamw[] = {w_adamw};
 
-    // Use same high weight decay to make difference obvious
     float32_t wd = 0.1f;
     float32_t lr = 0.1f;
-    
+
     Optimizer *opt_adam = optimizer_adam_create(p_adam, 1, lr, 0.9f, 0.999f, 1e-8f, wd);
     Optimizer *opt_adamw = optimizer_adamw_create(p_adamw, 1, lr, 0.9f, 0.999f, 1e-8f, wd);
 
     optimizer_step(opt_adam);
     optimizer_step(opt_adamw);
 
-    // Adam: WD added to grad. Gradient becomes 1.2.
-    // m ~ 0.12, v ~ 0.00144. m_hat ~ 1.2, v_hat ~ 1.44.
-    // update ~ 0.1 * 1.2 / 1.2 = 0.1.
-    // w ~ 1.9.
-    
-    // AdamW:
-    // m ~ 0.1, v ~ 0.001. m_hat ~ 1.0, v_hat ~ 1.0. 
-    // update ~ 0.1 * 1.0 / 1.0 = 0.1.
-    // w = (2.0 - 0.1) * (1 - 0.01) = 1.9 * 0.99 = 1.881
-    
     TEST_ASSERT_FALSE(w_adam->data[0] == w_adamw->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-3f, 1.900f, w_adam->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-3f, 1.881f, w_adamw->data[0]);
@@ -298,6 +371,11 @@ int main(void) {
     RUN_TEST(test_adamw_step_basic);
     RUN_TEST(test_adamw_decoupled_decay);
     RUN_TEST(test_sgd_multiple_params);
+    RUN_TEST(test_sgd_zero_learning_rate);
+    RUN_TEST(test_sgd_high_momentum);
+    RUN_TEST(test_adam_alternate_betas);
+    RUN_TEST(test_adam_numerical_stability);
+    RUN_TEST(test_optimizer_large_tensor);
     RUN_TEST(test_optimizer_skip_null_grad);
     RUN_TEST(test_sgd_integration);
     RUN_TEST(test_adam_vs_adamw_difference);
