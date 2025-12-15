@@ -27,8 +27,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad);
 void tensor_free(Tensor *t);
 
-#include "ops/arithmetic.h"
-
 // reshapes
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim);
 Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1);
