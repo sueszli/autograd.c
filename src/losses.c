@@ -37,6 +37,9 @@ float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
 
     uint64_t batch_size = logits->shape[0];
     uint64_t num_classes = logits->shape[1];
+    if (num_classes == 0) {
+        return 0.0f;
+    }
     assert(num_classes > 0);
 
     float32_t sum_loss = 0.0f;
@@ -62,6 +65,10 @@ float32_t cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
             sum_exp += expf(logit - max_logit);
         }
 
+        // clip for numerical stability
+        if (sum_exp < 1.0f) {
+            sum_exp = 1.0f;
+        }
         float32_t log_sum_exp = logf(sum_exp) + max_logit;
         float32_t correct_logit = logits->data[i * num_classes + target_idx];
 

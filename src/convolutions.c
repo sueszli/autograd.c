@@ -214,10 +214,10 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
 
     uint64_t in_channels = input->shape[1];
 
-    // Pad input
+    // pad input
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
 
-    // Init gradients
+    // init gradients
     Tensor *grad_input_padded = tensor_zeros(padded_input->shape, 4, false);
     assert(grad_input_padded != NULL && "failed to allocate grad_input_padded");
     *out_grad_w = tensor_zeros(weight->shape, 4, false);
@@ -242,18 +242,18 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
                     for (uint64_t k_h = 0; k_h < kernel_size; ++k_h) {
                         for (uint64_t k_w = 0; k_w < kernel_size; ++k_w) {
                             for (uint64_t in_ch = 0; in_ch < in_channels; ++in_ch) {
-                                // Input pos details
+                                // input pos details
                                 uint64_t in_h = in_h_start + k_h;
                                 uint64_t in_w = in_w_start + k_w;
 
-                                // Grad wrt. weight
+                                // grad wrt. weight
                                 uint64_t padded_idx = b * padded_input->strides[0] + in_ch * padded_input->strides[1] + in_h * padded_input->strides[2] + in_w * padded_input->strides[3];
                                 float32_t p_val = padded_input->data[padded_idx];
 
                                 uint64_t w_idx = out_ch * (*out_grad_w)->strides[0] + in_ch * (*out_grad_w)->strides[1] + k_h * (*out_grad_w)->strides[2] + k_w * (*out_grad_w)->strides[3];
                                 (*out_grad_w)->data[w_idx] += p_val * grad_val;
 
-                                // Grad wrt. input
+                                // grad wrt. input
                                 uint64_t w_val_idx = out_ch * weight->strides[0] + in_ch * weight->strides[1] + k_h * weight->strides[2] + k_w * weight->strides[3];
                                 float32_t w_val = weight->data[w_val_idx];
 
@@ -267,11 +267,11 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
         }
     }
 
-    // Bias gradient
+    // bias gradient
     if (*out_grad_b) {
         for (uint64_t out_ch = 0; out_ch < out_channels; ++out_ch) {
             float32_t sum = 0.0f;
-            // Sum over batch, height, width
+            // sum over batch, height, width
             for (uint64_t b = 0; b < batch_size; ++b) {
                 for (uint64_t h = 0; h < out_height; ++h) {
                     for (uint64_t w = 0; w < out_width; ++w) {
@@ -284,7 +284,7 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
         }
     }
 
-    // Remove padding from input gradient
+    // remove padding from input gradient
     if (padding > 0) {
         uint64_t inner_H = input->shape[2];
         uint64_t inner_W = input->shape[3];
@@ -332,8 +332,8 @@ static Tensor *maxpool2d_forward_impl(const Tensor *input, uint64_t kernel_size,
     const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
 
-    // Apply padding
-    // For MaxPool, padding value should be -inf
+    // apply padding
+    // for MaxPool, padding value should be -inf
     Tensor *padded_input = pad_tensor(input, padding, -INFINITY);
 
     for (uint64_t b = 0; b < batch_size; ++b) {
@@ -393,7 +393,7 @@ Layer *layer_maxpool2d_create(uint64_t kernel_size, uint64_t stride, uint64_t pa
     l->base.name = "MaxPool2d";
 
     l->kernel_size = kernel_size;
-    l->stride = (stride == 0) ? kernel_size : stride; // Default stride is kernel_size if 0
+    l->stride = (stride == 0) ? kernel_size : stride; // default stride is kernel_size if 0
     l->padding = padding;
 
     return (Layer *)l;
@@ -420,7 +420,7 @@ Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
                     uint64_t max_h = 0;
                     uint64_t max_w = 0;
 
-                    // Recompute max position
+                    // recompute max position
                     for (uint64_t k_h = 0; k_h < kernel_size; ++k_h) {
                         for (uint64_t k_w = 0; k_w < kernel_size; ++k_w) {
                             uint64_t in_h = in_h_start + k_h;
@@ -437,7 +437,7 @@ Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
                         }
                     }
 
-                    // Route gradient
+                    // route gradient
                     uint64_t grad_out_idx = b * grad_output->strides[0] + c * grad_output->strides[1] + out_h * grad_output->strides[2] + out_w * grad_output->strides[3];
                     float32_t g = grad_output->data[grad_out_idx];
 
@@ -507,7 +507,7 @@ static Tensor *avgpool2d_forward(Layer *layer, const Tensor *input, bool trainin
     const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
 
-    // Apply padding
+    // apply padding
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
 
     for (uint64_t b = 0; b < batch_size; ++b) {
@@ -593,20 +593,19 @@ static Tensor *batchnorm2d_forward_impl(Layer *layer, const Tensor *input, bool 
     uint64_t width = input->shape[3];
 
     if (channels != l->num_features) {
-        return NULL; // Mismatch
+        return NULL; // mismatch
     }
 
     Tensor *output = tensor_zeros(input->shape, 4, input->requires_grad || l->gamma->requires_grad || l->beta->requires_grad);
 
-    // Per-channel mean and var
-    // Per-channel mean and var
+    // per-channel mean and var
     float32_t *batch_mean = calloc(channels, sizeof(float32_t));
     assert(batch_mean != NULL);
     float32_t *batch_var = calloc(channels, sizeof(float32_t));
     assert(batch_var != NULL);
 
     if (training) {
-        // Compute batch stats
+        // compute batch stats
         uint64_t n_pixels = batch_size * height * width;
 
         for (uint64_t c = 0; c < channels; ++c) {
@@ -632,20 +631,20 @@ static Tensor *batchnorm2d_forward_impl(Layer *layer, const Tensor *input, bool 
             batch_mean[c] = mean;
             batch_var[c] = var;
 
-            // Update running stats
+            // update running stats
             // running = (1 - momentum) * running + momentum * batch
             l->running_mean->data[c] = (1.0f - l->momentum) * l->running_mean->data[c] + l->momentum * mean;
             l->running_var->data[c] = (1.0f - l->momentum) * l->running_var->data[c] + l->momentum * var;
         }
     } else {
-        // Use running stats
+        // use running stats
         for (uint64_t c = 0; c < channels; ++c) {
             batch_mean[c] = l->running_mean->data[c];
             batch_var[c] = l->running_var->data[c];
         }
     }
 
-    // Normalize and scale/shift
+    // normalize and scale/shift
     for (uint64_t c = 0; c < channels; ++c) {
         float32_t mean = batch_mean[c];
         float32_t var = batch_var[c];
@@ -707,8 +706,8 @@ Layer *layer_batchnorm2d_create(uint64_t num_features, float32_t eps, float32_t 
 
     const uint64_t shape[] = {num_features};
     // gamma = 1
-    l->gamma = tensor_create(NULL, shape, 1, true); // Create creates uninitialized
-    // Fill gamma with 1
+    l->gamma = tensor_create(NULL, shape, 1, true); // create creates uninitialized
+    // fill gamma with 1
     for (size_t i = 0; i < l->gamma->size; ++i)
         l->gamma->data[i] = 1.0f;
 
@@ -741,34 +740,34 @@ typedef struct {
 static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool training) {
     SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
 
-    // Conv1
+    // conv1
     Tensor *x1 = layer_forward(l->conv1, input, training);
 
-    // ReLU
+    // relu
     for (uint64_t i = 0; i < x1->size; ++i) {
         if (x1->data[i] < 0.0f)
             x1->data[i] = 0.0f;
     }
 
-    // Pool1
+    // pool1
     Tensor *x2 = layer_forward(l->pool1, x1, training);
     tensor_free(x1);
 
-    // Conv2
+    // conv2
     Tensor *x3 = layer_forward(l->conv2, x2, training);
     tensor_free(x2);
 
-    // ReLU
+    // relu
     for (uint64_t i = 0; i < x3->size; ++i) {
         if (x3->data[i] < 0.0f)
             x3->data[i] = 0.0f;
     }
 
-    // Pool2
+    // pool2
     Tensor *x4 = layer_forward(l->pool2, x3, training);
     tensor_free(x3);
 
-    // Flatten
+    // flatten
     uint64_t N = x4->shape[0];
     uint64_t flat_size = x4->size / N;
 
@@ -793,7 +792,7 @@ static void simple_cnn_free(Layer *layer) {
 static void simple_cnn_parameters(Layer *layer, Tensor ***out_params, size_t *out_count) {
     SimpleCNNLayer *l = (SimpleCNNLayer *)layer;
 
-    // Collect params from sublayers
+    // collect params from sublayers
     Tensor **p1, **p2;
     size_t c1, c2;
 
@@ -827,14 +826,14 @@ Layer *simple_cnn_create(uint64_t num_classes) {
     l->base.parameters = simple_cnn_parameters;
     l->base.name = "SimpleCNN";
 
-    // Conv1: 3 -> 16, 3x3, pad 1
+    // conv1: 3 -> 16, 3x3, pad 1
     l->conv1 = layer_conv2d_create(3, 16, 3, 1, 1, true);
-    // Pool1: 2x2, stride 2
+    // pool1: 2x2, stride 2
     l->pool1 = layer_maxpool2d_create(2, 2, 0);
 
-    // Conv2: 16 -> 32, 3x3, pad 1
+    // conv2: 16 -> 32, 3x3, pad 1
     l->conv2 = layer_conv2d_create(16, 32, 3, 1, 1, true);
-    // Pool2: 2x2, stride 2
+    // pool2: 2x2, stride 2
     l->pool2 = layer_maxpool2d_create(2, 2, 0);
 
     return (Layer *)l;

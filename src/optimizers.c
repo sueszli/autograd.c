@@ -140,7 +140,8 @@ Optimizer *optimizer_sgd_create(Tensor **params, size_t count, float32_t lr, flo
     sgd->momentum_buffers = calloc(count, sizeof(float32_t *));
     assert(sgd->momentum_buffers != NULL);
 
-    return (Optimizer *)sgd;
+    Optimizer *opt = (Optimizer *)sgd;
+    return opt;
 }
 
 //
@@ -277,8 +278,8 @@ Optimizer *optimizer_adam_create(Tensor **params, size_t count, float32_t lr, fl
     adam->v_buffers = calloc(count, sizeof(float32_t *));
     assert(adam->v_buffers != NULL);
 
-    // cppcheck-suppress memleak
-    return (Optimizer *)adam;
+    Optimizer *opt = (Optimizer *)adam;
+    return opt;
 }
 
 Optimizer *optimizer_adamw_create(Tensor **params, size_t count, float32_t lr, float32_t beta1, float32_t beta2, float32_t eps, float32_t weight_decay) {
@@ -316,6 +317,6 @@ Optimizer *optimizer_adamw_create(Tensor **params, size_t count, float32_t lr, f
     adam->v_buffers = calloc(count, sizeof(float32_t *));
     assert(adam->v_buffers != NULL);
 
-    // cppcheck-suppress memleak
-    return (Optimizer *)adam;
+    Optimizer *opt = (Optimizer *)adam;
+    return opt;
 }
