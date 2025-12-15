@@ -1,5 +1,5 @@
-#include "ops/arithmetic.h"
 #include "ops/activations.h"
+#include "ops/arithmetic.h"
 #include "tensor.h"
 #include "utils/cifar10.h"
 #include "utils/tqdm.h"
