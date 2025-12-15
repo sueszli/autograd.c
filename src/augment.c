@@ -57,10 +57,10 @@ void random_horizontal_flip(Tensor *t, float32_t p) {
  *
  * example (padding=1, target=2x2):
  *
- *   input (2x2):     virtual padded (4x4):      random crop (2x2):
- *   [1, 1]           0  0  0  0                 [0, 0]
- *   [1, 1]      ->   0 [1, 1] 0        ->       [0, 1]
- *                    0 [1, 1] 0                 (if top=0, left=0)
+ *   input (2x2):     virtual padded (4x4):    random crop (2x2):
+ *   [1, 1]           0  0  0  0               [0, 0]
+ *   [1, 1]      ->   0 [1, 1] 0        ->     [0, 1]
+ *                    0 [1, 1] 0               (if top=0, left=0)
  *                    0  0  0  0
  *
  * simulates translation invariance by shifting content.
