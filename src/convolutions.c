@@ -37,7 +37,7 @@ static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value
     uint64_t padded_H = H + 2 * padding;
     uint64_t padded_W = W + 2 * padding;
 
-    uint64_t out_shape[] = {N, C, padded_H, padded_W};
+    const uint64_t out_shape[] = {N, C, padded_H, padded_W};
     Tensor *padded = tensor_create(NULL, out_shape, 4, false); // manual fill
     assert(padded != NULL && "failed to allocate padded tensor");
 
@@ -76,7 +76,7 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
     uint64_t out_height = (in_height + 2 * padding - kernel_size) / stride + 1;
     uint64_t out_width = (in_width + 2 * padding - kernel_size) / stride + 1;
 
-    uint64_t out_shape[] = {batch_size, out_channels, out_height, out_width};
+    const uint64_t out_shape[] = {batch_size, out_channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad || weight->requires_grad);
     assert(output != NULL && "failed to allocate output tensor");
 
@@ -137,7 +137,7 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
 
 static Tensor *conv2d_forward(Layer *layer, const Tensor *input, bool training) {
     (void)training;
-    Conv2dLayer *l = (Conv2dLayer *)layer;
+    const Conv2dLayer *l = (Conv2dLayer *)layer;
     assert(input->ndim == 4 && "input must be 4D tensor");
     return conv2d_forward_impl(input, l->weight, l->bias, l->stride, l->padding, l->kernel_size);
 }
@@ -155,6 +155,7 @@ static void conv2d_parameters(Layer *layer, Tensor ***out_params, size_t *out_co
     Conv2dLayer *l = (Conv2dLayer *)layer;
     size_t count = (l->bias != NULL) ? 2 : 1;
     *out_params = malloc(sizeof(Tensor *) * count);
+    assert(*out_params != NULL);
     (*out_params)[0] = l->weight;
     if (l->bias) {
         (*out_params)[1] = l->bias;
@@ -177,7 +178,7 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
     l->padding = padding;
 
     // He init
-    uint64_t weight_shape[] = {out_channels, in_channels, kernel_size, kernel_size};
+    const uint64_t weight_shape[] = {out_channels, in_channels, kernel_size, kernel_size};
     uint64_t fan_in = in_channels * kernel_size * kernel_size;
     float32_t std = sqrtf(2.0f / (float32_t)fan_in);
 
@@ -186,8 +187,8 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
     assert(w_data != NULL && "failed to allocate weight data");
     for (uint64_t i = 0; i < w_size; ++i) {
         // box muller for normal dist.
-        float32_t u1 = (float32_t)rand() / RAND_MAX;
-        float32_t u2 = (float32_t)rand() / RAND_MAX;
+        float32_t u1 = (float32_t)rand() / (float32_t)RAND_MAX;
+        float32_t u2 = (float32_t)rand() / (float32_t)RAND_MAX;
         if (u1 < 1e-6f) {
             u1 = 1e-6f;
         }
@@ -198,7 +199,7 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
     free(w_data);
 
     if (bias) {
-        uint64_t bias_shape[] = {out_channels};
+        const uint64_t bias_shape[] = {out_channels};
         l->bias = tensor_zeros(bias_shape, 1, true);
     }
 
@@ -328,7 +329,7 @@ static Tensor *maxpool2d_forward_impl(const Tensor *input, uint64_t kernel_size,
     uint64_t out_height = (in_height + 2 * padding - kernel_size) / stride + 1;
     uint64_t out_width = (in_width + 2 * padding - kernel_size) / stride + 1;
 
-    uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
+    const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
 
     // Apply padding
@@ -367,7 +368,7 @@ static Tensor *maxpool2d_forward_impl(const Tensor *input, uint64_t kernel_size,
 
 static Tensor *maxpool2d_forward(Layer *layer, const Tensor *input, bool training) {
     (void)training;
-    MaxPool2dLayer *l = (MaxPool2dLayer *)layer;
+    const MaxPool2dLayer *l = (MaxPool2dLayer *)layer;
     assert(input->ndim == 4 && "input must be 4D");
     return maxpool2d_forward_impl(input, l->kernel_size, l->stride, l->padding);
 }
@@ -486,7 +487,7 @@ typedef struct {
 
 static Tensor *avgpool2d_forward(Layer *layer, const Tensor *input, bool training) {
     (void)training;
-    AvgPool2dLayer *l = (AvgPool2dLayer *)layer;
+    const AvgPool2dLayer *l = (AvgPool2dLayer *)layer;
     if (input->ndim != 4) {
         return NULL;
     }
@@ -503,7 +504,7 @@ static Tensor *avgpool2d_forward(Layer *layer, const Tensor *input, bool trainin
     uint64_t out_height = (in_height + 2 * padding - kernel_size) / stride + 1;
     uint64_t out_width = (in_width + 2 * padding - kernel_size) / stride + 1;
 
-    uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
+    const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
 
     // Apply padding
@@ -686,6 +687,7 @@ static void batchnorm2d_parameters(Layer *layer, Tensor ***out_params, size_t *o
     BatchNorm2dLayer *l = (BatchNorm2dLayer *)layer;
     size_t count = 2; // gamma and beta
     *out_params = malloc(sizeof(Tensor *) * count);
+    assert(*out_params != NULL);
     (*out_params)[0] = l->gamma;
     (*out_params)[1] = l->beta;
     *out_count = count;
@@ -703,7 +705,7 @@ Layer *layer_batchnorm2d_create(uint64_t num_features, float32_t eps, float32_t 
     l->eps = eps;
     l->momentum = momentum;
 
-    uint64_t shape[] = {num_features};
+    const uint64_t shape[] = {num_features};
     // gamma = 1
     l->gamma = tensor_create(NULL, shape, 1, true); // Create creates uninitialized
     // Fill gamma with 1
@@ -770,7 +772,7 @@ static Tensor *simple_cnn_forward(Layer *layer, const Tensor *input, bool traini
     uint64_t N = x4->shape[0];
     uint64_t flat_size = x4->size / N;
 
-    int64_t flat_shape[] = {(int64_t)N, (int64_t)flat_size};
+    const int64_t flat_shape[] = {(int64_t)N, (int64_t)flat_size};
 
     Tensor *out = tensor_reshape(x4, flat_shape, 2);
 
