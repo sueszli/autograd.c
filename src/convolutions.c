@@ -24,20 +24,25 @@ typedef struct {
  * returns a new tensor with shape (N, C, H+2p, W+2p).
  * value is 0.0f (or -inf for maxpool if needed, but this is for conv2d).
  */
+/*
+ * applies padding to a 4D tensor (batch_size, channels, height, width).
+ * returns a new tensor with shape (batch_size, channels, height+2p, width+2p).
+ * value is 0.0f (or -inf for maxpool if needed).
+ */
 static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value) {
     if (padding == 0) {
         return tensor_create(input->data, input->shape, input->ndim, false); // copy
     }
 
-    uint64_t N = input->shape[0];
-    uint64_t C = input->shape[1];
-    uint64_t H = input->shape[2];
-    uint64_t W = input->shape[3];
+    uint64_t batch_size = input->shape[0];
+    uint64_t channels = input->shape[1];
+    uint64_t height = input->shape[2];
+    uint64_t width = input->shape[3];
 
-    uint64_t padded_H = H + 2 * padding;
-    uint64_t padded_W = W + 2 * padding;
+    uint64_t padded_height = height + 2 * padding;
+    uint64_t padded_width = width + 2 * padding;
 
-    const uint64_t out_shape[] = {N, C, padded_H, padded_W};
+    const uint64_t out_shape[] = {batch_size, channels, padded_height, padded_width};
     Tensor *padded = tensor_create(NULL, out_shape, 4, false); // manual fill
     assert(padded != NULL && "failed to allocate padded tensor");
 
@@ -47,13 +52,13 @@ static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value
     }
 
     // copy input into center
-    for (uint64_t n = 0; n < N; ++n) {
-        for (uint64_t c = 0; c < C; ++c) {
-            for (uint64_t h = 0; h < H; ++h) {
-                for (uint64_t w = 0; w < W; ++w) {
-                    uint64_t in_idx = n * input->strides[0] + c * input->strides[1] + h * input->strides[2] + w * input->strides[3];
+    for (uint64_t b = 0; b < batch_size; ++b) {
+        for (uint64_t c = 0; c < channels; ++c) {
+            for (uint64_t h = 0; h < height; ++h) {
+                for (uint64_t w = 0; w < width; ++w) {
+                    uint64_t in_idx = b * input->strides[0] + c * input->strides[1] + h * input->strides[2] + w * input->strides[3];
 
-                    uint64_t out_idx = n * padded->strides[0] + c * padded->strides[1] + (h + padding) * padded->strides[2] + (w + padding) * padded->strides[3];
+                    uint64_t out_idx = b * padded->strides[0] + c * padded->strides[1] + (h + padding) * padded->strides[2] + (w + padding) * padded->strides[3];
 
                     padded->data[out_idx] = input->data[in_idx];
                 }
@@ -65,27 +70,41 @@ static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value
 }
 
 static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, const Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size) {
+    assert(input != NULL);
+    assert(weight != NULL);
+
     uint64_t batch_size = input->shape[0];
     uint64_t in_channels = input->shape[1];
     uint64_t in_height = input->shape[2];
     uint64_t in_width = input->shape[3];
 
     uint64_t out_channels = weight->shape[0];
-    // weight shape: (out_channels, in_channels, kernel_h, kernel_w)
+    uint64_t weight_in_channels = weight->shape[1];
+    uint64_t weight_h = weight->shape[2];
+    uint64_t weight_w = weight->shape[3];
+
+    // Assertions for shape consistency
+    assert(in_channels == weight_in_channels && "input channels must match weight input channels");
+    assert(weight_h == kernel_size && "weight height must match kernel size");
+    assert(weight_w == kernel_size && "weight width must match kernel size");
 
     uint64_t out_height = (in_height + 2 * padding - kernel_size) / stride + 1;
     uint64_t out_width = (in_width + 2 * padding - kernel_size) / stride + 1;
 
     const uint64_t out_shape[] = {batch_size, out_channels, out_height, out_width};
-    Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad || weight->requires_grad);
+    bool requires_grad = input->requires_grad || weight->requires_grad || (bias && bias->requires_grad);
+    Tensor *output = tensor_zeros(out_shape, 4, requires_grad);
     assert(output != NULL && "failed to allocate output tensor");
 
     // apply padding
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
+    assert(padded_input != NULL && "failed to allocate padded input");
 
     // explicit loops
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t out_ch = 0; out_ch < out_channels; ++out_ch) {
+            float32_t bias_val = (bias != NULL) ? bias->data[out_ch] : 0.0f;
+
             for (uint64_t out_h = 0; out_h < out_height; ++out_h) {
                 for (uint64_t out_w = 0; out_w < out_width; ++out_w) {
                     uint64_t in_h_start = out_h * stride;
@@ -102,35 +121,21 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
 
                                 // weight value
                                 uint64_t w_idx = out_ch * weight->strides[0] + in_ch * weight->strides[1] + k_h * weight->strides[2] + k_w * weight->strides[3];
-                                float32_t w = weight->data[w_idx];
+                                float32_t w_val = weight->data[w_idx];
 
-                                conv_sum += val * w;
+                                conv_sum += val * w_val;
                             }
                         }
                     }
 
                     uint64_t out_idx = b * output->strides[0] + out_ch * output->strides[1] + out_h * output->strides[2] + out_w * output->strides[3];
-                    output->data[out_idx] = conv_sum;
+                    output->data[out_idx] = conv_sum + bias_val;
                 }
             }
         }
     }
 
     tensor_free(padded_input);
-
-    if (bias != NULL) {
-        for (uint64_t b = 0; b < batch_size; ++b) {
-            for (uint64_t out_ch = 0; out_ch < out_channels; ++out_ch) {
-                float32_t b_val = bias->data[out_ch];
-                for (uint64_t out_h = 0; out_h < out_height; ++out_h) {
-                    for (uint64_t out_w = 0; out_w < out_width; ++out_w) {
-                        uint64_t out_idx = b * output->strides[0] + out_ch * output->strides[1] + out_h * output->strides[2] + out_w * output->strides[3];
-                        output->data[out_idx] += b_val;
-                    }
-                }
-            }
-        }
-    }
 
     return output;
 }
@@ -207,6 +212,13 @@ Layer *layer_conv2d_create(uint64_t in_channels, uint64_t out_channels, uint64_t
 }
 
 void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_w, Tensor **out_grad_b) {
+    assert(input != NULL);
+    assert(weight != NULL);
+    assert(grad_output != NULL);
+    assert(out_grad_in != NULL);
+    assert(out_grad_w != NULL);
+    assert(out_grad_b != NULL);
+
     uint64_t batch_size = grad_output->shape[0];
     uint64_t out_channels = grad_output->shape[1];
     uint64_t out_height = grad_output->shape[2];
@@ -216,12 +228,15 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
 
     // pad input
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
+    assert(padded_input != NULL && "failed to allocate padded_input");
 
     // init gradients
     Tensor *grad_input_padded = tensor_zeros(padded_input->shape, 4, false);
     assert(grad_input_padded != NULL && "failed to allocate grad_input_padded");
+
     *out_grad_w = tensor_zeros(weight->shape, 4, false);
     assert(*out_grad_w != NULL && "failed to allocate out_grad_w");
+
     if (bias) {
         *out_grad_b = tensor_zeros(bias->shape, 1, false);
         assert(*out_grad_b != NULL && "failed to allocate out_grad_b");
@@ -248,10 +263,10 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
 
                                 // grad wrt. weight
                                 uint64_t padded_idx = b * padded_input->strides[0] + in_ch * padded_input->strides[1] + in_h * padded_input->strides[2] + in_w * padded_input->strides[3];
-                                float32_t p_val = padded_input->data[padded_idx];
+                                float32_t val = padded_input->data[padded_idx];
 
                                 uint64_t w_idx = out_ch * (*out_grad_w)->strides[0] + in_ch * (*out_grad_w)->strides[1] + k_h * (*out_grad_w)->strides[2] + k_w * (*out_grad_w)->strides[3];
-                                (*out_grad_w)->data[w_idx] += p_val * grad_val;
+                                (*out_grad_w)->data[w_idx] += val * grad_val;
 
                                 // grad wrt. input
                                 uint64_t w_val_idx = out_ch * weight->strides[0] + in_ch * weight->strides[1] + k_h * weight->strides[2] + k_w * weight->strides[3];
@@ -286,14 +301,15 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
 
     // remove padding from input gradient
     if (padding > 0) {
-        uint64_t inner_H = input->shape[2];
-        uint64_t inner_W = input->shape[3];
+        uint64_t inner_height = input->shape[2];
+        uint64_t inner_width = input->shape[3];
         *out_grad_in = tensor_zeros(input->shape, 4, false);
+        assert(*out_grad_in != NULL && "failed to allocate out_grad_in");
 
         for (uint64_t b = 0; b < batch_size; ++b) {
             for (uint64_t c = 0; c < in_channels; ++c) {
-                for (uint64_t h = 0; h < inner_H; ++h) {
-                    for (uint64_t w = 0; w < inner_W; ++w) {
+                for (uint64_t h = 0; h < inner_height; ++h) {
+                    for (uint64_t w = 0; w < inner_width; ++w) {
                         uint64_t src_idx = b * grad_input_padded->strides[0] + c * grad_input_padded->strides[1] + (h + padding) * grad_input_padded->strides[2] + (w + padding) * grad_input_padded->strides[3];
                         uint64_t dst_idx = b * (*out_grad_in)->strides[0] + c * (*out_grad_in)->strides[1] + h * (*out_grad_in)->strides[2] + w * (*out_grad_in)->strides[3];
                         (*out_grad_in)->data[dst_idx] = grad_input_padded->data[src_idx];
@@ -331,10 +347,12 @@ static Tensor *maxpool2d_forward_impl(const Tensor *input, uint64_t kernel_size,
 
     const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
+    assert(output != NULL && "failed to allocate output tensor");
 
     // apply padding
     // for MaxPool, padding value should be -inf
     Tensor *padded_input = pad_tensor(input, padding, -INFINITY);
+    assert(padded_input != NULL && "failed to allocate padded_input");
 
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t c = 0; c < channels; ++c) {
@@ -406,8 +424,10 @@ Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
     uint64_t out_width = output_shape[3];
 
     Tensor *padded_input = pad_tensor(input, padding, -INFINITY);
+    assert(padded_input != NULL && "failed to allocate padded_input");
+
     Tensor *grad_input_padded = tensor_zeros(padded_input->shape, 4, false);
-    assert(grad_input_padded != NULL);
+    assert(grad_input_padded != NULL && "failed to allocate grad_input_padded");
 
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t c = 0; c < channels; ++c) {
@@ -450,14 +470,15 @@ Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
 
     Tensor *grad_input;
     if (padding > 0) {
-        uint64_t inner_H = input->shape[2];
-        uint64_t inner_W = input->shape[3];
+        uint64_t inner_height = input->shape[2];
+        uint64_t inner_width = input->shape[3];
         grad_input = tensor_zeros(input->shape, 4, false);
+        assert(grad_input != NULL && "failed to allocate grad_input");
 
         for (uint64_t b = 0; b < batch_size; ++b) {
             for (uint64_t c = 0; c < channels; ++c) {
-                for (uint64_t h = 0; h < inner_H; ++h) {
-                    for (uint64_t w = 0; w < inner_W; ++w) {
+                for (uint64_t h = 0; h < inner_height; ++h) {
+                    for (uint64_t w = 0; w < inner_width; ++w) {
                         uint64_t src_idx = b * grad_input_padded->strides[0] + c * grad_input_padded->strides[1] + (h + padding) * grad_input_padded->strides[2] + (w + padding) * grad_input_padded->strides[3];
                         uint64_t dst_idx = b * grad_input->strides[0] + c * grad_input->strides[1] + h * grad_input->strides[2] + w * grad_input->strides[3];
                         grad_input->data[dst_idx] = grad_input_padded->data[src_idx];
@@ -506,9 +527,11 @@ static Tensor *avgpool2d_forward(Layer *layer, const Tensor *input, bool trainin
 
     const uint64_t out_shape[] = {batch_size, channels, out_height, out_width};
     Tensor *output = tensor_zeros(out_shape, 4, input->requires_grad);
+    assert(output != NULL && "failed to allocate output tensor");
 
     // apply padding
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
+    assert(padded_input != NULL && "failed to allocate padded_input");
 
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t c = 0; c < channels; ++c) {
@@ -583,26 +606,24 @@ typedef struct {
 static Tensor *batchnorm2d_forward_impl(Layer *layer, const Tensor *input, bool training) {
     BatchNorm2dLayer *l = (BatchNorm2dLayer *)layer;
 
-    if (input->ndim != 4) {
-        return NULL;
-    }
+    assert(input->ndim == 4 && "input must be 4D tensor");
 
     uint64_t batch_size = input->shape[0];
     uint64_t channels = input->shape[1];
     uint64_t height = input->shape[2];
     uint64_t width = input->shape[3];
 
-    if (channels != l->num_features) {
-        return NULL; // mismatch
-    }
+    assert(channels == l->num_features && "input channels must match batchnorm num_features");
 
-    Tensor *output = tensor_zeros(input->shape, 4, input->requires_grad || l->gamma->requires_grad || l->beta->requires_grad);
+    bool requires_grad = input->requires_grad || l->gamma->requires_grad || l->beta->requires_grad;
+    Tensor *output = tensor_zeros(input->shape, 4, requires_grad);
+    assert(output != NULL && "failed to allocate output tensor");
 
     // per-channel mean and var
     float32_t *batch_mean = calloc(channels, sizeof(float32_t));
-    assert(batch_mean != NULL);
+    assert(batch_mean != NULL && "failed to allocate batch_mean");
     float32_t *batch_var = calloc(channels, sizeof(float32_t));
-    assert(batch_var != NULL);
+    assert(batch_var != NULL && "failed to allocate batch_var");
 
     if (training) {
         // compute batch stats

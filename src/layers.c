@@ -56,10 +56,13 @@ static Tensor *linear_forward(Layer *layer, const Tensor *input, bool training) 
     const LinearLayer *l = (const LinearLayer *)layer;
     assert(l->weight != NULL);
 
+    // output = input @ weight + bias
     Tensor *output = tensor_matmul(input, l->weight);
+    assert(output != NULL);
 
     if (l->bias != NULL) {
         Tensor *output_bias = tensor_add(output, l->bias);
+        assert(output_bias != NULL);
         tensor_free(output);
         output = output_bias;
     }
@@ -102,6 +105,10 @@ static void linear_parameters(Layer *layer, Tensor ***out_params, size_t *out_co
 }
 
 Layer *layer_linear_create(uint64_t in_features, uint64_t features_out, bool bias) {
+    assert(in_features > 0);
+    assert(features_out > 0);
+    assert(in_features < (SIZE_MAX / features_out));
+
     LinearLayer *l = (LinearLayer *)calloc(1, sizeof(LinearLayer));
     assert(l != NULL && "calloc failed");
 
@@ -124,11 +131,13 @@ Layer *layer_linear_create(uint64_t in_features, uint64_t features_out, bool bia
     }
 
     l->weight = tensor_create(w_data, w_shape, 2, true);
+    assert(l->weight != NULL);
     free(w_data);
 
     if (bias) {
         uint64_t const b_shape[] = {features_out};
         l->bias = tensor_zeros(b_shape, 1, true);
+        assert(l->bias != NULL);
     } else {
         l->bias = NULL;
     }
@@ -150,28 +159,35 @@ static Tensor *dropout_forward(const Layer *layer, const Tensor *input, bool tra
     assert(input != NULL);
 
     const DropoutLayer *l = (const DropoutLayer *)layer;
-
     if (!training || l->p <= 0.0f) {
-        return tensor_create(input->data, input->shape, input->ndim, input->requires_grad);
+        Tensor *t = tensor_create(input->data, input->shape, input->ndim, input->requires_grad);
+        assert(t != NULL);
+        return t;
     }
 
     if (l->p >= 1.0f) {
-        return tensor_zeros(input->shape, input->ndim, input->requires_grad);
+        Tensor *t = tensor_zeros(input->shape, input->ndim, input->requires_grad);
+        assert(t != NULL);
+        return t;
     }
 
     float32_t const scale = 1.0f / (1.0f - l->p);
     float32_t *mask_data = (float32_t *)malloc(input->size * sizeof(float32_t));
     assert(mask_data != NULL && "malloc failed");
 
+    // mask_data[i] = 0 with probability p, or 1/(1-p) with probability (1-p)
     for (size_t i = 0; i < input->size; ++i) {
         float32_t const r = (float32_t)rand() / (float32_t)RAND_MAX;
         mask_data[i] = (r < (1.0f - l->p)) ? scale : 0.0f;
     }
 
     Tensor *mask = tensor_create(mask_data, input->shape, input->ndim, false);
+    assert(mask != NULL);
     free(mask_data);
 
+    // output = input * mask
     Tensor *output = tensor_mul(input, mask);
+    assert(output != NULL);
     tensor_free(mask);
 
     return output;
@@ -192,9 +208,7 @@ static void dropout_parameters(Layer *layer, Tensor ***out_params, size_t *out_c
 }
 
 Layer *layer_dropout_create(float32_t p) {
-    if (p < 0.0f || p > 1.0f) {
-        return NULL;
-    }
+    assert(p >= 0.0f && p <= 1.0f && "dropout probability must be between 0 and 1");
 
     DropoutLayer *l = (DropoutLayer *)calloc(1, sizeof(DropoutLayer));
     assert(l != NULL && "calloc failed");
@@ -224,19 +238,23 @@ static Tensor *sequential_forward(Layer *layer, const Tensor *input, bool traini
     const SequentialLayer *l = (const SequentialLayer *)layer;
 
     if (l->count == 0) {
-        return tensor_create(input->data, input->shape, input->ndim, input->requires_grad);
+        Tensor *t = tensor_create(input->data, input->shape, input->ndim, input->requires_grad);
+        assert(t != NULL);
+        return t;
     }
 
     Tensor *current = NULL;
 
+    // first layer
     current = layer_forward(l->layers[0], input, training);
-    assert(current != NULL); // ensure the first layer forward returns a valid tensor
+    assert(current != NULL);
 
     for (size_t i = 1; i < l->count; ++i) {
+        // composition: pass output of previous layer as input to next layer
         Tensor *next = layer_forward(l->layers[i], current, training);
+        assert(next != NULL);
         tensor_free(current);
         current = next;
-        assert(current != NULL); // ensure subsequent layers return valid tensors
     }
 
     return current;
