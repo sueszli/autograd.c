@@ -568,6 +568,10 @@ Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1) {
     }
     free(curr);
 
+    if (result->requires_grad) {
+        result->grad_fn = new_transpose_backward((Tensor *)t, dim0, dim1);
+        result->grad_fn->out_tensor = result;
+    }
     return result;
 }
 
@@ -875,6 +879,10 @@ Tensor *tensor_get(const Tensor *t, const uint64_t *multidim) {
     assert(offset < t->size);
 
     // scalar tensor with 0 dim
-    Tensor *val = tensor_create(&t->data[offset], NULL, 0, false);
+    Tensor *val = tensor_create(&t->data[offset], NULL, 0, t->requires_grad);
+    if (val->requires_grad) {
+        val->grad_fn = new_getitem_backward((Tensor *)t, multidim);
+        val->grad_fn->out_tensor = val;
+    }
     return val;
 }
