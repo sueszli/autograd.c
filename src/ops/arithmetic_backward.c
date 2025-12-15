@@ -1,5 +1,7 @@
 #include "ops/arithmetic_backward.h"
 #include "ops/arithmetic.h"
+#include "ops/reductions.h"
+#include "ops/reshapes.h"
 #include "tensor.h"
 #include <assert.h>
 #include <stddef.h>

@@ -1,5 +1,6 @@
 #include "activations.h"
 #include "ops/arithmetic.h"
+#include "ops/reductions.h"
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>

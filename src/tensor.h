@@ -27,15 +27,6 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
 Tensor *tensor_zeros(const uint64_t *shape, uint64_t ndim, bool requires_grad);
 void tensor_free(Tensor *t);
 
-// reshapes
-Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim);
-Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1);
-
-// reductions
-Tensor *tensor_sum(const Tensor *t, int64_t dim_idx, bool keepdims);
-Tensor *tensor_mean(const Tensor *t, int64_t dim_idx, bool keepdims);
-Tensor *tensor_max(const Tensor *t, int64_t dim_idx, bool keepdims);
-
 // utils
 void tensor_print(const Tensor *t);
 Tensor *tensor_get(const Tensor *t, const uint64_t *multidim);
