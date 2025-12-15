@@ -49,6 +49,10 @@ static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
     return (Tensor *)curr_grad;
 }
 
+//
+// add
+//
+
 Tensor *tensor_add_backward_a(const Tensor *grad_output, const Tensor *a) {
     assert(grad_output != NULL);
     assert(a != NULL);
@@ -60,6 +64,10 @@ Tensor *tensor_add_backward_b(const Tensor *grad_output, const Tensor *b) {
     assert(b != NULL);
     return unbroadcast(grad_output, b);
 }
+
+//
+// sub
+//
 
 Tensor *tensor_sub_backward_a(const Tensor *grad_output, const Tensor *a) {
     assert(grad_output != NULL);
@@ -79,6 +87,10 @@ Tensor *tensor_sub_backward_b(const Tensor *grad_output, const Tensor *b) {
     tensor_free(neg_grad);
     return result;
 }
+
+//
+// mul
+//
 
 Tensor *tensor_mul_backward_a(const Tensor *grad_output, const Tensor *a, const Tensor *b) {
     assert(grad_output != NULL);
@@ -101,6 +113,10 @@ Tensor *tensor_mul_backward_b(const Tensor *grad_output, const Tensor *a, const 
     tensor_free(temp);
     return result;
 }
+
+//
+// div
+//
 
 Tensor *tensor_div_backward_a(const Tensor *grad_output, const Tensor *a, const Tensor *b) {
     assert(grad_output != NULL);
@@ -135,6 +151,10 @@ Tensor *tensor_div_backward_b(const Tensor *grad_output, const Tensor *a, const 
     tensor_free(temp);
     return result;
 }
+
+//
+// matmul
+//
 
 Tensor *tensor_matmul_backward_a(const Tensor *grad_output, const Tensor *a, const Tensor *b) {
     assert(grad_output != NULL);

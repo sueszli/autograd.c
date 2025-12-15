@@ -1,5 +1,6 @@
 #pragma once
 
+#include "autograd.h"
 #include "tensor.h"
 
 Tensor *tensor_add_backward_a(const Tensor *grad_output, const Tensor *a);

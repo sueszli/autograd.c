@@ -167,6 +167,7 @@ static bool shapes_equal(const Tensor *a, const Tensor *b) {
     return true;
 }
 
+// used when a tensor receives multiple gradient contributions
 void accumulate_grad(Tensor *tensor, Tensor *new_grad) {
     assert(tensor != NULL);
     assert(new_grad != NULL);
