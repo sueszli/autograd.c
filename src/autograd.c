@@ -10,6 +10,14 @@
 #define MAX_RECURSION_DEPTH 1024
 #define MAX_NDIM 32
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef EPSILON
+#define EPSILON 1e-7f
+#endif
+
 //
 // Helpers
 //
@@ -806,7 +814,7 @@ GradFn *new_reshape_backward(Tensor *input, const uint64_t *old_shape, uint64_t 
     return (GradFn *)fn;
 }
 
-// TRANSPOSE
+// --- Transpose ---
 typedef struct {
     GradFn base;
     Tensor *input;
@@ -815,10 +823,12 @@ typedef struct {
 } TransposeBackward;
 
 static void transpose_apply(GradFn *base, const Tensor *grad_output) {
-    TransposeBackward *self = (TransposeBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    TransposeBackward *self = (TransposeBackward *)base;
 
+    // Grad input = grad_output.transpose(dim0, dim1)
+    // Transpose is its own inverse operation in terms of swapping dims
     Tensor *grad_input = tensor_transpose(grad_output, self->dim0, self->dim1);
     accumulate_grad(self->input, grad_input);
     tensor_free(grad_input);
@@ -842,7 +852,7 @@ GradFn *new_transpose_backward(Tensor *input, uint64_t dim0, uint64_t dim1) {
     return (GradFn *)fn;
 }
 
-// GETITEM (Slice)
+// --- GetItem (Slice) ---
 typedef struct {
     GradFn base;
     Tensor *input;
@@ -850,23 +860,36 @@ typedef struct {
 } GetItemBackward;
 
 static void getitem_apply(GradFn *base, const Tensor *grad_output) {
-    GetItemBackward *self = (GetItemBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    GetItemBackward *self = (GetItemBackward *)base;
 
     // Create a zero tensor of input shape
+    // Assuming we simply fill in the gradient at the specific index.
     Tensor *grad_input = tensor_zeros(self->input->shape, self->input->ndim, false);
 
-    // Write grad_output (scalar) to the correct position
-    // We need to re-calculate offset.
-    uint64_t offset = 0;
-    for (uint64_t d = 0; d < self->input->ndim; d++) {
-        offset += self->multidim[d] * self->input->strides[d];
+    // We need to write grad_output to the correct position.
+    // NOTE: tensor_getitem usually returns a scalar (if fully indexed) or a slice?
+    // Based on implementation, it seems to handle single element access via multidim array?
+    // If grad_output is scalar:
+    assert(grad_output->size == 1 && "GetItem backward currently supports scalar output");
+
+    // Calculate linear offset in input tensor
+    // TODO: This duplication of logic (multidim_to_linear) is not ideal but acceptable for now.
+    // Ideally we should expose multidim_to_linear from tensor.h/c
+    // But it's static there. We can reimplement simple logic or assume strides are available.
+
+    if (self->input->strides) {
+        uint64_t offset = 0;
+        for (uint64_t d = 0; d < self->input->ndim; d++) {
+            offset += self->multidim[d] * self->input->strides[d];
+        }
+        assert(offset < grad_input->size);
+        grad_input->data[offset] = grad_output->data[0];
+    } else {
+        // Fallback or error? Strides should exist if tensor created properly.
+        assert(false && "Input tensor has no strides");
     }
-    assert(offset < grad_input->size);
-    // grad_output is scalar
-    assert(grad_output->size == 1);
-    grad_input->data[offset] = grad_output->data[0];
 
     accumulate_grad(self->input, grad_input);
     tensor_free(grad_input);
@@ -893,33 +916,37 @@ GradFn *new_getitem_backward(Tensor *input, const uint64_t *multidim) {
     return (GradFn *)fn;
 }
 
-// GELU
+// --- GELU ---
 typedef struct {
     GradFn base;
     Tensor *input;
 } GELUBackward;
 
 static void gelu_apply(GradFn *base, const Tensor *grad_output) {
-    GELUBackward *self = (GELUBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    GELUBackward *self = (GELUBackward *)base;
 
     Tensor *grad_input = tensor_create(NULL, grad_output->shape, grad_output->ndim, false);
 
     // GELU gradient approximation
     // gelu(x) approx 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-    // derivative logic from reference
     float32_t sqrt_2_over_pi = sqrtf(2.0f / (float32_t)M_PI);
     float32_t coeff = 0.044715f;
 
     for (uint64_t i = 0; i < self->input->size; i++) {
         float32_t x = self->input->data[i];
-        float32_t x3 = x * x * x;
+        float32_t x2 = x * x;
+        float32_t x3 = x2 * x;
+
         float32_t tanh_arg = sqrt_2_over_pi * (x + coeff * x3);
         float32_t tanh_out = tanhf(tanh_arg);
         float32_t sech_sq = 1.0f - tanh_out * tanh_out;
 
-        float32_t d_tanh_arg = sqrt_2_over_pi * (1.0f + 3.0f * coeff * x * x);
+        float32_t d_tanh_arg = sqrt_2_over_pi * (1.0f + 3.0f * coeff * x2);
+
+        // y = 0.5 * x * (1 + tanh(...))
+        // dy/dx = 0.5 * (1 + tanh(...)) + 0.5 * x * sech^2(...) * d(...)/dx
         float32_t gelu_grad = 0.5f * (1.0f + tanh_out) + 0.5f * x * sech_sq * d_tanh_arg;
 
         grad_input->data[i] = grad_output->data[i] * gelu_grad;
@@ -945,7 +972,7 @@ GradFn *new_gelu_backward(Tensor *input) {
     return (GradFn *)fn;
 }
 
-// MSE
+// --- MSE ---
 typedef struct {
     GradFn base;
     Tensor *predictions;
@@ -953,9 +980,10 @@ typedef struct {
 } MSEBackward;
 
 static void mse_apply(GradFn *base, const Tensor *grad_output) {
-    MSEBackward *self = (MSEBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    MSEBackward *self = (MSEBackward *)base;
+
     // grad_output IS A SCALAR TENSOR (loss is scalar)
     assert(grad_output->size == 1);
     float32_t g = grad_output->data[0];
@@ -991,21 +1019,18 @@ GradFn *new_mse_backward(Tensor *predictions, Tensor *targets) {
     return (GradFn *)fn;
 }
 
-// BCE
+// --- BCE ---
 typedef struct {
     GradFn base;
     Tensor *predictions;
     Tensor *targets;
 } BCEBackward;
 
-#ifndef EPSILON
-#define EPSILON 1e-7f
-#endif
-
 static void bce_apply(GradFn *base, const Tensor *grad_output) {
-    BCEBackward *self = (BCEBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    BCEBackward *self = (BCEBackward *)base;
+
     assert(grad_output->size == 1);
     float32_t g = grad_output->data[0];
 
@@ -1022,6 +1047,10 @@ static void bce_apply(GradFn *base, const Tensor *grad_output) {
             p = 1.0f - EPSILON;
 
         // grad = (p - y) / (p * (1 - p) * N)
+        // For BCE Loss = -mean(y*log(p) + (1-y)*log(1-p))
+        // dLoss/dp = (p - y) / (p * (1-p)) / N
+        // Multiplied by incoming gradient g
+
         float32_t denom = p * (1.0f - p) * num_samples;
         grad_pred->data[i] = g * (p - y) / denom;
     }
@@ -1048,7 +1077,7 @@ GradFn *new_bce_backward(Tensor *predictions, Tensor *targets) {
     return (GradFn *)fn;
 }
 
-// CrossEntropy
+// --- CrossEntropy ---
 typedef struct {
     GradFn base;
     Tensor *logits;
@@ -1056,20 +1085,20 @@ typedef struct {
 } CrossEntropyBackward;
 
 static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
-    CrossEntropyBackward *self = (CrossEntropyBackward *)base;
     assert(base != NULL);
     assert(grad_output != NULL);
+    CrossEntropyBackward *self = (CrossEntropyBackward *)base;
+
     assert(grad_output->size == 1);
     float32_t g = grad_output->data[0];
 
-    // logits shape [batch, num_classes] (assumed 2D)
+    // Recompute softmax
     assert(self->logits->ndim == 2);
     uint64_t batch_size = self->logits->shape[0];
     uint64_t num_classes = self->logits->shape[1];
 
     Tensor *grad_logits = tensor_create(NULL, self->logits->shape, self->logits->ndim, false);
 
-    // We will do manual softmax calculation per row
     for (uint64_t i = 0; i < batch_size; i++) {
         // 1. max for stability
         float32_t max_val = -INFINITY;
@@ -1086,6 +1115,7 @@ static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
         }
 
         // 3. compute grad
+        // grad_logit[j] = (probs[j] - indicator[j==target]) / batch_size
         uint64_t target_idx = (uint64_t)self->targets->data[i];
 
         for (uint64_t j = 0; j < num_classes; j++) {
