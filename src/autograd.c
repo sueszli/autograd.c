@@ -631,6 +631,7 @@ static void relu_apply(GradFn *base, const Tensor *grad_output) {
     ReluBackward *self = (ReluBackward *)base;
 
     assert(grad_output->size == self->input->size && "ReLU grad shape mismatch");
+    assert(grad_output->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
     Tensor *grad_input = tensor_zeros(grad_output->shape, grad_output->ndim, false);
 
     for (uint64_t elem_idx = 0; elem_idx < grad_output->size; elem_idx++) {
@@ -932,6 +933,7 @@ static void gelu_apply(GradFn *base, const Tensor *grad_output) {
     GELUBackward *self = (GELUBackward *)base;
 
     Tensor *grad_input = tensor_create(NULL, grad_output->shape, grad_output->ndim, false);
+    assert(self->input->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
 
     // GELU gradient approximation
     // gelu(x) approx 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
@@ -993,6 +995,7 @@ static void mse_apply(GradFn *base, const Tensor *grad_output) {
     float32_t g = grad_output->data[0];
 
     Tensor *grad_pred = tensor_create(NULL, self->predictions->shape, self->predictions->ndim, false);
+    assert(self->predictions->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
     float32_t sample_count_f32 = (float32_t)self->predictions->size;
 
     for (uint64_t elem_idx = 0; elem_idx < self->predictions->size; elem_idx++) {
@@ -1039,6 +1042,7 @@ static void bce_apply(GradFn *base, const Tensor *grad_output) {
     float32_t g = grad_output->data[0];
 
     Tensor *grad_pred = tensor_create(NULL, self->predictions->shape, self->predictions->ndim, false);
+    assert(self->predictions->size < MAX_TENSOR_SIZE && "Tensor size exceeds maximum limit");
     float32_t sample_count_f32 = (float32_t)self->predictions->size;
 
     for (uint64_t elem_idx = 0; elem_idx < self->predictions->size; elem_idx++) {
@@ -1100,6 +1104,8 @@ static void crossentropy_apply(GradFn *base, const Tensor *grad_output) {
     assert(self->logits->ndim == 2);
     uint64_t batch_size = self->logits->shape[0];
     uint64_t class_count = self->logits->shape[1];
+    assert(batch_size < MAX_TENSOR_SIZE && "Batch size exceeds maximum limit");
+    assert(class_count < MAX_TENSOR_SIZE && "Class count exceeds maximum limit");
 
     Tensor *grad_logits = tensor_create(NULL, self->logits->shape, self->logits->ndim, false);
 
