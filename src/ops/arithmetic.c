@@ -153,14 +153,14 @@ Tensor *tensor_add(const Tensor *a, const Tensor *b) {
     return result;
 }
 
-// ------------------------------------------------------------------------------
-// END AUTOGRAD STUFF
-// ------------------------------------------------------------------------------
-
 static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
 Tensor *tensor_sub(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_sub); }
 
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
+
+// ------------------------------------------------------------------------------
+// END AUTOGRAD STUFF
+// ------------------------------------------------------------------------------
 
 // Backward function for mul: d(a*b)/da = b, d(a*b)/db = a
 static void mul_backward(Function *fn, const Tensor *grad_output) {
