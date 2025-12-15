@@ -25,4 +25,5 @@ TODO:
 
 - autograd.c (in progress)
 - training.c (full architecture)
+- test_e2e.c
 - benchmarking and visualizing, finishing readme
