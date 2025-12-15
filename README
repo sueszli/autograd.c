@@ -15,14 +15,3 @@ $ make run
 $ cat references.txt
 
     - https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/
-
-
-
-
-
-
-TODO:
-
-write autograd
-
-training, benchmarking, visualizing -> https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/07_training/ABOUT.md

@@ -90,6 +90,8 @@ Tensor *tensor_create(const float32_t *data, const uint64_t *shape, uint64_t ndi
     t->ndim = ndim;
     t->requires_grad = requires_grad;
     t->grad = NULL;
+    t->grad_fn = NULL;
+    t->ref_count = 1;
     t->shape = NULL;
     t->strides = NULL;
 
@@ -160,6 +162,34 @@ void tensor_free(Tensor *t) {
         tensor_free(t->grad);
     }
     free(t);
+}
+
+Tensor *tensor_retain(Tensor *t) {
+    if (t) {
+        t->ref_count++;
+    }
+    return t;
+}
+
+void tensor_release(Tensor *t) {
+    if (!t) {
+        return;
+    }
+    assert(t->ref_count > 0 && "ref_count already zero");
+    t->ref_count--;
+    if (t->ref_count == 0) {
+        tensor_free(t);
+    }
+}
+
+void tensor_zero_grad(Tensor *t) {
+    if (!t) {
+        return;
+    }
+    if (t->grad) {
+        tensor_free(t->grad);
+        t->grad = NULL;
+    }
 }
 
 /*
