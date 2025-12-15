@@ -7,22 +7,24 @@
 #include <unistd.h>
 
 int32_t main(void) {
-    float32_t float_data[INPUT_SIZE];
+
     const uint64_t shape[] = {CHANNELS, HEIGHT, WIDTH};
 
-    // load 5 images into tensors
-    for (int8_t i = 0; i < 5; i++) {
-        sample_t *s = &test_samples[i];
-        printf("test sample %d: %s\n", i, label_to_str(s->label));
+    Tensor *images = cifar10_get_test_images();
+    Tensor *labels = cifar10_get_test_labels();
 
-        for (uint64_t j = 0; j < INPUT_SIZE; j++) {
-            float_data[j] = (float32_t)s->data[j] / 255.0f;
-        }
+    for (uint64_t i = 0; i < 5; i++) {
+        label_t idx = (label_t)labels->data[i];
+        printf("test sample %" PRIu64 ": %s\n", i, label_to_str(idx));
 
-        Tensor *t = tensor_create(float_data, shape, 3, false);
+        float32_t *img_data = &images->data[i * INPUT_SIZE];
+        Tensor *t = tensor_create(img_data, shape, 3, false);
         tensor_print(t);
         tensor_free(t);
     }
+
+    tensor_free(images);
+    tensor_free(labels);
 
     // demo tqdm
     for (uint64_t i = 0; i < 30; i++) {
