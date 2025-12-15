@@ -71,7 +71,6 @@ Tensor *tensor_gelu(const Tensor *t) {
 
     Tensor *out = tensor_create(NULL, t->shape, t->ndim, t->requires_grad);
 
-    // GELU exact: 0.5 * x * (1 + erf(x / sqrt(2)))
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
         out->data[i] = 0.5f * x * (1.0f + erff(x * 1 / (float)sqrt(2)));

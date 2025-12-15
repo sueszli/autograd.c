@@ -23,15 +23,7 @@ $ cat references.txt
 
 TODO:
 
-- autograd.c (in progress)
-    - low quality, high indentation, messy
-    - missing tensor_tanh backward (activations.h:7) - common activation needed for RNNs
-    - missing tensor_mean backward (tensor.h:41) - commonly used for loss averaging and normalization
-    - missing  tensor_max backward (tensor.h:42) - needed for certain loss functions
-    - missing Conv2d GradFn integration (convolutions.h:33) - backward exists but not autograd-integrated
-    - missing MaxPool2d GradFn integration (convolutions.h:56) - backward exists but not autograd-integrated
-    - missing AvgPool2d backward - not implemented, useful for some CNN architectures
-    - missing BatchNorm2d backward - not implemented, important for training stability in deep networks
+- autograd.c -> improve code quality
 - training.c -> https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/07_training/ABOUT.md
 - test_e2e.c
 - benchmarking and visualizing, finishing readme
