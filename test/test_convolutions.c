@@ -1,5 +1,5 @@
-#include "convolutions.h"
 #include "layers.h"
+#include "ops/convolutions.h"
 #include "tensor.h"
 #include "unity.h"
 #include <math.h>

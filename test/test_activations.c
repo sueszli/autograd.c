@@ -1,5 +1,5 @@
-#include "../src/ops/activations.h"
-#include "../src/tensor.h"
+#include "ops/activations.h"
+#include "tensor.h"
 #include "unity.h"
 #include <float.h>
 #include <math.h>

@@ -1,6 +1,6 @@
-#include "../src/tensor.h"
-#include "../src/utils/augment.h"
+#include "tensor.h"
 #include "unity.h"
+#include "utils/augment.h"
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>

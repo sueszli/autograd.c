@@ -1,5 +1,5 @@
-#include "../src/ops/losses_backward.h"
-#include "../src/tensor.h"
+#include "ops/losses_backward.h"
+#include "tensor.h"
 #include "unity.h"
 #include <float.h>
 #include <math.h>

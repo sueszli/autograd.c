@@ -1,5 +1,5 @@
-#include "../src/layers.h"
-#include "../src/tensor.h"
+#include "layers.h"
+#include "tensor.h"
 #include "unity.h"
 #include <float.h>
 #include <math.h>

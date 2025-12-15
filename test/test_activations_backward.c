@@ -1,6 +1,6 @@
-#include "../src/ops/activations.h"
-#include "../src/ops/activations_backward.h"
-#include "../src/tensor.h"
+#include "ops/activations.h"
+#include "ops/activations_backward.h"
+#include "tensor.h"
 #include "unity.h"
 #include <math.h>
 #include <stdint.h>
