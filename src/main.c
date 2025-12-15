@@ -1,36 +1,66 @@
-#include "cifar10.h"
+#include "autograd.h"
 #include "tensor.h"
-#include "tqdm.h"
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
-int32_t main(void) {
+int main(void) {
+    printf("Running Autograd Experiment...\n");
 
-    const uint64_t shape[] = {CHANNELS, HEIGHT, WIDTH};
+    // Create scalar tensors x and y
+    // x = 2.0
+    uint64_t shape[] = {1};
+    Tensor *x = tensor_create(NULL, shape, 0, true); // Scalar
+    x->data[0] = 2.0f;
 
-    Tensor *images = cifar10_get_test_images();
-    Tensor *labels = cifar10_get_test_labels();
+    // y = 3.0
+    Tensor *y = tensor_create(NULL, shape, 0, true); // Scalar
+    y->data[0] = 3.0f;
 
-    for (uint64_t i = 0; i < 5; i++) {
-        label_t idx = (label_t)labels->data[i];
-        printf("test sample %" PRIu64 ": %s\n", i, label_to_str(idx));
+    printf("Created tensors x = %f, y = %f\n", x->data[0], y->data[0]);
 
-        const float32_t *img_data = &images->data[i * INPUT_SIZE];
-        Tensor *t = tensor_create(img_data, shape, 3, false);
-        tensor_print(t);
-        tensor_free(t);
+    // z = (x + y) * x
+    //   = x^2 + y*x
+    // dz/dx = 2x + y = 2(2) + 3 = 7
+    // dz/dy = x = 2
+
+    Tensor *sum = tensor_add(x, y);
+    Tensor *z = tensor_mul(sum, x);
+
+    printf("Computed z = (x + y) * x\n");
+    tensor_print(z);
+
+    // Backward pass
+    printf("Running backward()...\n");
+    backward(z, NULL); // implicit grad = 1.0
+
+    // Print gradients
+    if (x->grad) {
+        printf("x->grad = %f (Expected: 7.0)\n", x->grad->data[0]);
+    } else {
+        printf("x->grad is NULL!\n");
     }
 
-    tensor_free(images);
-    tensor_free(labels);
-
-    // demo tqdm
-    for (uint64_t i = 0; i < 30; i++) {
-        tqdm((i + 1), 30);
-        usleep(10000);
+    if (y->grad) {
+        printf("y->grad = %f (Expected: 2.0)\n", y->grad->data[0]);
+    } else {
+        printf("y->grad is NULL!\n");
     }
 
+    // Cleanup
+    // Freeing root of the graph (z) frees the intermediate nodes (MulBackward, AddBackward)
+    // but we must manually free the leaf tensors and intermediate tensors we hold handles to.
+
+    // z depends on sum and x.
+    // sum depends on x and y.
+
+    // When we free z, z->grad_fn (MulBackward) is freed.
+    // When we free sum, sum->grad_fn (AddBackward) is freed.
+
+    tensor_free(z);
+    tensor_free(sum);
+    tensor_free(y);
+    tensor_free(x);
+
+    printf("Experiment finished.\n");
     return EXIT_SUCCESS;
 }
