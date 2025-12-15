@@ -16,24 +16,10 @@ struct Layer {
     char *name;                     // for debugging
 };
 
-// forward pass through layer
-Tensor *layer_forward(Layer *layer, const Tensor *input, bool training);
+Tensor *layer_forward(Layer *layer, const Tensor *input, bool training);      // forward pass through layer
+void layer_free(Layer *layer);                                                // frees layer resources
+void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count); // gets trainable parameters
 
-// frees layer resources
-void layer_free(Layer *layer);
-
-// gets trainable parameters
-void layer_parameters(Layer *layer, Tensor ***out_params, size_t *out_count);
-
-//
-// layer constructors
-//
-
-// linear: y = xW + b
-Layer *layer_linear_create(uint64_t in_features, uint64_t features_out, bool bias);
-
-// dropout: randomly zeros elements during training
-Layer *layer_dropout_create(float32_t p);
-
-// sequential: chains layers together
-Layer *layer_sequential_create(Layer **layers, size_t count);
+Layer *layer_linear_create(uint64_t in_features, uint64_t features_out, bool bias); // linear: y = xW + b
+Layer *layer_dropout_create(float32_t p);                                           // randomly zeros elements during training
+Layer *layer_sequential_create(Layer **layers, size_t count);                       // chains layers together
