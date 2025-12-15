@@ -1,4 +1,5 @@
 #include "dataloader/cifar10.h"
+#include "ops/activations.h"
 #include "tensor.h"
 #include "utils/tqdm.h"
 #include <inttypes.h>
@@ -19,6 +20,7 @@ int32_t main(void) {
 
         const float32_t *img_data = &images->data[i * INPUT_SIZE];
         Tensor *t = tensor_create(img_data, shape, CHANNELS, false);
+
         tensor_print(t);
         printf("\n");
         tensor_print(t);

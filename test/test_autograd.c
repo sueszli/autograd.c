@@ -1,6 +1,6 @@
-#include "../src/activations.h"
 #include "../src/autograd.h"
 #include "../src/losses.h"
+#include "../src/ops/activations.h"
 #include "../src/tensor.h"
 #include "unity.h"
 #include <assert.h>

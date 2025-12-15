@@ -1,4 +1,4 @@
-#include "../src/activations.h"
+#include "../src/ops/activations.h"
 #include "../src/tensor.h"
 #include "unity.h"
 #include <float.h>
