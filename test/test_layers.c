@@ -589,7 +589,6 @@ void test_linear_input_no_grad(void) {
     Layer *l = layer_linear_create(2, 2, false);
     uint64_t shape[] = {1, 2};
     Tensor *input = tensor_zeros(shape, 2, false);
-    // Linear layer weights require grad by default, so output should require grad
     Tensor *out = layer_forward(l, input, false);
     TEST_ASSERT_TRUE(out->requires_grad);
     tensor_free(input);
@@ -756,7 +755,6 @@ void test_dropout_inference_p01(void) {
     float32_t val[] = {1.0f, 2.0f, 3.0f};
     uint64_t shape[] = {1, 3};
     Tensor *input = create_tensor_from_data(val, shape, 2);
-    // Inference mode (training=false). Should be identity.
     Tensor *out = layer_forward(l, input, false);
     for (int i = 0; i < 3; i++) {
         TEST_ASSERT_EQUAL_FLOAT(val[i], out->data[i]);
@@ -779,7 +777,6 @@ void test_dropout_randomness(void) {
     Tensor *out1 = layer_forward(l, input, true);
     Tensor *out2 = layer_forward(l, input, true);
 
-    // Check they are not exactly same (extremely unlikely to be same for 100 elements)
     int diff_count = 0;
     for (uint64_t i = 0; i < size; i++) {
         if (out1->data[i] != out2->data[i])
@@ -834,7 +831,7 @@ void test_dropout_all_zeros(void) {
 }
 
 void test_dropout_nan_propagation(void) {
-    Layer *l = layer_dropout_create(0.0f); // p=0 means no dropout, so identity in training
+    Layer *l = layer_dropout_create(0.0f);
     float32_t val[] = {NAN};
     uint64_t shape[] = {1};
     Tensor *input = create_tensor_from_data(val, shape, 1);
@@ -844,9 +841,6 @@ void test_dropout_nan_propagation(void) {
     tensor_free(out);
     layer_free(l);
 
-    // Now p=0.5. NaN might be dropped (zeroed) or scaled (NaN). 0 * NaN is NaN usually, but logic is `mask * input`.
-    // If mask is 0, 0 * NaN = NaN? In C, 0.0 * NAN is NAN.
-    // So output should definitely be NaN.
     l = layer_dropout_create(0.5f);
     input = create_tensor_from_data(val, shape, 1);
     out = layer_forward(l, input, true);
@@ -867,7 +861,6 @@ void test_sequential_single_layer(void) {
     uint64_t shape[] = {1, 2};
     Tensor *input = create_tensor_from_data(val, shape, 2);
 
-    // Set weights to identity
     Tensor **params;
     size_t c;
     layer_parameters(l1, &params, &c);
@@ -888,8 +881,8 @@ void test_sequential_single_layer(void) {
 }
 
 void test_sequential_param_count_correct(void) {
-    Layer *l1 = layer_linear_create(2, 2, true);  // 2 params (w, b)
-    Layer *l2 = layer_linear_create(2, 2, false); // 1 param (w)
+    Layer *l1 = layer_linear_create(2, 2, true);
+    Layer *l2 = layer_linear_create(2, 2, false);
     Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
     arr[0] = l1;
     arr[1] = l2;
@@ -917,7 +910,6 @@ void test_sequential_with_dropout_only(void) {
     uint64_t shape[] = {100};
     Tensor *input = tensor_zeros(shape, 1, false);
     Tensor *out = layer_forward(seq, input, true);
-    // Just check it runs and returns correct shape
     TEST_ASSERT_EQUAL_UINT64(1, out->ndim);
     TEST_ASSERT_EQUAL_UINT64(100, out->shape[0]);
 
@@ -927,8 +919,6 @@ void test_sequential_with_dropout_only(void) {
 }
 
 void test_sequential_training_mode_propagation(void) {
-    // If training=true, dropout should be active (randomness/scaling).
-    // Use dropout p=1.0, so output should be 0.
     Layer *l1 = layer_dropout_create(1.0f);
     Layer **arr = (Layer **)malloc(sizeof(Layer *));
     arr[0] = l1;
@@ -939,7 +929,7 @@ void test_sequential_training_mode_propagation(void) {
     uint64_t shape[] = {1};
     Tensor *input = create_tensor_from_data(val, shape, 1);
 
-    Tensor *out = layer_forward(seq, input, true); // Training
+    Tensor *out = layer_forward(seq, input, true);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->data[0]);
 
     tensor_free(input);
@@ -948,7 +938,6 @@ void test_sequential_training_mode_propagation(void) {
 }
 
 void test_sequential_inference_mode_propagation(void) {
-    // If training=false, dropout should be identity.
     Layer *l1 = layer_dropout_create(1.0f);
     Layer **arr = (Layer **)malloc(sizeof(Layer *));
     arr[0] = l1;
@@ -959,7 +948,7 @@ void test_sequential_inference_mode_propagation(void) {
     uint64_t shape[] = {1};
     Tensor *input = create_tensor_from_data(val, shape, 1);
 
-    Tensor *out = layer_forward(seq, input, false); // Inference
+    Tensor *out = layer_forward(seq, input, false);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, out->data[0]);
 
     tensor_free(input);
@@ -968,7 +957,6 @@ void test_sequential_inference_mode_propagation(void) {
 }
 
 void test_layer_free_null(void) {
-    // Should not crash
     layer_free(NULL);
     TEST_ASSERT_TRUE(true);
 }
@@ -1046,7 +1034,7 @@ void test_sequential_large_chain(void) {
         Tensor **p;
         size_t c;
         layer_parameters(arr[i], &p, &c);
-        p[0]->data[0] = 1.0f; // Identity weights
+        p[0]->data[0] = 1.0f;
         if (p)
             free(p);
     }
@@ -1080,7 +1068,6 @@ void test_dropout_p05_stats(void) {
         if (out->data[i] == 0.0f)
             zero_count++;
     }
-    // Should be roughly 500
     TEST_ASSERT_TRUE(zero_count > 400 && zero_count < 600);
 
     tensor_free(input);
@@ -1111,7 +1098,6 @@ void test_linear_all_ones_weights(void) {
 }
 
 void test_sequential_linear_dropout(void) {
-    // Linear (Id) -> Dropout (p=0, Id)
     Layer *l1 = layer_linear_create(1, 1, false);
     Layer *l2 = layer_dropout_create(0.0f);
     Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
@@ -1138,7 +1124,6 @@ void test_sequential_linear_dropout(void) {
 }
 
 void test_sequential_dropout_linear(void) {
-    // Dropout (p=0) -> Linear(Id)
     Layer *l1 = layer_dropout_create(0.0f);
     Layer *l2 = layer_linear_create(1, 1, false);
     Layer **arr = (Layer **)malloc(2 * sizeof(Layer *));
@@ -1186,8 +1171,6 @@ int main(void) {
     RUN_TEST(test_sequential_nested);
     RUN_TEST(test_sequential_deep);
     RUN_TEST(test_sequential_linear_dropout_linear);
-
-    // New Linear Tests
     RUN_TEST(test_linear_bias_init_zero);
     RUN_TEST(test_linear_input_requires_grad);
     RUN_TEST(test_linear_input_no_grad);
@@ -1198,16 +1181,12 @@ int main(void) {
     RUN_TEST(test_linear_inf_input);
     RUN_TEST(test_linear_reuse);
     RUN_TEST(test_linear_negative_input);
-
-    // New Dropout Tests
     RUN_TEST(test_dropout_inference_p01);
     RUN_TEST(test_dropout_randomness);
     RUN_TEST(test_dropout_output_shape);
     RUN_TEST(test_dropout_requires_grad_propagation);
     RUN_TEST(test_dropout_all_zeros);
     RUN_TEST(test_dropout_nan_propagation);
-
-    // New Sequential & Edge Tests
     RUN_TEST(test_sequential_single_layer);
     RUN_TEST(test_sequential_param_count_correct);
     RUN_TEST(test_sequential_with_dropout_only);
@@ -1222,6 +1201,5 @@ int main(void) {
     RUN_TEST(test_linear_all_ones_weights);
     RUN_TEST(test_sequential_linear_dropout);
     RUN_TEST(test_sequential_dropout_linear);
-
     return UNITY_END();
 }

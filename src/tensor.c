@@ -218,7 +218,30 @@ static bool broadcast_shapes_mut(const uint64_t *shape_a, uint64_t ndim_a, const
             return false;
         }
 
-        out_shape[idx_out] = (dim_a > dim_b) ? dim_a : dim_b;
+        // if one is 1, take the other. if both equal, take either.
+        // this handles the case where one is 0 and the other is 1 -> result is 0.
+        // max(a,b) would be wrong if a=0,b=1 -> 1. but correct is 0.
+        // actually, if dim_a=0, dim_b=1 -> fail? no, broadcasting rules:
+        // iterate backwards.
+        // shape A: (0)
+        // shape B: (1)
+        // result: (0) ?
+        // numpy: A(0), B(1) -> result(0).
+        // numpy: A(0), B(5) -> result(0).
+        // logic: if dim_a == 1, take dim_b. else take dim_a.
+        // check:
+        // a=1, b=5 -> take 5. Correct.
+        // a=5, b=1 -> take 5. Correct.
+        // a=5, b=5 -> take 5. Correct.
+        // a=0, b=1 -> take 0. Correct.
+        // a=1, b=0 -> take 0. Correct.
+        // a=0, b=5 -> take 0. Correct. (0 size tensor broadcasts to 0 size tensor of same rank)
+
+        if (dim_a == 1) {
+            out_shape[idx_out] = dim_b;
+        } else {
+            out_shape[idx_out] = dim_a;
+        }
 
         idx_a--;
         idx_b--;
@@ -700,6 +723,12 @@ Tensor *tensor_sum(const Tensor *t, int64_t dim_idx, bool keepdims) {
     if (curr) {
         free(curr);
     }
+
+    if (result->requires_grad) {
+        result->grad_fn = new_sum_backward((Tensor *)t, dim_idx, keepdims);
+        result->grad_fn->out_tensor = result;
+    }
+
     return result;
 }
 
@@ -713,13 +742,18 @@ Tensor *tensor_mean(const Tensor *t, int64_t dim_idx, bool keepdims) {
     // scale sum by 1/n
     uint64_t n = (t->shape) ? t->shape[dim_idx] : 1;
     assert(n > 0 && "division by zero: axis dimension is 0");
-    float32_t scale = 1.0f / (float32_t)n;
 
-    for (uint64_t i = 0; i < sum_mut->size; i++) {
-        sum_mut->data[i] *= scale;
-    }
+    // Create a scalar tensor for scaling to support autograd
+    uint64_t scalar_shape[] = {1};
+    Tensor *scale_t = tensor_create(NULL, scalar_shape, 0, false);
+    scale_t->data[0] = 1.0f / (float32_t)n;
 
-    return sum_mut;
+    Tensor *result = tensor_mul(sum_mut, scale_t);
+
+    tensor_free(scale_t);
+    tensor_free(sum_mut);
+
+    return result;
 }
 
 Tensor *tensor_max(const Tensor *t, int64_t dim_idx, bool keepdims) {
