@@ -23,7 +23,7 @@ $ cat references.txt
 
 TODO:
 
-- autograd.c (in progress)
-- training.c (full architecture)
+- autograd.c (in progress) -> increase code quality, lower indentation, study code
+- training.c -> https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/07_training/ABOUT.md
 - test_e2e.c
 - benchmarking and visualizing, finishing readme
