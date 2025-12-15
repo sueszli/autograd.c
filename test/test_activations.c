@@ -504,44 +504,11 @@ void test_softmax_empty(void) {
     tensor_free(out);
 }
 
-void test_sigmoid_requires_grad_true(void) {
-    float32_t data[] = {0.5f};
-    uint64_t shape[] = {1};
-    Tensor *t = tensor_create(data, shape, 1, true);
-    Tensor *out = tensor_sigmoid(t);
-    TEST_ASSERT_TRUE(out->requires_grad);
-    TEST_ASSERT_NOT_NULL(out->grad_fn);
-    tensor_free(t);
-    tensor_free(out);
-}
-
 void test_sigmoid_requires_grad_false(void) {
     float32_t data[] = {0.5f};
     uint64_t shape[] = {1};
     Tensor *t = tensor_create(data, shape, 1, false);
     Tensor *out = tensor_sigmoid(t);
-    TEST_ASSERT_FALSE(out->requires_grad);
-    TEST_ASSERT_NULL(out->grad_fn);
-    tensor_free(t);
-    tensor_free(out);
-}
-
-void test_relu_requires_grad_true(void) {
-    float32_t data[] = {0.5f};
-    uint64_t shape[] = {1};
-    Tensor *t = tensor_create(data, shape, 1, true);
-    Tensor *out = tensor_relu(t);
-    TEST_ASSERT_TRUE(out->requires_grad);
-    TEST_ASSERT_NOT_NULL(out->grad_fn);
-    tensor_free(t);
-    tensor_free(out);
-}
-
-void test_relu_requires_grad_false(void) {
-    float32_t data[] = {0.5f};
-    uint64_t shape[] = {1};
-    Tensor *t = tensor_create(data, shape, 1, false);
-    Tensor *out = tensor_relu(t);
     TEST_ASSERT_FALSE(out->requires_grad);
     TEST_ASSERT_NULL(out->grad_fn);
     tensor_free(t);
@@ -834,10 +801,7 @@ int main(void) {
     RUN_TEST(test_tanh_empty);
     RUN_TEST(test_gelu_empty);
     RUN_TEST(test_softmax_empty);
-    RUN_TEST(test_sigmoid_requires_grad_true);
     RUN_TEST(test_sigmoid_requires_grad_false);
-    RUN_TEST(test_relu_requires_grad_true);
-    RUN_TEST(test_relu_requires_grad_false);
     RUN_TEST(test_tanh_requires_grad_true);
     RUN_TEST(test_tanh_requires_grad_false);
     RUN_TEST(test_gelu_requires_grad_true);

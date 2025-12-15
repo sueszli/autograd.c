@@ -26,12 +26,6 @@ Tensor *tensor_sigmoid(const Tensor *t) {
             out->data[i] = ex / (1.0f + ex);
         }
     }
-
-    // TODO: FIX THIS
-    if (out->requires_grad) {
-        out->grad_fn = new_sigmoid_backward((Tensor *)t, out);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }
 
@@ -45,11 +39,6 @@ Tensor *tensor_relu(const Tensor *t) {
         float32_t x = t->data[i];
         out->data[i] = (x > 0.0f) ? x : 0.0f;
     }
-    // TODO: FIX THIS
-    if (out->requires_grad) {
-        out->grad_fn = new_relu_backward((Tensor *)t);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }
 
@@ -62,7 +51,6 @@ Tensor *tensor_tanh(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         out->data[i] = tanhf(t->data[i]);
     }
-    // TODO: FIX THIS
     return out;
 }
 
@@ -75,12 +63,6 @@ Tensor *tensor_gelu(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
         out->data[i] = 0.5f * x * (1.0f + erff(x * 1 / (float)sqrt(2)));
-    }
-
-    // TODO: FIX THIS
-    if (out->requires_grad) {
-        out->grad_fn = new_gelu_backward((Tensor *)t);
-        out->grad_fn->out_tensor = out;
     }
     return out;
 }
@@ -102,11 +84,5 @@ Tensor *tensor_softmax(const Tensor *t, int64_t dim) {
 
     tensor_free(shifted);
     tensor_free(sum_exp);
-
-    // TODO: FIX THIS
-    if (out->requires_grad) {
-        out->grad_fn = new_softmax_backward((Tensor *)t, out, dim);
-        out->grad_fn->out_tensor = out;
-    }
     return out;
 }

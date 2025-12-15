@@ -94,39 +94,6 @@ void test_conv2d_stride(void) {
     l->free(l);
 }
 
-// void test_conv2d_backward(void) {
-//     uint64_t in_shape[] = {1, 1, 3, 3};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     for (int i = 0; i < 9; ++i)
-//         input->data[i] = (float)i;
-
-//     uint64_t w_shape[] = {1, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-//     for (int i = 0; i < 4; ++i)
-//         weight->data[i] = 1.0f;
-
-//     uint64_t out_shape[] = {1, 1, 2, 2};
-//     Tensor *grad_out = tensor_zeros(out_shape, 4, false);
-//     for (int i = 0; i < 4; ++i)
-//         grad_out->data[i] = 1.0f;
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, NULL, 1, 0, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_FLOAT(8.0f, d_w->data[0]);
-//     TEST_ASSERT_EQUAL_FLOAT(12.0f, d_w->data[1]);
-//     TEST_ASSERT_EQUAL_FLOAT(20.0f, d_w->data[2]);
-//     TEST_ASSERT_EQUAL_FLOAT(24.0f, d_w->data[3]);
-//     TEST_ASSERT_EQUAL_FLOAT(4.0f, d_in->data[4]);
-//     TEST_ASSERT_EQUAL_FLOAT(1.0f, d_in->data[0]);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-// }
-
 void test_maxpool2d_simple(void) {
     uint64_t in_shape[] = {1, 1, 4, 4};
     Tensor *input = tensor_zeros(in_shape, 4, false);
@@ -145,31 +112,6 @@ void test_maxpool2d_simple(void) {
     tensor_free(out);
     l->free(l);
 }
-
-// void test_maxpool2d_backward(void) {
-//     uint64_t in_shape[] = {1, 1, 2, 2};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     input->data[0] = 1.0f;
-//     input->data[1] = 2.0f;
-//     input->data[2] = 3.0f;
-//     input->data[3] = 4.0f;
-
-//     uint64_t out_shape[] = {1, 1, 1, 1};
-//     uint64_t grad_shape[] = {1, 1, 1, 1};
-//     Tensor *grad_out = tensor_zeros(grad_shape, 4, false);
-//     grad_out->data[0] = 10.0f;
-
-//     Tensor *grad_in = maxpool2d_backward(input, out_shape, 2, 2, 0, grad_out);
-
-//     TEST_ASSERT_EQUAL_FLOAT(0.0f, grad_in->data[0]);
-//     TEST_ASSERT_EQUAL_FLOAT(0.0f, grad_in->data[1]);
-//     TEST_ASSERT_EQUAL_FLOAT(0.0f, grad_in->data[2]);
-//     TEST_ASSERT_EQUAL_FLOAT(10.0f, grad_in->data[3]);
-
-//     tensor_free(input);
-//     tensor_free(grad_out);
-//     tensor_free(grad_in);
-// }
 
 void test_avgpool2d_simple(void) {
     uint64_t in_shape[] = {1, 1, 2, 2};
@@ -448,153 +390,6 @@ void test_conv2d_deep_channels(void) {
     l->free(l);
 }
 
-// void test_conv2d_backward_bias_accum(void) {
-//     uint64_t in_shape[] = {2, 1, 2, 2};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-
-//     Layer *l = layer_conv2d_create(1, 1, 2, 1, 0, true);
-//     uint64_t w_shape[] = {1, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-
-//     uint64_t b_shape[] = {1};
-//     Tensor *bias = tensor_zeros(b_shape, 1, false);
-
-//     uint64_t gout_shape[] = {2, 1, 1, 1};
-//     Tensor *grad_out = tensor_zeros(gout_shape, 4, false);
-//     grad_out->data[0] = 5.0f;
-//     grad_out->data[1] = 10.0f;
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, bias, 1, 0, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_FLOAT(15.0f, d_b->data[0]);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(bias);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-//     tensor_free(d_b);
-//     l->free(l);
-// }
-
-// void test_conv2d_backward_grad_input_shape(void) {
-//     uint64_t in_shape[] = {1, 1, 3, 3};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     uint64_t w_shape[] = {1, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-//     uint64_t gout_shape[] = {1, 1, 2, 2};
-//     Tensor *grad_out = tensor_zeros(gout_shape, 4, false);
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, NULL, 1, 0, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_UINT64(input->size, d_in->size);
-//     TEST_ASSERT_EQUAL_UINT64(3, d_in->shape[2]);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-// }
-
-// void test_conv2d_backward_grad_weight_shape(void) {
-//     uint64_t in_shape[] = {1, 1, 3, 3};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     uint64_t w_shape[] = {2, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-//     uint64_t gout_shape[] = {1, 2, 2, 2};
-//     Tensor *grad_out = tensor_zeros(gout_shape, 4, false);
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, NULL, 1, 0, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_UINT64(weight->size, d_w->size);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-// }
-
-// void test_conv2d_backward_strided(void) {
-//     uint64_t in_shape[] = {1, 1, 4, 4};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     input->data[0] = 1.0f;
-
-//     uint64_t w_shape[] = {1, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-//     for (int i = 0; i < 4; ++i)
-//         weight->data[i] = 1.0f;
-
-//     uint64_t gout_shape[] = {1, 1, 2, 2};
-//     Tensor *grad_out = tensor_zeros(gout_shape, 4, false);
-//     for (int i = 0; i < 4; ++i)
-//         grad_out->data[i] = 1.0f;
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, NULL, 2, 0, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_FLOAT(1.0f, d_w->data[0]);
-
-//     TEST_ASSERT_EQUAL_FLOAT(1.0f, d_in->data[0]);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-// }
-
-// void test_conv2d_backward_padded(void) {
-//     uint64_t in_shape[] = {1, 1, 2, 2};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     input->data[0] = 1.0f;
-
-//     uint64_t w_shape[] = {1, 1, 2, 2};
-//     Tensor *weight = tensor_zeros(w_shape, 4, false);
-//     for (int i = 0; i < 4; ++i)
-//         weight->data[i] = 1.0f;
-
-//     uint64_t gout_shape[] = {1, 1, 3, 3};
-//     Tensor *grad_out = tensor_zeros(gout_shape, 4, false);
-//     for (int i = 0; i < 9; ++i)
-//         grad_out->data[i] = 1.0f;
-
-//     Tensor *d_in, *d_w, *d_b;
-//     conv2d_backward(input, weight, NULL, 1, 1, 2, grad_out, &d_in, &d_w, &d_b);
-
-//     TEST_ASSERT_EQUAL_UINT64(2, d_in->shape[2]);
-//     TEST_ASSERT_EQUAL_UINT64(2, d_in->shape[3]);
-
-//     tensor_free(input);
-//     tensor_free(weight);
-//     tensor_free(grad_out);
-//     tensor_free(d_in);
-//     tensor_free(d_w);
-// }
-
-// void test_maxpool2d_negative_values(void) {
-//     uint64_t in_shape[] = {1, 1, 2, 2};
-//     Tensor *input = tensor_zeros(in_shape, 4, false);
-//     input->data[0] = -10.0f;
-//     input->data[1] = -5.0f;
-//     input->data[2] = -20.0f;
-//     input->data[3] = -8.0f;
-
-//     Layer *l = layer_maxpool2d_create(2, 2, 0);
-//     Tensor *out = l->forward(l, input, false);
-
-//     TEST_ASSERT_EQUAL_FLOAT(-5.0f, out->data[0]);
-
-//     tensor_free(input);
-//     tensor_free(out);
-//     l->free(l);
-// }
-
 void test_maxpool2d_stride_1(void) {
     uint64_t in_shape[] = {1, 1, 3, 3};
     Tensor *input = tensor_zeros(in_shape, 4, false);
@@ -853,9 +648,7 @@ int main(void) {
     RUN_TEST(test_conv2d_simple_forward);
     RUN_TEST(test_conv2d_padding);
     RUN_TEST(test_conv2d_stride);
-    // RUN_TEST(test_conv2d_backward);
     RUN_TEST(test_maxpool2d_simple);
-    // RUN_TEST(test_maxpool2d_backward);
     RUN_TEST(test_avgpool2d_simple);
     RUN_TEST(test_batchnorm2d_forward);
     RUN_TEST(test_conv2d_3x3_stride1_pad1);
@@ -868,12 +661,6 @@ int main(void) {
     RUN_TEST(test_conv2d_rect_input);
     RUN_TEST(test_conv2d_1x1_kernel);
     RUN_TEST(test_conv2d_deep_channels);
-    // RUN_TEST(test_conv2d_backward_bias_accum);
-    // RUN_TEST(test_conv2d_backward_grad_input_shape);
-    // RUN_TEST(test_conv2d_backward_grad_weight_shape);
-    // RUN_TEST(test_conv2d_backward_strided);
-    // RUN_TEST(test_conv2d_backward_padded);
-    // RUN_TEST(test_maxpool2d_negative_values);
     RUN_TEST(test_maxpool2d_stride_1);
     RUN_TEST(test_maxpool2d_non_overlapping);
     RUN_TEST(test_maxpool2d_padded);
