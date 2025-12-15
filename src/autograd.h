@@ -6,11 +6,7 @@
 struct Tensor;
 
 typedef struct GradFn {
-    // computes gradients and accumulates them into input tensors
     void (*apply)(struct GradFn *self, const struct Tensor *grad_output);
-
-    // references to the parents in the graph.
-    // we do NOT own these pointers (they are owned by the Tensors or by the graph structure implied by Tensors)
     struct GradFn **next_fns;
     int num_next;
     struct Tensor *out_tensor;
@@ -23,7 +19,6 @@ void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), Gr
 
 void grad_fn_free(GradFn *fn);
 
-// Backward function constructors
 GradFn *new_add_backward(struct Tensor *a, struct Tensor *b);
 GradFn *new_sub_backward(struct Tensor *a, struct Tensor *b);
 GradFn *new_mul_backward(struct Tensor *a, struct Tensor *b);
