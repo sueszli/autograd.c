@@ -110,8 +110,9 @@ Optimizer *optimizer_sgd_create(Tensor **params, size_t count, float32_t lr, flo
     assert(params != NULL);
     assert(count > 0);
 
-    SGD *sgd = calloc(1, sizeof(SGD));
-    assert(sgd != NULL);
+    Optimizer *opt = calloc(1, sizeof(SGD));
+    assert(opt != NULL);
+    SGD *sgd = (SGD *)opt;
 
     sgd->base.param_count = count;
     // Copy the params array so validation/integrity is kept
@@ -135,7 +136,6 @@ Optimizer *optimizer_sgd_create(Tensor **params, size_t count, float32_t lr, flo
     sgd->momentum_buffers = calloc(count, sizeof(float32_t *));
     assert(sgd->momentum_buffers != NULL);
 
-    Optimizer *opt = (Optimizer *)sgd;
     return opt;
 }
 
@@ -246,8 +246,9 @@ Optimizer *optimizer_adam_create(Tensor **params, size_t count, float32_t lr, fl
     assert(params != NULL);
     assert(count > 0);
 
-    Adam *adam = calloc(1, sizeof(Adam));
-    assert(adam != NULL);
+    Optimizer *opt = calloc(1, sizeof(Adam));
+    assert(opt != NULL);
+    Adam *adam = (Adam *)opt;
 
     adam->base.param_count = count;
     adam->base.params = calloc(count, sizeof(Tensor *));
@@ -273,20 +274,16 @@ Optimizer *optimizer_adam_create(Tensor **params, size_t count, float32_t lr, fl
     adam->v_buffers = calloc(count, sizeof(float32_t *));
     assert(adam->v_buffers != NULL);
 
-    Optimizer *opt = (Optimizer *)adam;
     return opt;
 }
 
 Optimizer *optimizer_adamw_create(Tensor **params, size_t count, float32_t lr, float32_t beta1, float32_t beta2, float32_t eps, float32_t weight_decay) {
-    // Re-use initialization logic? Or simple copy paste.
-    // It's cleaner to just do it again or have a helper but we need specific class/step func.
-    // Let's copy-paste and change step func, simple enough.
-
     assert(params != NULL);
     assert(count > 0);
 
-    Adam *adam = calloc(1, sizeof(Adam));
-    assert(adam != NULL);
+    Optimizer *opt = calloc(1, sizeof(Adam));
+    assert(opt != NULL);
+    Adam *adam = (Adam *)opt;
 
     adam->base.param_count = count;
     adam->base.params = calloc(count, sizeof(Tensor *));
@@ -312,6 +309,5 @@ Optimizer *optimizer_adamw_create(Tensor **params, size_t count, float32_t lr, f
     adam->v_buffers = calloc(count, sizeof(float32_t *));
     assert(adam->v_buffers != NULL);
 
-    Optimizer *opt = (Optimizer *)adam;
     return opt;
 }
