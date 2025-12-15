@@ -17,4 +17,6 @@ $ cat references.txt
     - https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/
 
 
-currently only has autograd for arithmetic::mul and ::add
+autograd currently implemented and tested for:
+
+    - ops/arithmetic

@@ -99,6 +99,10 @@ Tensor *tensor_binary_op(const Tensor *a, const Tensor *b, binary_op_t op) {
     return out_tensor;
 }
 
+//
+// add
+//
+
 static float32_t op_add(float32_t a, float32_t b) { return a + b; }
 Tensor *tensor_add(const Tensor *a, const Tensor *b) {
     Tensor *result = tensor_binary_op(a, b, op_add);
@@ -124,15 +128,43 @@ Tensor *tensor_add(const Tensor *a, const Tensor *b) {
     return result;
 }
 
+//
+// sub
+//
+
 static float32_t op_sub(float32_t a, float32_t b) { return a - b; }
-Tensor *tensor_sub(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_sub); }
+Tensor *tensor_sub(const Tensor *a, const Tensor *b) {
+    Tensor *result = tensor_binary_op(a, b, op_sub);
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = sub_backward;
+        fn->output = result;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)a;
+        fn->inputs[1] = (Tensor *)b;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (a->grad_fn != NULL) {
+            a->grad_fn->pending_count++;
+        }
+        if (b->grad_fn != NULL) {
+            b->grad_fn->pending_count++;
+        }
+        result->grad_fn = fn;
+    }
+
+    return result;
+}
+
+//
+// mul
+//
 
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
 Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
-    // actual op
     Tensor *result = tensor_binary_op(a, b, op_mul);
 
-    // autograd setup
     if (result->requires_grad) {
         Function *fn = arena_alloc_function();
         fn->apply = mul_backward;
@@ -153,8 +185,38 @@ Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
     return result;
 }
 
+//
+// div
+//
+
 static float32_t op_div(float32_t a, float32_t b) { return a / b; }
-Tensor *tensor_div(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_div); }
+Tensor *tensor_div(const Tensor *a, const Tensor *b) {
+    Tensor *result = tensor_binary_op(a, b, op_div);
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = div_backward;
+        fn->output = result;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)a;
+        fn->inputs[1] = (Tensor *)b;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (a->grad_fn != NULL) {
+            a->grad_fn->pending_count++;
+        }
+        if (b->grad_fn != NULL) {
+            b->grad_fn->pending_count++;
+        }
+        result->grad_fn = fn;
+    }
+
+    return result;
+}
+
+//
+// matmul
+//
 
 Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(a != NULL);
@@ -199,5 +261,24 @@ Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(result->ndim == 2);
     assert(result->shape[0] == M);
     assert(result->shape[1] == N);
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = matmul_backward;
+        fn->output = result;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)a;
+        fn->inputs[1] = (Tensor *)b;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (a->grad_fn != NULL) {
+            a->grad_fn->pending_count++;
+        }
+        if (b->grad_fn != NULL) {
+            b->grad_fn->pending_count++;
+        }
+        result->grad_fn = fn;
+    }
+
     return result;
 }

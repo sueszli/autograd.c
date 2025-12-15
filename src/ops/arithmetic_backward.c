@@ -107,6 +107,25 @@ Tensor *tensor_sub_backward_b(const Tensor *grad_output, const Tensor *b) {
     return result;
 }
 
+void sub_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+
+    Tensor *a = fn->inputs[0];
+    Tensor *b = fn->inputs[1];
+
+    if (a != NULL && a->requires_grad) {
+        Tensor *grad_a = tensor_sub_backward_a(grad_output, a);
+        accumulate_grad(a, grad_a);
+    }
+
+    if (b != NULL && b->requires_grad) {
+        Tensor *grad_b = tensor_sub_backward_b(grad_output, b);
+        accumulate_grad(b, grad_b);
+    }
+}
+
 //
 // mul
 //
@@ -190,6 +209,25 @@ Tensor *tensor_div_backward_b(const Tensor *grad_output, const Tensor *a, const 
     return result;
 }
 
+void div_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+
+    Tensor *a = fn->inputs[0];
+    Tensor *b = fn->inputs[1];
+
+    if (a != NULL && a->requires_grad) {
+        Tensor *grad_a = tensor_div_backward_a(grad_output, a, b);
+        accumulate_grad(a, grad_a);
+    }
+
+    if (b != NULL && b->requires_grad) {
+        Tensor *grad_b = tensor_div_backward_b(grad_output, a, b);
+        accumulate_grad(b, grad_b);
+    }
+}
+
 //
 // matmul
 //
@@ -222,4 +260,23 @@ Tensor *tensor_matmul_backward_b(const Tensor *grad_output, const Tensor *a, con
     Tensor *result = unbroadcast(temp, b);
     tensor_free(temp);
     return result;
+}
+
+void matmul_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+
+    Tensor *a = fn->inputs[0];
+    Tensor *b = fn->inputs[1];
+
+    if (a != NULL && a->requires_grad) {
+        Tensor *grad_a = tensor_matmul_backward_a(grad_output, a, b);
+        accumulate_grad(a, grad_a);
+    }
+
+    if (b != NULL && b->requires_grad) {
+        Tensor *grad_b = tensor_matmul_backward_b(grad_output, a, b);
+        accumulate_grad(b, grad_b);
+    }
 }
