@@ -32,7 +32,7 @@ Tensor *tensor_mul(const Tensor *a, const Tensor *b);
 Tensor *tensor_div(const Tensor *a, const Tensor *b);
 Tensor *tensor_matmul(const Tensor *a, const Tensor *b);
 
-// shape manipulation
+// reshapes
 Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_ndim);
 Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1);
 
