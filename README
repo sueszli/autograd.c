@@ -25,6 +25,7 @@ TODO:
 
 check if arithmetic leaks
 write arithmetic backward
+repeat for reshapes and reductions
 
 write tests
 try forward and backward in main and see if it leaks
