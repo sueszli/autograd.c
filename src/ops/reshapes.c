@@ -1,4 +1,6 @@
 #include "ops/reshapes.h"
+#include "autograd.h"
+#include "ops/reshapes_backward.h"
 #include "utils/aligned_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -45,6 +47,28 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     free(resolved_shape);
     assert(result != NULL);
     assert(result->size == t->size);
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = reshape_backward;
+        fn->output = result;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        ReshapeContext *ctx = (ReshapeContext *)malloc(sizeof(ReshapeContext));
+        assert(ctx != NULL && "malloc failed");
+        assert(t->ndim <= MAX_NDIM);
+        memcpy(ctx->shape, t->shape, t->ndim * sizeof(uint64_t));
+        ctx->ndim = t->ndim;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+
+        result->grad_fn = fn;
+    }
 
     return result;
 }
@@ -112,5 +136,27 @@ Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1) {
         result->data[i] = t->data[offset];
     }
     free(curr);
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = transpose_backward;
+        fn->output = result;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        TransposeContext *ctx = (TransposeContext *)malloc(sizeof(TransposeContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->dim0 = dim0;
+        ctx->dim1 = dim1;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+
+        result->grad_fn = fn;
+    }
+
     return result;
 }

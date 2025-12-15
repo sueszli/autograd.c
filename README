@@ -15,3 +15,11 @@ $ make run
 $ cat references.txt
 
     - https://github.com/harvard-edge/cs249r_book/tree/dev/tinytorch/src
+
+
+TODO:
+
+missing ops with autograd:
+    - activations
+    - convolutions
+    - losses

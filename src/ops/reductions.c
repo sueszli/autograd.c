@@ -1,5 +1,7 @@
 #include "ops/reductions.h"
+#include "autograd.h"
 #include "ops/arithmetic.h"
+#include "ops/reductions_backward.h"
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
@@ -133,29 +135,95 @@ Tensor *tensor_sum(const Tensor *t, int64_t dim_idx, bool keepdims) {
     if (curr) {
         free(curr);
     }
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = sum_backward;
+        fn->output = result;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        SumContext *ctx = (SumContext *)malloc(sizeof(SumContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->dim_idx = dim_idx;
+        ctx->keepdims = keepdims;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+
+        result->grad_fn = fn;
+    }
+
     return result;
 }
 
 Tensor *tensor_mean(const Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(t != NULL);
+    assert(t->data != NULL || t->size == 0);
     dim_idx = (dim_idx < 0) ? (dim_idx + (int64_t)t->ndim) : dim_idx;
     assert(dim_idx >= 0 && dim_idx < (int64_t)t->ndim && "dim_idx out of bounds");
 
-    Tensor *sum_mut = tensor_sum(t, dim_idx, keepdims);
+    uint64_t *new_shape;
+    uint64_t new_ndim;
+    reduction_shapes_mut(t, dim_idx, keepdims, &new_shape, &new_ndim);
 
-    // scale sum by 1/n
+    Tensor *result = tensor_zeros(new_shape, new_ndim, t->requires_grad);
+    if (new_shape) {
+        free(new_shape);
+    }
+
+    uint64_t *curr = (new_ndim > 0) ? (uint64_t *)calloc((size_t)new_ndim, sizeof(uint64_t)) : NULL;
+    if (new_ndim > 0) {
+        assert(curr != NULL && "calloc failed");
+    }
+
     uint64_t n = (t->shape) ? t->shape[dim_idx] : 1;
     assert(n > 0 && "division by zero: axis dimension is 0");
+    float32_t scale = 1.0f / (float32_t)n;
 
-    // create a scalar tensor for scaling to support autograd
-    const uint64_t scalar_shape[] = {1};
-    Tensor *scale_t = tensor_create(NULL, scalar_shape, 0, false);
-    scale_t->data[0] = 1.0f / (float32_t)n;
+    for (uint64_t i = 0; i < result->size; i++) {
+        linear_to_multidim_mut(i, result->shape, new_ndim, curr);
 
-    Tensor *result = tensor_mul(sum_mut, scale_t);
+        uint64_t base_offset = reduction_multidim_to_linear(t, curr, dim_idx, keepdims);
 
-    tensor_free(scale_t);
-    tensor_free(sum_mut);
+        float32_t sum = 0.0f;
+        uint64_t axis_dim = (t->shape) ? t->shape[dim_idx] : 1;
+        uint64_t axis_stride = t->strides[dim_idx];
+        for (uint64_t j = 0; j < axis_dim; j++) {
+            uint64_t offset = base_offset + j * axis_stride;
+            assert(offset < t->size && "offset out of bounds");
+            sum += t->data[offset];
+        }
+        result->data[i] = sum * scale;
+    }
+
+    if (curr) {
+        free(curr);
+    }
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = mean_backward;
+        fn->output = result;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        MeanContext *ctx = (MeanContext *)malloc(sizeof(MeanContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->dim_idx = dim_idx;
+        ctx->keepdims = keepdims;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+
+        result->grad_fn = fn;
+    }
 
     return result;
 }
@@ -209,5 +277,28 @@ Tensor *tensor_max(const Tensor *t, int64_t dim_idx, bool keepdims) {
     if (curr) {
         free(curr);
     }
+
+    if (result->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = max_backward;
+        fn->output = result;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        MaxContext *ctx = (MaxContext *)malloc(sizeof(MaxContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->dim_idx = dim_idx;
+        ctx->keepdims = keepdims;
+        ctx->output = result;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+
+        result->grad_fn = fn;
+    }
+
     return result;
 }

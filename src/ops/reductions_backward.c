@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+//
+// sum
+//
+
 Tensor *tensor_sum_backward(const Tensor *grad_output, const Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(grad_output != NULL);
     assert(t != NULL);
@@ -53,6 +57,28 @@ Tensor *tensor_sum_backward(const Tensor *grad_output, const Tensor *t, int64_t 
     return grad_input;
 }
 
+void sum_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+    assert(fn->ctx != NULL && "sum_backward requires context");
+
+    Tensor *t = fn->inputs[0];
+    const SumContext *ctx = (SumContext *)fn->ctx;
+
+    if (t != NULL && t->requires_grad) {
+        Tensor *grad_t = tensor_sum_backward(grad_output, t, ctx->dim_idx, ctx->keepdims);
+        accumulate_grad(t, grad_t);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
+}
+
+//
+// mean
+//
+
 Tensor *tensor_mean_backward(const Tensor *grad_output, const Tensor *t, int64_t dim_idx, bool keepdims) {
     assert(grad_output != NULL);
     assert(t != NULL);
@@ -85,6 +111,28 @@ Tensor *tensor_mean_backward(const Tensor *grad_output, const Tensor *t, int64_t
 
     return grad_input;
 }
+
+void mean_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+    assert(fn->ctx != NULL && "mean_backward requires context");
+
+    Tensor *t = fn->inputs[0];
+    const MeanContext *ctx = (MeanContext *)fn->ctx;
+
+    if (t != NULL && t->requires_grad) {
+        Tensor *grad_t = tensor_mean_backward(grad_output, t, ctx->dim_idx, ctx->keepdims);
+        accumulate_grad(t, grad_t);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
+}
+
+//
+// max
+//
 
 Tensor *tensor_max_backward(const Tensor *grad_output, const Tensor *t, const Tensor *out, int64_t dim_idx, bool keepdims) {
     assert(grad_output != NULL);
@@ -131,4 +179,22 @@ Tensor *tensor_max_backward(const Tensor *grad_output, const Tensor *t, const Te
     }
 
     return grad_input;
+}
+
+void max_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+    assert(fn->ctx != NULL && "max_backward requires context");
+
+    Tensor *t = fn->inputs[0];
+    const MaxContext *ctx = (MaxContext *)fn->ctx;
+
+    if (t != NULL && t->requires_grad) {
+        Tensor *grad_t = tensor_max_backward(grad_output, t, ctx->output, ctx->dim_idx, ctx->keepdims);
+        accumulate_grad(t, grad_t);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
 }
