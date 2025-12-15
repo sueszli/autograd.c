@@ -58,6 +58,15 @@ static void sgd_free(Optimizer *opt) {
     free(sgd);
 }
 
+static void sgd_ensure_buffer(SGD *sgd, size_t param_idx, size_t elem_count) {
+    if (sgd->momentum_buffers[param_idx] == NULL) {
+        // use calloc for zero initialization
+        float32_t *buf = calloc(elem_count, sizeof(float32_t));
+        assert(buf != NULL);
+        sgd->momentum_buffers[param_idx] = buf;
+    }
+}
+
 static void sgd_step(Optimizer *opt) {
     SGD *sgd = (SGD *)opt;
     opt->step_count++;
@@ -70,38 +79,40 @@ static void sgd_step(Optimizer *opt) {
 
         float32_t *p_data = param->data;
         const float32_t *g_data = param->grad->data;
-        size_t size = param->size;
+        // Rename size to elem_count for clarity (CONTRIBUTING.md)
+        const size_t elem_count = param->size;
 
-        // Ensure momentum buffer exists if needed
+        // allocate momentum buffer if needed
         if (sgd->momentum != 0.0f) {
-            if (sgd->momentum_buffers[i] == NULL) {
-                // allocations must be guarded / asserted
-                float32_t *buf = calloc(size, sizeof(float32_t));
-                assert(buf != NULL);
-                sgd->momentum_buffers[i] = buf;
-            }
+            sgd_ensure_buffer(sgd, i, elem_count);
         }
 
         float32_t *m_buf = sgd->momentum_buffers[i];
 
-        // We can vectorize this loop or rely on compiler O2/O3
-        for (size_t j = 0; j < size; ++j) {
+        // optimize: lift constants out of loop
+        const float32_t lr = sgd->lr;
+        const float32_t momentum = sgd->momentum;
+        const float32_t weight_decay = sgd->weight_decay;
+
+        // Data-oriented: process arrays
+        for (size_t j = 0; j < elem_count; ++j) {
             float32_t g = g_data[j];
 
-            // Weight decay
-            if (sgd->weight_decay != 0.0f) {
-                g += sgd->weight_decay * p_data[j];
+            // 1. Weight decay (L2 penalty)
+            if (weight_decay != 0.0f) {
+                g += weight_decay * p_data[j];
             }
 
-            // Momentum
-            if (sgd->momentum != 0.0f) {
+            // 2. Momentum
+            if (momentum != 0.0f) {
                 // v = momentum * v_prev + g
-                m_buf[j] = sgd->momentum * m_buf[j] + g;
+                m_buf[j] = momentum * m_buf[j] + g;
+                // update gradient to be the velocity
                 g = m_buf[j];
             }
 
-            // Update
-            p_data[j] -= sgd->lr * g;
+            // 3. Update parameter
+            p_data[j] -= lr * g;
         }
     }
 }
@@ -176,14 +187,30 @@ static void adam_free(Optimizer *opt) {
     free(adam);
 }
 
+static void adam_ensure_buffers(Adam *adam, size_t param_idx, size_t elem_count) {
+    if (adam->m_buffers[param_idx] == NULL) {
+        adam->m_buffers[param_idx] = calloc(elem_count, sizeof(float32_t));
+        assert(adam->m_buffers[param_idx] != NULL);
+        adam->v_buffers[param_idx] = calloc(elem_count, sizeof(float32_t));
+        assert(adam->v_buffers[param_idx] != NULL);
+    }
+}
+
 static void adam_step_impl(Optimizer *opt, bool is_adamw) {
     Adam *adam = (Adam *)opt;
     opt->step_count++;
 
-    // Precompute bias corrections
-    // pow returns double, cast to float32_t
-    float32_t bias_correction1 = 1.0f - (float32_t)pow(adam->beta1, (double)opt->step_count);
-    float32_t bias_correction2 = 1.0f - (float32_t)pow(adam->beta2, (double)opt->step_count);
+    // cache constants for loop efficiency
+    const float32_t beta1 = adam->beta1;
+    const float32_t beta2 = adam->beta2;
+    const float32_t eps = adam->eps;
+    const float32_t weight_decay = adam->weight_decay;
+    const float32_t lr = adam->lr;
+
+    // pre-compute bias corrections (constant across all parameters)
+    // 1 - beta^t
+    const float32_t bias_correction1 = 1.0f - (float32_t)pow(beta1, (double)opt->step_count);
+    const float32_t bias_correction2 = 1.0f - (float32_t)pow(beta2, (double)opt->step_count);
 
     for (size_t i = 0; i < opt->param_count; ++i) {
         Tensor *param = opt->params[i];
@@ -193,45 +220,43 @@ static void adam_step_impl(Optimizer *opt, bool is_adamw) {
 
         float32_t *p_data = param->data;
         const float32_t *g_data = param->grad->data;
-        size_t size = param->size;
+        const size_t elem_count = param->size; // rename size -> elem_count
 
-        if (adam->m_buffers[i] == NULL) {
-            adam->m_buffers[i] = calloc(size, sizeof(float32_t));
-            assert(adam->m_buffers[i] != NULL);
-            adam->v_buffers[i] = calloc(size, sizeof(float32_t));
-            assert(adam->v_buffers[i] != NULL);
-        }
+        // ensure internal state buffers exist
+        adam_ensure_buffers(adam, i, elem_count);
 
         float32_t *m = adam->m_buffers[i];
         float32_t *v = adam->v_buffers[i];
 
-        for (size_t j = 0; j < size; ++j) {
+        // hot loop: process ensure strict alignment / SIMD friendly if possible
+        for (size_t j = 0; j < elem_count; ++j) {
             float32_t g = g_data[j];
 
             if (!is_adamw) {
-                // Adam: Add weight decay to gradient
-                if (adam->weight_decay != 0.0f) {
-                    g += adam->weight_decay * p_data[j];
+                // Adam: Add weight decay to gradient (L2 regularization equivalent)
+                if (weight_decay != 0.0f) {
+                    g += weight_decay * p_data[j];
                 }
             }
 
-            // Update biased first moment estimate
-            m[j] = adam->beta1 * m[j] + (1.0f - adam->beta1) * g;
+            // 1. Update biased first moment estimate: m = beta1 * m + (1 - beta1) * g
+            m[j] = beta1 * m[j] + (1.0f - beta1) * g;
 
-            // Update biased second moment estimate
-            v[j] = adam->beta2 * v[j] + (1.0f - adam->beta2) * (g * g);
+            // 2. Update biased second moment estimate: v = beta2 * v + (1 - beta2) * g^2
+            v[j] = beta2 * v[j] + (1.0f - beta2) * (g * g);
 
-            // Compute bias-corrected moments
+            // 3. Compute bias-corrected moments
             float32_t m_hat = m[j] / bias_correction1;
             float32_t v_hat = v[j] / bias_correction2;
 
-            // Update parameter
-            p_data[j] -= adam->lr * m_hat / (sqrtf(v_hat) + adam->eps);
+            // 4. Update parameter
+            p_data[j] -= lr * m_hat / (sqrtf(v_hat) + eps);
 
             if (is_adamw) {
-                // AdamW: Decay weights directly
-                if (adam->weight_decay != 0.0f) {
-                    p_data[j] *= (1.0f - adam->lr * adam->weight_decay);
+                // AdamW: Decay weights directly (decoupled weight decay)
+                // P_new = P_old - lr * (weight_decay * P_old + other_terms)
+                if (weight_decay != 0.0f) {
+                    p_data[j] *= (1.0f - lr * weight_decay);
                 }
             }
         }
