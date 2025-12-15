@@ -12,6 +12,10 @@ static uint64_t random_int_range(uint64_t min, uint64_t max) {
     return min + ((uint64_t)rand() % (max - min + 1));
 }
 
+/*
+ * applies a random horizontal flip to the tensor with probability p.
+ * only makes sense for images where semantics are invariant to horizontal flipping.
+ */
 void random_horizontal_flip(Tensor *t, float32_t p) {
     assert(t != NULL);
     assert(t->data != NULL);
@@ -47,6 +51,20 @@ void random_horizontal_flip(Tensor *t, float32_t p) {
     tensor_free(out);
 }
 
+/*
+ * applies a random crop to the tensor.
+ * virtually pads the image with zeros, then selects a random window.
+ *
+ * example (padding=1, target=2x2):
+ *
+ *   input (2x2):     virtual padded (4x4):      random crop (2x2):
+ *   [1, 1]           0  0  0  0                 [0, 0]
+ *   [1, 1]      ->   0 [1, 1] 0        ->       [0, 1]
+ *                    0 [1, 1] 0                 (if top=0, left=0)
+ *                    0  0  0  0
+ *
+ * simulates translation invariance by shifting content.
+ */
 void random_crop(Tensor *t, uint64_t target_h, uint64_t target_w, uint64_t padding) {
     assert(t != NULL);
     assert(t->data != NULL);
