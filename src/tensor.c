@@ -1,5 +1,4 @@
 #include "tensor.h"
-#include "autograd.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
@@ -367,42 +366,10 @@ static Tensor *tensor_binary_op(const Tensor *a, const Tensor *b, binary_op_t op
     return out_tensor;
 }
 
-Tensor *tensor_add(const Tensor *a, const Tensor *b) {
-    Tensor *out = tensor_binary_op(a, b, op_add);
-    // TODO: fix this
-    if (out->requires_grad) {
-        out->grad_fn = new_add_backward((Tensor *)a, (Tensor *)b);
-        out->grad_fn->out_tensor = out;
-    }
-    return out;
-}
-Tensor *tensor_sub(const Tensor *a, const Tensor *b) {
-    Tensor *out = tensor_binary_op(a, b, op_sub);
-    // TODO: fix this
-    if (out->requires_grad) {
-        out->grad_fn = new_sub_backward((Tensor *)a, (Tensor *)b);
-        out->grad_fn->out_tensor = out;
-    }
-    return out;
-}
-Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
-    Tensor *out = tensor_binary_op(a, b, op_mul);
-    // TODO: fix this
-    if (out->requires_grad) {
-        out->grad_fn = new_mul_backward((Tensor *)a, (Tensor *)b);
-        out->grad_fn->out_tensor = out;
-    }
-    return out;
-}
-Tensor *tensor_div(const Tensor *a, const Tensor *b) {
-    Tensor *out = tensor_binary_op(a, b, op_div);
-    // TODO: fix this
-    if (out->requires_grad) {
-        out->grad_fn = new_div_backward((Tensor *)a, (Tensor *)b);
-        out->grad_fn->out_tensor = out;
-    }
-    return out;
-}
+Tensor *tensor_add(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_add); }
+Tensor *tensor_sub(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_sub); }
+Tensor *tensor_mul(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_mul); }
+Tensor *tensor_div(const Tensor *a, const Tensor *b) { return tensor_binary_op(a, b, op_div); }
 
 Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(a != NULL);
@@ -447,12 +414,6 @@ Tensor *tensor_matmul(const Tensor *a, const Tensor *b) {
     assert(result->ndim == 2);
     assert(result->shape[0] == M);
     assert(result->shape[1] == N);
-
-    // TODO: fix this
-    if (result->requires_grad) {
-        result->grad_fn = new_matmul_backward((Tensor *)a, (Tensor *)b);
-        result->grad_fn->out_tensor = result;
-    }
     return result;
 }
 
@@ -502,11 +463,6 @@ Tensor *tensor_reshape(const Tensor *t, const int64_t *new_shape, uint64_t new_n
     assert(result != NULL);
     assert(result->size == t->size);
 
-    // TODO: fix this
-    if (result->requires_grad) {
-        result->grad_fn = new_reshape_backward((Tensor *)t, t->shape, t->ndim);
-        result->grad_fn->out_tensor = result;
-    }
     return result;
 }
 
@@ -573,12 +529,6 @@ Tensor *tensor_transpose(const Tensor *t, uint64_t dim0, uint64_t dim1) {
         result->data[i] = t->data[offset];
     }
     free(curr);
-
-    // TODO: fix this
-    if (result->requires_grad) {
-        result->grad_fn = new_transpose_backward((Tensor *)t, dim0, dim1);
-        result->grad_fn->out_tensor = result;
-    }
     return result;
 }
 
@@ -715,12 +665,6 @@ Tensor *tensor_sum(const Tensor *t, int64_t dim_idx, bool keepdims) {
     if (curr) {
         free(curr);
     }
-
-    // TODO: fix this
-    if (result->requires_grad) {
-        result->grad_fn = new_sum_backward((Tensor *)t, dim_idx, keepdims);
-        result->grad_fn->out_tensor = result;
-    }
     return result;
 }
 
@@ -745,7 +689,6 @@ Tensor *tensor_mean(const Tensor *t, int64_t dim_idx, bool keepdims) {
     tensor_free(scale_t);
     tensor_free(sum_mut);
 
-    // TODO: fix this
     return result;
 }
 
@@ -798,8 +741,6 @@ Tensor *tensor_max(const Tensor *t, int64_t dim_idx, bool keepdims) {
     if (curr) {
         free(curr);
     }
-
-    // TODO: fix this
     return result;
 }
 
@@ -890,9 +831,5 @@ Tensor *tensor_get(const Tensor *t, const uint64_t *multidim) {
 
     // scalar tensor with 0 dim
     Tensor *val = tensor_create(&t->data[offset], NULL, 0, t->requires_grad);
-    if (val->requires_grad) {
-        val->grad_fn = new_getitem_backward((Tensor *)t, multidim);
-        val->grad_fn->out_tensor = val;
-    }
     return val;
 }
