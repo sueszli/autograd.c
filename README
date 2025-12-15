@@ -10,9 +10,19 @@ $ toilet -f mono12 -w 100 "autograd.c"
 
 $ make run
 
-... WORK IN PROGRESS!!!!!
+    ...
 
 $ cat references.txt
 
     - https://github.com/harvard-edge/cs249r_book/blob/dev/tinytorch/src/
 
+
+
+
+
+
+TODO:
+
+- autograd.c (in progress)
+- training.c (full architecture)
+- benchmarking and visualizing, finishing readme
