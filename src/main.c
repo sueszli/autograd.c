@@ -17,7 +17,7 @@ int32_t main(void) {
         label_t idx = (label_t)labels->data[i];
         printf("test sample %" PRIu64 ": %s\n", i, label_to_str(idx));
 
-        float32_t *img_data = &images->data[i * INPUT_SIZE];
+        const float32_t *img_data = &images->data[i * INPUT_SIZE];
         Tensor *t = tensor_create(img_data, shape, 3, false);
         tensor_print(t);
         tensor_free(t);

@@ -145,7 +145,7 @@ typedef struct {
     float32_t p;
 } DropoutLayer;
 
-static Tensor *dropout_forward(Layer *layer, const Tensor *input, bool training) {
+static Tensor *dropout_forward(const Layer *layer, const Tensor *input, bool training) {
     assert(layer != NULL);
     assert(input != NULL);
 
@@ -199,7 +199,7 @@ Layer *layer_dropout_create(float32_t p) {
     DropoutLayer *l = (DropoutLayer *)calloc(1, sizeof(DropoutLayer));
     assert(l != NULL && "calloc failed");
 
-    l->base.forward = dropout_forward;
+    l->base.forward = (Tensor * (*)(Layer *, const Tensor *, bool)) dropout_forward;
     l->base.free = dropout_free;
     l->base.parameters = dropout_parameters;
     l->base.name = "Dropout";

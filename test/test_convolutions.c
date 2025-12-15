@@ -201,7 +201,7 @@ void test_batchnorm2d_forward(void) {
     input->data[6] = 1.0f;
     input->data[7] = 3.0f;
 
-    Layer *l = layer_batchnorm2d_create(2, 1e-5, 0.1);
+    Layer *l = layer_batchnorm2d_create(2, 1e-5f, 0.1f);
     Tensor *out = l->forward(l, input, true);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, out->data[0]);
