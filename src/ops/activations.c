@@ -61,7 +61,7 @@ Tensor *tensor_gelu(const Tensor *t) {
 
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
-        out->data[i] = 0.5f * x * (1.0f + erff(x * 1 / (float)sqrt(2)));
+        out->data[i] = 0.5f * x * (1.0f + erff(x * 1 / (float32_t)sqrt(2)));
     }
     return out;
 }
