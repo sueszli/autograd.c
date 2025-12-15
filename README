@@ -24,8 +24,10 @@ $ cat references.txt
 TODO:
 
 write arithmetic backward
+
 repeat for reshapes and reductions
 
+write backward
 write tests
 try forward and backward in main and see if it leaks
 
