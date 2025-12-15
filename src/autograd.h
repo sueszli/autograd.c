@@ -8,14 +8,14 @@ struct Tensor;
 typedef struct GradFn {
     void (*apply)(struct GradFn *self, const struct Tensor *grad_output);
     struct GradFn **next_fns;
-    int num_next;
+    int64_t num_next;
     struct Tensor *out_tensor;
     char *name;
 } GradFn;
 
 void backward(struct Tensor *root, const struct Tensor *grad);
 
-void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), GradFn **next_fns, int num_next, const char *name);
+void grad_fn_init(GradFn *fn, void (*apply)(GradFn *, const struct Tensor *), GradFn **next_fns, int64_t num_next, const char *name);
 void grad_fn_free(GradFn *fn);
 
 GradFn *new_add_backward(struct Tensor *a, struct Tensor *b);

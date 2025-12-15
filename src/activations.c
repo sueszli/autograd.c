@@ -5,10 +5,12 @@
 #include <stddef.h>
 
 static inline float32_t sigmoid(float32_t x) {
-    if (x > 500.0f)
+    if (x > 500.0f) {
         x = 500.0f;
-    if (x < -500.0f)
+    }
+    if (x < -500.0f) {
         x = -500.0f;
+    }
 
     if (x >= 0.0f) {
         return 1.0f / (1.0f + expf(-x));
@@ -70,11 +72,9 @@ Tensor *tensor_gelu(const Tensor *t) {
     Tensor *out = tensor_create(NULL, t->shape, t->ndim, t->requires_grad);
 
     // GELU exact: 0.5 * x * (1 + erf(x / sqrt(2)))
-    float32_t sqrt_2_inv = 0.7071067811865476f; // 1/sqrt(2)
-
     for (uint64_t i = 0; i < t->size; i++) {
         float32_t x = t->data[i];
-        out->data[i] = 0.5f * x * (1.0f + erff(x * sqrt_2_inv));
+        out->data[i] = 0.5f * x * (1.0f + erff(x * 1/(float)sqrt(2)));
     }
 
     if (out->requires_grad) {
