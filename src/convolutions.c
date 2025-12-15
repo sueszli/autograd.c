@@ -20,11 +20,6 @@ typedef struct {
 } Conv2dLayer;
 
 /*
- * applies padding to a 4D tensor (N, C, H, W).
- * returns a new tensor with shape (N, C, H+2p, W+2p).
- * value is 0.0f (or -inf for maxpool if needed, but this is for conv2d).
- */
-/*
  * applies padding to a 4D tensor (batch_size, channels, height, width).
  * returns a new tensor with shape (batch_size, channels, height+2p, width+2p).
  * value is 0.0f (or -inf for maxpool if needed).
@@ -83,7 +78,6 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
     uint64_t weight_h = weight->shape[2];
     uint64_t weight_w = weight->shape[3];
 
-    // Assertions for shape consistency
     assert(in_channels == weight_in_channels && "input channels must match weight input channels");
     assert(weight_h == kernel_size && "weight height must match kernel size");
     assert(weight_w == kernel_size && "weight width must match kernel size");
@@ -100,7 +94,6 @@ static Tensor *conv2d_forward_impl(const Tensor *input, const Tensor *weight, co
     Tensor *padded_input = pad_tensor(input, padding, 0.0f);
     assert(padded_input != NULL && "failed to allocate padded input");
 
-    // explicit loops
     for (uint64_t b = 0; b < batch_size; ++b) {
         for (uint64_t out_ch = 0; out_ch < out_channels; ++out_ch) {
             float32_t bias_val = (bias != NULL) ? bias->data[out_ch] : 0.0f;
