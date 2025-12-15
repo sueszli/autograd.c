@@ -1,4 +1,5 @@
 #include "losses_backward.h"
+#include "autograd.h"
 #include "tensor.h"
 #include <assert.h>
 #include <float.h>
@@ -29,6 +30,25 @@ Tensor *mse_loss_backward(const Tensor *predictions, const Tensor *targets) {
     }
 
     return grad;
+}
+
+void mse_loss_backward_fn(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+    assert(grad_output->size == 1 && "loss output must be scalar");
+
+    Tensor *predictions = fn->inputs[0];
+    const Tensor *targets = fn->inputs[1];
+
+    if (predictions != NULL && predictions->requires_grad) {
+        Tensor *grad = mse_loss_backward(predictions, targets);
+        float32_t scale = grad_output->data[0];
+        for (uint64_t i = 0; i < grad->size; i++) {
+            grad->data[i] *= scale;
+        }
+        accumulate_grad(predictions, grad);
+    }
 }
 
 Tensor *cross_entropy_loss_backward(const Tensor *logits, const Tensor *targets) {
@@ -87,6 +107,25 @@ Tensor *cross_entropy_loss_backward(const Tensor *logits, const Tensor *targets)
     return grad;
 }
 
+void cross_entropy_loss_backward_fn(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+    assert(grad_output->size == 1 && "loss output must be scalar");
+
+    Tensor *logits = fn->inputs[0];
+    const Tensor *targets = fn->inputs[1];
+
+    if (logits != NULL && logits->requires_grad) {
+        Tensor *grad = cross_entropy_loss_backward(logits, targets);
+        float32_t scale = grad_output->data[0];
+        for (uint64_t i = 0; i < grad->size; i++) {
+            grad->data[i] *= scale;
+        }
+        accumulate_grad(logits, grad);
+    }
+}
+
 #define EPSILON 1e-7f
 
 Tensor *binary_cross_entropy_loss_backward(const Tensor *predictions, const Tensor *targets) {
@@ -129,4 +168,23 @@ Tensor *binary_cross_entropy_loss_backward(const Tensor *predictions, const Tens
     }
 
     return grad;
+}
+
+void binary_cross_entropy_loss_backward_fn(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 2);
+    assert(grad_output->size == 1 && "loss output must be scalar");
+
+    Tensor *predictions = fn->inputs[0];
+    const Tensor *targets = fn->inputs[1];
+
+    if (predictions != NULL && predictions->requires_grad) {
+        Tensor *grad = binary_cross_entropy_loss_backward(predictions, targets);
+        float32_t scale = grad_output->data[0];
+        for (uint64_t i = 0; i < grad->size; i++) {
+            grad->data[i] *= scale;
+        }
+        accumulate_grad(predictions, grad);
+    }
 }

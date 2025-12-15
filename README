@@ -22,4 +22,3 @@ TODO:
 missing ops with autograd:
     - activations
     - convolutions
-    - losses

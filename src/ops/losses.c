@@ -1,4 +1,6 @@
 #include "losses.h"
+#include "autograd.h"
+#include "ops/losses_backward.h"
 #include <assert.h>
 #include <float.h>
 #include <math.h>
@@ -25,6 +27,24 @@ Tensor *mse_loss(const Tensor *predictions, const Tensor *targets) {
 
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = mse_loss_backward_fn;
+        fn->output = out;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)predictions;
+        fn->inputs[1] = (Tensor *)targets;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (predictions->grad_fn != NULL) {
+            predictions->grad_fn->pending_count++;
+        }
+        if (targets->grad_fn != NULL) {
+            targets->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
 
     return out;
 }
@@ -84,6 +104,25 @@ Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
 
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, logits->requires_grad);
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = cross_entropy_loss_backward_fn;
+        fn->output = out;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)logits;
+        fn->inputs[1] = (Tensor *)targets;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (logits->grad_fn != NULL) {
+            logits->grad_fn->pending_count++;
+        }
+        if (targets->grad_fn != NULL) {
+            targets->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
 
@@ -122,5 +161,24 @@ Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targe
 
     const uint64_t shape[] = {1};
     Tensor *out = tensor_create(&loss_val, shape, 0, predictions->requires_grad);
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = binary_cross_entropy_loss_backward_fn;
+        fn->output = out;
+        fn->num_inputs = 2;
+        fn->inputs[0] = (Tensor *)predictions;
+        fn->inputs[1] = (Tensor *)targets;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (predictions->grad_fn != NULL) {
+            predictions->grad_fn->pending_count++;
+        }
+        if (targets->grad_fn != NULL) {
+            targets->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
