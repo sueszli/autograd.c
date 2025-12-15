@@ -6,8 +6,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define EPSILON 1e-7f
-
 Tensor *mse_loss(const Tensor *predictions, const Tensor *targets) {
     assert(predictions != NULL);
     assert(targets != NULL);
@@ -99,6 +97,8 @@ Tensor *cross_entropy_loss(const Tensor *logits, const Tensor *targets) {
     }
     return out;
 }
+
+#define EPSILON 1e-7f
 
 Tensor *binary_cross_entropy_loss(const Tensor *predictions, const Tensor *targets) {
     assert(predictions != NULL);

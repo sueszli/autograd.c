@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-// applies a random horizontal flip to the tensor with probability p.
+// applies an in-place random horizontal flip to the tensor with probability p.
 // only makes sense for images where semantics are invariant to horizontal flipping.
-void random_horizontal_flip(Tensor *t, float32_t p) {
+void random_horizontal_flip_mut(Tensor *t, float32_t p) {
     assert(t != NULL);
     assert(t->data != NULL);
     assert(p >= 0.0f && p <= 1.0f);
@@ -39,6 +39,7 @@ void random_horizontal_flip(Tensor *t, float32_t p) {
 
 /*
  * applies a random crop to the tensor.
+ * simulates translation invariance by shifting content.
  * virtually pads the image with zeros, then selects a random window.
  *
  * example (padding=1, target=2x2):
@@ -48,10 +49,8 @@ void random_horizontal_flip(Tensor *t, float32_t p) {
  *   [1, 1]      ->   0 [1, 1] 0        ->     [0, 1]
  *                    0 [1, 1] 0               (if top=0, left=0)
  *                    0  0  0  0
- *
- * simulates translation invariance by shifting content.
  */
-void random_crop(Tensor *t, uint64_t target_h, uint64_t target_w, uint64_t padding) {
+void random_crop_mut(Tensor *t, uint64_t target_h, uint64_t target_w, uint64_t padding) {
     assert(t != NULL);
     assert(t->data != NULL);
     assert(target_h > 0);

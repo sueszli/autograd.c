@@ -1,6 +1,6 @@
-#include "cifar10.h"
+#include "dataloader/cifar10.h"
 #include "tensor.h"
-#include "tqdm.h"
+#include "utils/tqdm.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,9 @@ int32_t main(void) {
         printf("test sample %" PRIu64 ": %s\n", i, label_to_str(idx));
 
         const float32_t *img_data = &images->data[i * INPUT_SIZE];
-        Tensor *t = tensor_create(img_data, shape, 3, false);
+        Tensor *t = tensor_create(img_data, shape, CHANNELS, false);
+        tensor_print(t);
+        printf("\n");
         tensor_print(t);
         tensor_free(t);
     }

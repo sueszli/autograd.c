@@ -1,5 +1,5 @@
-#include "../src/augment.h"
 #include "../src/tensor.h"
+#include "../src/utils/augment.h"
 #include "unity.h"
 #include <float.h>
 #include <math.h>
@@ -17,7 +17,7 @@ static void test_random_horizontal_flip_p0(void) {
     float32_t data[] = {0, 1, 2, 3, 4, 5};
     memcpy(t->data, data, 6 * sizeof(float32_t));
 
-    random_horizontal_flip(t, 0.0f);
+    random_horizontal_flip_mut(t, 0.0f);
 
     for (int i = 0; i < 6; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, data[i], t->data[i]);
@@ -31,7 +31,7 @@ static void test_random_horizontal_flip_p1(void) {
     float32_t data[] = {0, 1, 2, 3, 4, 5};
     memcpy(t->data, data, 6 * sizeof(float32_t));
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     float32_t expected[] = {2, 1, 0, 5, 4, 3};
     for (int i = 0; i < 6; i++) {
@@ -46,7 +46,7 @@ static void test_random_horizontal_flip_odd_width(void) {
     float32_t data[] = {0, 1, 2};
     memcpy(t->data, data, 3 * sizeof(float32_t));
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 2.0f, t->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 1.0f, t->data[1]);
@@ -60,7 +60,7 @@ static void test_random_horizontal_flip_3d(void) {
     for (int i = 0; i < 12; i++)
         t3->data[i] = (float32_t)i;
 
-    random_horizontal_flip(t3, 1.0f);
+    random_horizontal_flip_mut(t3, 1.0f);
 
     float32_t expected3[] = {2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9};
     for (int i = 0; i < 12; i++) {
@@ -75,7 +75,7 @@ static void test_random_crop_2d(void) {
     for (int i = 0; i < 16; i++)
         t->data[i] = 1.0f;
 
-    random_crop(t, 2, 2, 1);
+    random_crop_mut(t, 2, 2, 1);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->ndim);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
@@ -93,7 +93,7 @@ static void test_random_crop_3d_chw(void) {
     for (int i = 0; i < 3 * 4 * 4; i++)
         t_chw->data[i] = 1.0f;
 
-    random_crop(t_chw, 2, 2, 1);
+    random_crop_mut(t_chw, 2, 2, 1);
 
     TEST_ASSERT_EQUAL_UINT64(3, t_chw->ndim);
     TEST_ASSERT_EQUAL_UINT64(3, t_chw->shape[0]);
@@ -106,7 +106,7 @@ static void test_random_crop_3d_hwc(void) {
     uint64_t shape_hwc[] = {5, 4, 5};
     Tensor *t_hwc = tensor_zeros(shape_hwc, 3, false);
 
-    random_crop(t_hwc, 2, 2, 1);
+    random_crop_mut(t_hwc, 2, 2, 1);
 
     TEST_ASSERT_EQUAL_UINT64(3, t_hwc->ndim);
     TEST_ASSERT_EQUAL_UINT64(2, t_hwc->shape[0]);
@@ -123,7 +123,7 @@ static void test_random_crop_identity(void) {
     t->data[2] = 3.0f;
     t->data[3] = 4.0f;
 
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 1.0f, t->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 2.0f, t->data[1]);
@@ -138,7 +138,7 @@ static void test_random_crop_zero_padding(void) {
     for (int i = 0; i < 9; i++)
         t->data[i] = 1.0f;
 
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -153,7 +153,7 @@ static void test_random_crop_larger_than_input(void) {
     Tensor *t = tensor_zeros(shape, 2, false);
     t->data[0] = 9.0f;
 
-    random_crop(t, 3, 3, 1);
+    random_crop_mut(t, 3, 3, 1);
 
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[1]);
@@ -169,8 +169,8 @@ static void test_chaining(void) {
     float32_t data[] = {0, 1, 2, 3, 4, 5};
     memcpy(t->data, data, 6 * sizeof(float32_t));
 
-    random_horizontal_flip(t, 1.0f);
-    random_crop(t, 2, 2, 0);
+    random_horizontal_flip_mut(t, 1.0f);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->ndim);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
@@ -199,7 +199,7 @@ static void test_flip_p1_1x1(void) {
     uint64_t shape[] = {1, 1};
     Tensor *t = tensor_zeros(shape, 2, false);
     t->data[0] = 42.0f;
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 42.0f, t->data[0]);
     tensor_free(t);
 }
@@ -209,7 +209,7 @@ static void test_flip_p1_1x5(void) {
     Tensor *t = tensor_zeros(shape, 2, false);
     for (int i = 0; i < 5; i++)
         t->data[i] = (float)i;
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
     float expected[] = {4, 3, 2, 1, 0};
     for (int i = 0; i < 5; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, expected[i], t->data[i]);
@@ -222,7 +222,7 @@ static void test_flip_p1_5x1(void) {
     Tensor *t = tensor_zeros(shape, 2, false);
     for (int i = 0; i < 5; i++)
         t->data[i] = (float)i;
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
     for (int i = 0; i < 5; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, (float)i, t->data[i]);
     }
@@ -235,8 +235,8 @@ static void test_flip_p1_reversibility(void) {
     for (int i = 0; i < 6; i++)
         t->data[i] = (float)i;
 
-    random_horizontal_flip(t, 1.0f);
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     for (int i = 0; i < 6; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, (float)i, t->data[i]);
@@ -250,7 +250,7 @@ static void test_flip_p0_no_op(void) {
     for (int i = 0; i < 6; i++)
         t->data[i] = (float)i;
 
-    random_horizontal_flip(t, 0.0f);
+    random_horizontal_flip_mut(t, 0.0f);
 
     for (int i = 0; i < 6; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, (float)i, t->data[i]);
@@ -263,7 +263,7 @@ static void test_flip_p0_pointer_check(void) {
     Tensor *t = tensor_zeros(shape, 2, false);
     float32_t *original_ptr = t->data;
 
-    random_horizontal_flip(t, 0.0f);
+    random_horizontal_flip_mut(t, 0.0f);
 
     TEST_ASSERT_EQUAL_PTR(original_ptr, t->data);
     tensor_free(t);
@@ -273,7 +273,7 @@ static void test_flip_p1_pointer_check(void) {
     uint64_t shape[] = {2, 3};
     Tensor *t = tensor_zeros(shape, 2, false);
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_NOT_NULL(t->data);
     TEST_ASSERT_EQUAL_UINT64(2, t->ndim);
@@ -289,7 +289,7 @@ static void test_flip_invariants_sum(void) {
         sum_orig += (float)i;
     }
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     float sum_new = 0;
     for (int i = 0; i < 9; i++)
@@ -306,7 +306,7 @@ static void test_flip_4d_tensor(void) {
     for (int i = 0; i < 24; i++)
         t->data[i] = (float)cnt++;
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 2.0f, t->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 1.0f, t->data[1]);
@@ -320,7 +320,7 @@ static void test_flip_large_tensor(void) {
     for (int i = 0; i < 10000; i++)
         t->data[i] = (float)i;
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 99.0f, t->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 0.0f, t->data[99]);
@@ -330,7 +330,7 @@ static void test_flip_large_tensor(void) {
 static void test_crop_2d_to_1x1(void) {
     uint64_t shape[] = {4, 4};
     Tensor *t = tensor_zeros(shape, 2, false);
-    random_crop(t, 1, 1, 0);
+    random_crop_mut(t, 1, 1, 0);
     TEST_ASSERT_EQUAL_UINT64(1, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(1, t->shape[1]);
     tensor_free(t);
@@ -340,7 +340,7 @@ static void test_crop_2d_same_size(void) {
     uint64_t shape[] = {4, 4};
     Tensor *t = tensor_zeros(shape, 2, false);
     t->data[0] = 42.0f;
-    random_crop(t, 4, 4, 0);
+    random_crop_mut(t, 4, 4, 0);
     TEST_ASSERT_EQUAL_UINT64(4, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(4, t->shape[1]);
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 42.0f, t->data[0]);
@@ -350,7 +350,7 @@ static void test_crop_2d_same_size(void) {
 static void test_crop_chw_boundary_c4(void) {
     uint64_t shape[] = {4, 5, 5};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 3, 3, 0);
+    random_crop_mut(t, 3, 3, 0);
     TEST_ASSERT_EQUAL_UINT64(4, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[1]);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[2]);
@@ -360,7 +360,7 @@ static void test_crop_chw_boundary_c4(void) {
 static void test_crop_hwc_boundary_h5(void) {
     uint64_t shape[] = {5, 5, 3};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 3, 3, 0);
+    random_crop_mut(t, 3, 3, 0);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[1]);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[2]);
@@ -373,7 +373,7 @@ static void test_crop_padding_expansion(void) {
     for (int i = 0; i < 4; i++)
         t->data[i] = 1.0f;
 
-    random_crop(t, 4, 4, 2);
+    random_crop_mut(t, 4, 4, 2);
 
     TEST_ASSERT_EQUAL_UINT64(4, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(4, t->shape[1]);
@@ -389,7 +389,7 @@ static void test_crop_extreme_padding(void) {
     Tensor *t = tensor_zeros(shape, 2, false);
     t->data[0] = 1.0f;
 
-    random_crop(t, 2, 2, 100);
+    random_crop_mut(t, 2, 2, 100);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -400,7 +400,7 @@ static void test_crop_extreme_padding(void) {
 static void test_crop_2d_strides(void) {
     uint64_t shape[] = {4, 4};
     Tensor *t = tensor_zeros(shape, 2, false);
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
     TEST_ASSERT_EQUAL_UINT64(2, t->strides[0]);
     TEST_ASSERT_EQUAL_UINT64(1, t->strides[1]);
     tensor_free(t);
@@ -409,7 +409,7 @@ static void test_crop_2d_strides(void) {
 static void test_crop_3d_chw_strides(void) {
     uint64_t shape[] = {3, 4, 4};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_EQUAL_UINT64(4, t->strides[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->strides[1]);
@@ -420,7 +420,7 @@ static void test_crop_3d_chw_strides(void) {
 static void test_crop_3d_hwc_strides(void) {
     uint64_t shape[] = {5, 5, 3};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_EQUAL_UINT64(6, t->strides[0]);
     TEST_ASSERT_EQUAL_UINT64(3, t->strides[1]);
@@ -434,7 +434,7 @@ static void test_crop_valid_data_range(void) {
     for (int i = 0; i < 16; i++)
         t->data[i] = 5.0f;
 
-    random_crop(t, 2, 2, 1);
+    random_crop_mut(t, 2, 2, 1);
 
     for (int i = 0; i < 4; i++) {
         TEST_ASSERT_TRUE(t->data[i] == 5.0f || t->data[i] == 0.0f);
@@ -448,7 +448,7 @@ static void test_crop_constant_input_no_pad(void) {
     for (int i = 0; i < 16; i++)
         t->data[i] = 7.0f;
 
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     for (int i = 0; i < 4; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, 7.0f, t->data[i]);
@@ -462,7 +462,7 @@ static void test_crop_constant_input_with_pad(void) {
     for (int i = 0; i < 4; i++)
         t->data[i] = 1.0f;
 
-    random_crop(t, 2, 2, 1);
+    random_crop_mut(t, 2, 2, 1);
 
     for (int i = 0; i < 4; i++) {
         TEST_ASSERT_TRUE(t->data[i] == 1.0f || t->data[i] == 0.0f);
@@ -473,7 +473,7 @@ static void test_crop_constant_input_with_pad(void) {
 static void test_crop_all_zeros(void) {
     uint64_t shape[] = {2, 2};
     Tensor *t = tensor_zeros(shape, 2, false);
-    random_crop(t, 2, 2, 1);
+    random_crop_mut(t, 2, 2, 1);
     for (int i = 0; i < 4; i++) {
         TEST_ASSERT_FLOAT_WITHIN(EPSILON, 0.0f, t->data[i]);
     }
@@ -486,9 +486,9 @@ static void test_chain_flip_crop(void) {
     for (int i = 0; i < 6; i++)
         t->data[i] = (float)i;
 
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -501,8 +501,8 @@ static void test_chain_crop_flip(void) {
     for (int i = 0; i < 6; i++)
         t->data[i] = (float)i;
 
-    random_crop(t, 2, 2, 0);
-    random_horizontal_flip(t, 1.0f);
+    random_crop_mut(t, 2, 2, 0);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -512,7 +512,7 @@ static void test_chain_crop_flip(void) {
 static void test_crop_shape_preserved_chw(void) {
     uint64_t shape[] = {3, 4, 4};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
     TEST_ASSERT_EQUAL_UINT64(3, t->ndim);
     TEST_ASSERT_EQUAL_UINT64(3, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -523,7 +523,7 @@ static void test_crop_shape_preserved_chw(void) {
 static void test_crop_shape_preserved_hwc(void) {
     uint64_t shape[] = {5, 5, 3};
     Tensor *t = tensor_zeros(shape, 3, false);
-    random_crop(t, 2, 2, 0);
+    random_crop_mut(t, 2, 2, 0);
     TEST_ASSERT_EQUAL_UINT64(3, t->ndim);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
@@ -537,7 +537,7 @@ static void test_flip_affects_data(void) {
     t->data[0] = 0;
     t->data[1] = 1;
     t->data[2] = 2;
-    random_horizontal_flip(t, 1.0f);
+    random_horizontal_flip_mut(t, 1.0f);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 2.0f, t->data[0]);
     tensor_free(t);
@@ -551,7 +551,7 @@ static void test_crop_affects_data(void) {
     t->data[2] = 3;
     t->data[3] = 4;
 
-    random_crop(t, 1, 1, 0);
+    random_crop_mut(t, 1, 1, 0);
     TEST_ASSERT_EQUAL_UINT64(1, t->size);
 
     bool found = (t->data[0] == 1 || t->data[0] == 2 || t->data[0] == 3 || t->data[0] == 4);
@@ -567,8 +567,8 @@ static void test_augment_idempotency_p0(void) {
     t->data[2] = 3;
     t->data[3] = 4;
 
-    random_horizontal_flip(t, 0.0f);
-    random_horizontal_flip(t, 0.0f);
+    random_horizontal_flip_mut(t, 0.0f);
+    random_horizontal_flip_mut(t, 0.0f);
 
     TEST_ASSERT_FLOAT_WITHIN(EPSILON, 1.0f, t->data[0]);
     tensor_free(t);
@@ -580,7 +580,7 @@ static void test_crop_partial_overlap(void) {
     for (int i = 0; i < 4; i++)
         t->data[i] = 1.0f;
 
-    random_crop(t, 2, 2, 1);
+    random_crop_mut(t, 2, 2, 1);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(2, t->shape[1]);
     tensor_free(t);
