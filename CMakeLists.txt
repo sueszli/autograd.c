@@ -44,7 +44,6 @@ add_compile_options(
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  message(STATUS "optimized build")
   add_compile_options(-fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing -ftrivial-auto-var-init=zero)
 endif()
 
