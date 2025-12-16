@@ -1,4 +1,5 @@
-# special thanks to ivan yashchuk from nvidia for guidance and feedback!
+# author: sueszli
+# reviewer: ivan yashchuk
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
