@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define BATCH_SIZE 64
 #define LEARNING_RATE 0.001f
@@ -255,7 +256,8 @@ void train_epoch(const Model *model, Optimizer *opt, const Tensor *train_images,
         processed_batches++;
 
         snprintf(postfix, sizeof(postfix), "loss=%.4f, acc=%.1f%%", loss->data[0], acc * 100.0f);
-        tqdm(i + 1, num_batches, prefix, postfix);
+        // tqdm(i + 1, num_batches, prefix, postfix);
+        tqdm_plot(i + 1, num_batches, loss->data[0], prefix);
 
         // cleanup
         tensor_free(batch_x);
