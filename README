@@ -19,6 +19,6 @@ $ cat references.txt
 
 TODO:
 
-concurrently generate a huge number of test/*_autograd.c tests
-check if all pass
+write test cases for `test/*_autograd.c`
+
 start building full models
