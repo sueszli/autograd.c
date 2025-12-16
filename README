@@ -15,8 +15,4 @@ $ cat references.txt
     - https://github.com/harvard-edge/cs249r_book/tree/dev/tinytorch/src
 
 
-TODO:
-
-write test cases for `test/*_autograd.c`
-
-start building full models
+TODO: start building full models
