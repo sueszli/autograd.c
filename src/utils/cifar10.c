@@ -28,16 +28,19 @@ static void load_batch(const char *filepath, uint8_t *images_out, label_t *label
     for (int32_t i = 0; i < count; i++) {
         uint8_t label;
         int64_t label_read = (int64_t)fread(&label, 1, 1, f);
+        (void)label_read;
         assert(label_read == 1 && "failed to read label");
         assert(label < NUM_CLASSES && "invalid label");
 
         labels_out[i] = (label_t)label;
 
         int64_t read = (int64_t)fread(images_out + (i * INPUT_SIZE), 1, INPUT_SIZE, f);
+        (void)read;
         assert(read == INPUT_SIZE && "failed to read image data");
     }
 
     int32_t close_result = fclose(f);
+    (void)close_result;
     assert(close_result == 0 && "failed to close batch file");
 }
 
@@ -54,6 +57,7 @@ __attribute__((constructor)) static void load_data(void) {
     for (int32_t i = 0; i < 5; i++) {
         char path[512];
         int32_t written = snprintf(path, sizeof(path), "%s/%s", DATA_DIRECTORY, batches[i]);
+        (void)written;
         assert(written > 0 && written < (int32_t)sizeof(path) && "path buffer overflow");
 
         int32_t offset = i * samples_per_batch;
@@ -63,6 +67,7 @@ __attribute__((constructor)) static void load_data(void) {
     // load test data
     char path[512];
     int32_t written = snprintf(path, sizeof(path), "%s/test_batch.bin", DATA_DIRECTORY);
+    (void)written;
     assert(written > 0 && written < (int32_t)sizeof(path) && "path buffer overflow");
     load_batch(path, test_images, test_labels, NUM_TEST_SAMPLES);
 }

@@ -60,6 +60,7 @@ Tensor *tensor_conv2d(const Tensor *input, const Tensor *weight, const Tensor *b
 
     uint64_t out_channels = weight->shape[0];
     uint64_t weight_in_channels = weight->shape[1];
+    (void)weight_in_channels;
     uint64_t kernel_h = weight->shape[2];
     uint64_t kernel_w = weight->shape[3];
 

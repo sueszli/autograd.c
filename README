@@ -6,7 +6,7 @@ $ toilet -f mono9 -w 100 "autograd.c"
     ▀▄▄▀█  ▀▄▄▀█    ▀▄▄  ▀█▄█▀  ▀█▄▀█   █     ▀▄▄▀█  ▀█▄██    █    ▀█▄▄▀ 
                                  ▄  █                                    
                                   ▀▀                                     
-$ make run
+$ make run-release
 
     ...
 
