@@ -1,3 +1,4 @@
+# special thanks to ivan yashchuk for guidance
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
