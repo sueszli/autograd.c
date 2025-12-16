@@ -1,4 +1,5 @@
-# idea by ivan yashchuk
+# author: sueszli
+# reviewer: ivan yashchuk
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
