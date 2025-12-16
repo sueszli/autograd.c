@@ -238,7 +238,7 @@ void softmax_backward(Function *fn, const Tensor *grad_output) {
 
     if (input != NULL && input->requires_grad) {
         // softmax backward: grad_input = output * (grad_output - sum(grad_output * output))
-        // this is the Jacobian-vector product for softmax
+        // this is the jacobian-vector product for softmax
 
         int64_t ndim = (int64_t)output->ndim;
         int64_t target_dim = (dim < 0) ? (dim + ndim) : dim;
