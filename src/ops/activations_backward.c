@@ -64,6 +64,7 @@ Tensor *tensor_relu_backward(const Tensor *t) {
 
     return grad;
 }
+
 void relu_backward(Function *fn, const Tensor *grad_output) {
     assert(fn != NULL);
     assert(grad_output != NULL);

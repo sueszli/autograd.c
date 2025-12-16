@@ -19,6 +19,7 @@ $ cat references.txt
 
 TODO:
 
-missing ops with autograd:
-    - activations
-    - convolutions
+fix current test cases
+concurrently generate a huge number of test/*_autograd.c tests
+check if all pass
+start building full models

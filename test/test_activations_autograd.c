@@ -19,8 +19,7 @@ void test_sigmoid_backward_simple(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
-    // At x=0, sigmoid(0) = 0.5, so gradient = 0.5 * 0.5 = 0.25
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.25f, x->grad->data[0]);
 
     tensor_release(x);
@@ -38,9 +37,7 @@ void test_sigmoid_backward_chain(void) {
     backward(z);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // z = sigmoid(x) * x
-    // dz/dx = sigmoid(x) * (1 - sigmoid(x)) * x + sigmoid(x)
-    // At x=1: sigmoid(1) ≈ 0.7311, so dz/dx ≈ 0.7311 * 0.2689 * 1 + 0.7311 ≈ 0.9277
+
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.9277f, x->grad->data[0]);
 
     tensor_release(x);
@@ -58,8 +55,7 @@ void test_relu_backward_simple(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // d/dx relu(x) = 1 if x > 0, else 0
-    // At x=2, gradient = 1
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
 
     tensor_release(x);
@@ -76,7 +72,7 @@ void test_relu_backward_negative(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At x=-2, gradient = 0
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, x->grad->data[0]);
 
     tensor_release(x);
@@ -93,7 +89,7 @@ void test_relu_backward_zero(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At x=0, gradient = 0 (since x <= 0)
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, x->grad->data[0]);
 
     tensor_release(x);
@@ -110,8 +106,7 @@ void test_tanh_backward_simple(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // d/dx tanh(x) = 1 - tanh^2(x)
-    // At x=0, tanh(0) = 0, so gradient = 1 - 0 = 1
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
 
     tensor_release(x);
@@ -128,7 +123,7 @@ void test_tanh_backward_nonzero(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At x=1, tanh(1) ≈ 0.7616, so gradient = 1 - 0.7616^2 ≈ 0.420
+
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.420f, x->grad->data[0]);
 
     tensor_release(x);
@@ -145,7 +140,7 @@ void test_gelu_backward_simple(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At x=0, GELU gradient should be approximately 0.5
+
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.5f, x->grad->data[0]);
 
     tensor_release(x);
@@ -162,7 +157,7 @@ void test_gelu_backward_nonzero(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At x=1, GELU gradient should be > 0.5
+
     TEST_ASSERT_TRUE(x->grad->data[0] > 0.5f);
 
     tensor_release(x);
@@ -180,8 +175,7 @@ void test_softmax_backward_simple(void) {
     backward(loss);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // Softmax backward is more complex, but gradients should sum to approximately 0
-    // (since softmax is normalized)
+
     float32_t grad_sum = 0.0f;
     for (uint64_t i = 0; i < 3; i++) {
         grad_sum += x->grad->data[i];
@@ -204,12 +198,11 @@ void test_sigmoid_backward_vector(void) {
     backward(loss);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // Check gradients at different points
-    // At x=0: gradient = 0.25
+
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.25f, x->grad->data[0]);
-    // At x=1: sigmoid(1) ≈ 0.731, gradient ≈ 0.197
+
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.1966f, x->grad->data[1]);
-    // At x=-1: sigmoid(-1) ≈ 0.269, gradient ≈ 0.197
+
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.1966f, x->grad->data[2]);
 
     tensor_release(x);
@@ -228,10 +221,10 @@ void test_relu_backward_vector(void) {
     backward(loss);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // Negative values should have gradient 0
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, x->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, x->grad->data[1]);
-    // Positive values should have gradient 1
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[2]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[3]);
 
@@ -252,8 +245,7 @@ void test_activations_chain(void) {
     backward(w);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // Chain rule: d/dx tanh(sigmoid(relu(x)))
-    // This should produce a non-zero gradient
+
     TEST_ASSERT_TRUE(x->grad->data[0] != 0.0f);
 
     tensor_release(x);
@@ -276,9 +268,7 @@ void test_sigmoid_mul_chain(void) {
 
     TEST_ASSERT_NOT_NULL(x->grad);
     TEST_ASSERT_NOT_NULL(w->grad);
-    // z = sigmoid(x) * w
-    // dz/dx = w * sigmoid(x) * (1 - sigmoid(x))
-    // dz/dw = sigmoid(x)
+
     float32_t sigmoid_x = 1.0f / (1.0f + expf(-2.0f));
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 3.0f * sigmoid_x * (1.0f - sigmoid_x), x->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, sigmoid_x, w->grad->data[0]);
@@ -301,7 +291,7 @@ void test_softmax_backward_2d(void) {
     backward(loss);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // Gradients should exist for all elements
+
     for (uint64_t i = 0; i < 4; i++) {
         TEST_ASSERT_TRUE(!isnan(x->grad->data[i]) && !isinf(x->grad->data[i]));
     }
@@ -322,10 +312,7 @@ void test_gelu_backward_negative(void) {
     backward(y);
 
     TEST_ASSERT_NOT_NULL(x->grad);
-    // At negative values, GELU gradient can be negative (e.g. at -1.0 it is approx -0.0833)
-    // x * (1/sqrt(2pi) * exp(-x^2/2) * (1 + 3 * 0.044715 * x^2)) ... approximated formula used in impl
-    // The implementation uses tanh approximation.
-    // For -1.0, results should be negative.
+
     TEST_ASSERT_TRUE(x->grad->data[0] < 0.0f);
 
     tensor_release(x);
@@ -346,8 +333,7 @@ void test_tanh_backward_chain_with_add(void) {
 
     TEST_ASSERT_NOT_NULL(x->grad);
     TEST_ASSERT_NOT_NULL(b->grad);
-    // dz/dx = d/dx (tanh(x) + b) = 1 - tanh^2(x)
-    // dz/db = 1
+
     float32_t tanh_x = tanhf(0.5f);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.0f - tanh_x * tanh_x, x->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, b->grad->data[0]);
@@ -365,7 +351,6 @@ void test_sigmoid_backward_no_grad(void) {
     Tensor *x = tensor_create(&x_data, shape, 0, false);
     Tensor *y = tensor_sigmoid(x);
 
-    // y should not require grad since x doesn't
     TEST_ASSERT_FALSE(y->requires_grad);
 
     tensor_release(x);

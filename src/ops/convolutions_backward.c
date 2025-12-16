@@ -49,6 +49,10 @@ static Tensor *pad_tensor(const Tensor *input, uint64_t padding, float32_t value
     return padded;
 }
 
+//
+// conv2d
+//
+
 void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bias, uint64_t stride, uint64_t padding, uint64_t kernel_size, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_w, Tensor **out_grad_b) {
     assert(input != NULL);
     assert(weight != NULL);
@@ -164,6 +168,52 @@ void conv2d_backward(const Tensor *input, const Tensor *weight, const Tensor *bi
     tensor_free(padded_input);
 }
 
+void conv2d_backward_fn(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->ctx != NULL && "conv2d_backward_fn requires context");
+    assert(fn->num_inputs >= 2 && "conv2d_backward_fn requires at least input and weight");
+
+    const Conv2dContext *ctx = (Conv2dContext *)fn->ctx;
+
+    Tensor *input = fn->inputs[0];
+    Tensor *weight = fn->inputs[1];
+    Tensor *bias = (fn->num_inputs > 2) ? fn->inputs[2] : NULL;
+
+    uint64_t kernel_size = ctx->kernel_h;
+
+    Tensor *grad_input = NULL;
+    Tensor *grad_weight = NULL;
+    Tensor *grad_bias = NULL;
+
+    conv2d_backward(input, weight, bias, ctx->stride, ctx->padding, kernel_size, grad_output, &grad_input, &grad_weight, &grad_bias);
+
+    if (input != NULL && input->requires_grad && grad_input != NULL) {
+        accumulate_grad(input, grad_input);
+    } else if (grad_input != NULL) {
+        tensor_free(grad_input);
+    }
+
+    if (weight != NULL && weight->requires_grad && grad_weight != NULL) {
+        accumulate_grad(weight, grad_weight);
+    } else if (grad_weight != NULL) {
+        tensor_free(grad_weight);
+    }
+
+    if (bias != NULL && bias->requires_grad && grad_bias != NULL) {
+        accumulate_grad(bias, grad_bias);
+    } else if (grad_bias != NULL) {
+        tensor_free(grad_bias);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
+}
+
+//
+// maxpool2d
+//
+
 Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding, const Tensor *grad_output) {
     uint64_t batch_size = input->shape[0];
     uint64_t channels = input->shape[1];
@@ -241,6 +291,28 @@ Tensor *maxpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
     return grad_input;
 }
 
+void maxpool2d_backward_fn(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->ctx != NULL && "maxpool2d_backward_fn requires context");
+    assert(fn->num_inputs == 1 && "maxpool2d_backward_fn requires exactly one input");
+
+    const MaxPool2dContext *ctx = (MaxPool2dContext *)fn->ctx;
+    Tensor *input = fn->inputs[0];
+
+    if (input != NULL && input->requires_grad) {
+        Tensor *grad_input = maxpool2d_backward(input, ctx->output_shape, ctx->kernel_size, ctx->stride, ctx->padding, grad_output);
+        accumulate_grad(input, grad_input);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
+}
+
+//
+// avgpool2d
+//
+
 Tensor *avgpool2d_backward(const Tensor *input, const uint64_t *output_shape, uint64_t kernel_size, uint64_t stride, uint64_t padding, const Tensor *grad_output) {
     uint64_t batch_size = input->shape[0];
     uint64_t channels = input->shape[1];
@@ -309,69 +381,6 @@ Tensor *avgpool2d_backward(const Tensor *input, const uint64_t *output_shape, ui
     return grad_input;
 }
 
-void conv2d_backward_fn(Function *fn, const Tensor *grad_output) {
-    assert(fn != NULL);
-    assert(grad_output != NULL);
-    assert(fn->ctx != NULL && "conv2d_backward_fn requires context");
-    assert(fn->num_inputs >= 2 && "conv2d_backward_fn requires at least input and weight");
-
-    const Conv2dContext *ctx = (Conv2dContext *)fn->ctx;
-
-    // Extract inputs: input is first, weight is second, bias is third (if present)
-    Tensor *input = fn->inputs[0];
-    Tensor *weight = fn->inputs[1];
-    Tensor *bias = (fn->num_inputs > 2) ? fn->inputs[2] : NULL;
-
-    // Note: conv2d_backward doesn't support dilation, so we use kernel_size from weight shape
-    // This matches the current implementation limitation
-    uint64_t kernel_size = ctx->kernel_h; // Assuming square kernel for backward compatibility
-
-    Tensor *grad_input = NULL;
-    Tensor *grad_weight = NULL;
-    Tensor *grad_bias = NULL;
-
-    conv2d_backward(input, weight, bias, ctx->stride, ctx->padding, kernel_size, grad_output, &grad_input, &grad_weight, &grad_bias);
-
-    if (input != NULL && input->requires_grad && grad_input != NULL) {
-        accumulate_grad(input, grad_input);
-    } else if (grad_input != NULL) {
-        tensor_free(grad_input);
-    }
-
-    if (weight != NULL && weight->requires_grad && grad_weight != NULL) {
-        accumulate_grad(weight, grad_weight);
-    } else if (grad_weight != NULL) {
-        tensor_free(grad_weight);
-    }
-
-    if (bias != NULL && bias->requires_grad && grad_bias != NULL) {
-        accumulate_grad(bias, grad_bias);
-    } else if (grad_bias != NULL) {
-        tensor_free(grad_bias);
-    }
-
-    free(fn->ctx);
-    fn->ctx = NULL;
-}
-
-void maxpool2d_backward_fn(Function *fn, const Tensor *grad_output) {
-    assert(fn != NULL);
-    assert(grad_output != NULL);
-    assert(fn->ctx != NULL && "maxpool2d_backward_fn requires context");
-    assert(fn->num_inputs == 1 && "maxpool2d_backward_fn requires exactly one input");
-
-    const MaxPool2dContext *ctx = (MaxPool2dContext *)fn->ctx;
-    Tensor *input = fn->inputs[0];
-
-    if (input != NULL && input->requires_grad) {
-        Tensor *grad_input = maxpool2d_backward(input, ctx->output_shape, ctx->kernel_size, ctx->stride, ctx->padding, grad_output);
-        accumulate_grad(input, grad_input);
-    }
-
-    free(fn->ctx);
-    fn->ctx = NULL;
-}
-
 void avgpool2d_backward_fn(Function *fn, const Tensor *grad_output) {
     assert(fn != NULL);
     assert(grad_output != NULL);
@@ -389,6 +398,10 @@ void avgpool2d_backward_fn(Function *fn, const Tensor *grad_output) {
     free(fn->ctx);
     fn->ctx = NULL;
 }
+
+//
+// batchnorm2d
+//
 
 void batchnorm2d_backward(const Tensor *input, const Tensor *gamma, const Tensor *batch_mean, const Tensor *batch_var, float32_t eps, const Tensor *grad_output, Tensor **out_grad_in, Tensor **out_grad_gamma, Tensor **out_grad_beta) {
     assert(input != NULL);
