@@ -6,13 +6,30 @@ $ toilet -f mono9 -w 100 "autograd.c"
     ▀▄▄▀█  ▀▄▄▀█    ▀▄▄  ▀█▄█▀  ▀█▄▀█   █     ▀▄▄▀█  ▀█▄██    █    ▀█▄▄▀ 
                                  ▄  █                                    
                                   ▀▀                                     
+$ make download
 $ make run-release
 
-    ...
-
-$ cat references.txt
-
-    - https://github.com/harvard-edge/cs249r_book/tree/dev/tinytorch/src
-
-
-implement something like tqdm but as a plot that shows you how the loss is decreasing over time (same header file as tqdm.h).
+    loaded data
+    train samples: 50000
+    test samples: 10000
+    
+    created model
+    starting training
+    ┌───────────────────────────── loss (epoch  1/15) ─────────────────────────────┐
+    │             •                                                                │ 2.2918 (max)
+    │                                                       •                      │
+    │               •                              •                               │
+    │              •        •                                                      │
+    │                           •                       •              •           │
+    │                 •    •             •                                         │
+    │•                             •       •                      •           • •  │
+    │    •                   •                      •  •              • •          │
+    │       •   •    •  ••          •  ••    •        •  • •    •          • •   • │
+    │      •              •      •               •   •       •              •      │
+    │ • • •  •                •   •       • • • •         •   •• •       •         │
+    │            •                   •         •  •                 ••    •    •   │
+    │  •      •        •       •      •                            •               │
+    │                                                                              │
+    │          •                                                                  •┤ 2.2331 (min)
+    └──────────────────────────────────────────────────────────────────────────────┘
+     57%|████████████████████████████████████████▎                             | 452/782 [1.4it/s]   

@@ -324,7 +324,6 @@ int32_t main(void) {
     Tensor **params = NULL;
     size_t param_count = 0;
     get_all_parameters(model, &params, &param_count);
-    printf("total params: %zu\n\n", param_count);
 
     Optimizer *opt = optimizer_adam_create(params, param_count, LEARNING_RATE, 0.9f, 0.999f, 1e-8f, WEIGHT_DECAY);
 
