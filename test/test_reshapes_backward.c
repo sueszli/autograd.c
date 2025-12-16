@@ -339,7 +339,7 @@ static void test_transpose_backward_double(void) {
     uint64_t shape[] = {2, 3};
     Tensor *grad_output = tensor_create(NULL, shape, 2, false);
     Tensor *step1 = tensor_transpose_backward(grad_output, 0, 1);
-    Tensor *step2 = tensor_transpose_backward(step1, 0, 1); // -> (2, 3)
+    Tensor *step2 = tensor_transpose_backward(step1, 0, 1);
 
     TEST_ASSERT_EQUAL_UINT64(2, step2->shape[0]);
     TEST_ASSERT_EQUAL_UINT64(3, step2->shape[1]);

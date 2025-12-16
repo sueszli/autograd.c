@@ -372,9 +372,9 @@ void test_relu_backward_requires_grad(void) {
 }
 
 void test_relu_backward_large_negative(void) {
-    uint64_t shape[] = {1};
+    uint64_t shape[] = {};
     float32_t val = -1e5f;
-    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *x = tensor_create(&val, shape, 0, true);
     Tensor *y = tensor_relu(x);
     backward(y);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -384,9 +384,9 @@ void test_relu_backward_large_negative(void) {
 }
 
 void test_relu_backward_large_positive(void) {
-    uint64_t shape[] = {1};
+    uint64_t shape[] = {};
     float32_t val = 1e5f;
-    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *x = tensor_create(&val, shape, 0, true);
     Tensor *y = tensor_relu(x);
     backward(y);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -396,9 +396,9 @@ void test_relu_backward_large_positive(void) {
 }
 
 void test_gelu_backward_large_value(void) {
-    uint64_t shape[] = {1};
+    uint64_t shape[] = {};
     float32_t val = 10.0f;
-    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *x = tensor_create(&val, shape, 0, true);
     Tensor *y = tensor_gelu(x);
     backward(y);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -408,9 +408,9 @@ void test_gelu_backward_large_value(void) {
 }
 
 void test_sigmoid_backward_large_value(void) {
-    uint64_t shape[] = {1};
+    uint64_t shape[] = {};
     float32_t val = 10.0f;
-    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *x = tensor_create(&val, shape, 0, true);
     Tensor *y = tensor_sigmoid(x);
     backward(y);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -420,9 +420,9 @@ void test_sigmoid_backward_large_value(void) {
 }
 
 void test_tanh_backward_large_value(void) {
-    uint64_t shape[] = {1};
+    uint64_t shape[] = {};
     float32_t val = 10.0f;
-    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *x = tensor_create(&val, shape, 0, true);
     Tensor *y = tensor_tanh(x);
     backward(y);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -455,7 +455,8 @@ void test_softmax_dim_check(void) {
     uint64_t shape[] = {1, 2};
     Tensor *x = tensor_create(data, shape, 2, true);
     Tensor *y = tensor_softmax(x, 1);
-    Tensor *loss = tensor_sum(y, 1, false);
+    Tensor *sum1 = tensor_sum(y, 1, false);
+    Tensor *loss = tensor_sum(sum1, 0, false);
 
     backward(loss);
     TEST_ASSERT_NOT_NULL(x->grad);
@@ -464,6 +465,7 @@ void test_softmax_dim_check(void) {
 
     tensor_release(x);
     tensor_release(y);
+    tensor_release(sum1);
     tensor_release(loss);
 }
 

@@ -72,7 +72,7 @@ void test_gelu_backward_standard_values(void) {
 }
 
 void test_softmax_backward_diagonal(void) {
-    float32_t data[] = {0.0f, 0.0f}; // softmax -> [0.5, 0.5]
+    float32_t data[] = {0.0f, 0.0f};
     uint64_t shape[] = {2};
     Tensor *t = tensor_create(data, shape, 1, false);
     Tensor *grad = tensor_softmax_backward(t, 0);
