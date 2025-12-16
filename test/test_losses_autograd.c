@@ -285,7 +285,7 @@ void test_mse_loss_backward_large_values(void) {
 
 void test_mse_loss_backward_broadcast(void) {
     float32_t p_data[] = {1.0f, 2.0f, 3.0f, 4.0f}; // 2x2
-    float32_t t_data[] = {1.0f, 2.0f}; // 2x1
+    float32_t t_data[] = {1.0f, 2.0f};             // 2x1
     Tensor *pred = create_tensor_2d(p_data, 2, 2, true);
     Tensor *target = create_tensor_2d(t_data, 2, 1, false);
 
@@ -307,20 +307,20 @@ void test_shared_input_multiple_losses(void) {
     float32_t x_data[] = {1.0f};
     float32_t t1_data[] = {2.0f};
     float32_t t2_data[] = {0.0f};
-    
+
     Tensor *x = create_tensor_1d(x_data, 1, true);
     Tensor *t1 = create_tensor_1d(t1_data, 1, false);
     Tensor *t2 = create_tensor_1d(t2_data, 1, false);
-    
+
     Tensor *l1 = mse_loss(x, t1);
     Tensor *l2 = mse_loss(x, t2);
-    
+
     Tensor *total_loss = tensor_add(l1, l2);
     backward(total_loss);
-    
+
     TEST_ASSERT_NOT_NULL(x->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[0]);
-    
+
     tensor_release(x);
     tensor_release(t1);
     tensor_release(t2);
@@ -332,17 +332,17 @@ void test_shared_input_multiple_losses(void) {
 void test_cross_entropy_loss_backward_large_logits(void) {
     float32_t l_data[] = {100.0f, 100.0f};
     float32_t t_data[] = {0.0f};
-    
+
     Tensor *logits = create_tensor_2d(l_data, 1, 2, true);
     Tensor *targets = create_tensor_1d(t_data, 1, false);
-    
+
     Tensor *loss = cross_entropy_loss(logits, targets);
     backward(loss);
-    
+
     TEST_ASSERT_NOT_NULL(logits->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, -0.5f, logits->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.5f, logits->grad->data[1]);
-    
+
     tensor_release(logits);
     tensor_release(targets);
     tensor_release(loss);
@@ -353,14 +353,14 @@ void test_binary_cross_entropy_loss_edge_predictions(void) {
     float32_t t_data[] = {0.0f, 1.0f};
     Tensor *pred = create_tensor_1d(p_data, 2, true);
     Tensor *target = create_tensor_1d(t_data, 2, false);
-    
+
     Tensor *loss = binary_cross_entropy_loss(pred, target);
     backward(loss);
-    
+
     TEST_ASSERT_NOT_NULL(pred->grad);
     TEST_ASSERT_FALSE(isnan(pred->grad->data[0]));
     TEST_ASSERT_FALSE(isnan(pred->grad->data[1]));
-    
+
     tensor_release(pred);
     tensor_release(target);
     tensor_release(loss);
@@ -371,14 +371,14 @@ void test_binary_cross_entropy_loss_broadcast(void) {
     float32_t t_data[] = {1.0f};
     Tensor *pred = create_tensor_2d(p_data, 2, 1, true);
     Tensor *target = create_tensor_1d(t_data, 1, false);
-    
+
     Tensor *loss = binary_cross_entropy_loss(pred, target);
     backward(loss);
-    
+
     TEST_ASSERT_NOT_NULL(pred->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, -1.0f, pred->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, -1.0f, pred->grad->data[1]);
-    
+
     tensor_release(pred);
     tensor_release(target);
     tensor_release(loss);

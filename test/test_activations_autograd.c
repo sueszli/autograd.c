@@ -397,7 +397,7 @@ void test_relu_backward_large_positive(void) {
 
 void test_gelu_backward_large_value(void) {
     uint64_t shape[] = {1};
-    float32_t val = 10.0f; 
+    float32_t val = 10.0f;
     Tensor *x = tensor_create(&val, shape, 1, true);
     Tensor *y = tensor_gelu(x);
     backward(y);
@@ -438,12 +438,12 @@ void test_multi_layer_chain(void) {
     Tensor *y = tensor_relu(x);
     Tensor *z = tensor_sigmoid(y);
     Tensor *loss = tensor_sum(z, 0, false);
-    
+
     backward(loss);
-    
+
     TEST_ASSERT_NOT_NULL(x->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.235003f, x->grad->data[0]);
-    
+
     tensor_release(x);
     tensor_release(y);
     tensor_release(z);
@@ -456,12 +456,12 @@ void test_softmax_dim_check(void) {
     Tensor *x = tensor_create(data, shape, 2, true);
     Tensor *y = tensor_softmax(x, 1);
     Tensor *loss = tensor_sum(y, 1, false);
-    
+
     backward(loss);
     TEST_ASSERT_NOT_NULL(x->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[1]);
-    
+
     tensor_release(x);
     tensor_release(y);
     tensor_release(loss);

@@ -413,7 +413,7 @@ void test_conv2d_backward_input_gradient_values(void) {
     Tensor *weight = tensor_create(w_data, w_shape, 4, true);
 
     Tensor *output = tensor_conv2d(input, weight, NULL, 1, 0, 1);
-    
+
     Tensor *sum1 = tensor_sum(output, 0, false);
     Tensor *sum2 = tensor_sum(sum1, 0, false);
     Tensor *sum3 = tensor_sum(sum2, 0, false);
@@ -451,7 +451,7 @@ void test_conv2d_backward_weight_gradient_values(void) {
 
     Tensor *output = tensor_conv2d(input, weight, NULL, 1, 0, 1);
     // Out is 1x1. Val = 1*0.5 * 4 = 2.0.
-    
+
     Tensor *sum1 = tensor_sum(output, 0, false);
     Tensor *sum2 = tensor_sum(sum1, 0, false);
     Tensor *sum3 = tensor_sum(sum2, 0, false);
@@ -479,7 +479,7 @@ void test_conv2d_backward_weight_gradient_values(void) {
 
 void test_batchnorm2d_backward_training_values(void) {
     uint64_t in_shape[] = {1, 1, 2, 2};
-    float32_t in_data[] = {1.0f, 1.0f, 1.0f, 1.0f}; // Constant input -> variance 0?
+    // float32_t in_data[] = {1.0f, 1.0f, 1.0f, 1.0f}; // Constant input -> variance 0?
     // Let's use varied input
     float32_t in_data2[] = {0.0f, 1.0f, 0.0f, 1.0f}; // Mean 0.5, Var 0.25
     Tensor *input = tensor_create(in_data2, in_shape, 4, true);
@@ -499,9 +499,9 @@ void test_batchnorm2d_backward_training_values(void) {
     Tensor *sum2 = tensor_sum(sum1, 0, false);
     Tensor *sum3 = tensor_sum(sum2, 0, false);
     Tensor *loss = tensor_sum(sum3, 0, false);
-    
+
     backward(loss);
-    
+
     TEST_ASSERT_NOT_NULL(input->grad);
     // Sum of BN output gradients for constant 1 loss?
     // If loss is sum(normalized_x), and x has values...
@@ -510,10 +510,10 @@ void test_batchnorm2d_backward_training_values(void) {
     // 0,1,0,1. Mean 0.5.
     // Norm: -1, 1, -1, 1. Sum = 0.
     // d(Sum)/dx?
-    
+
     // Just check it runs and produces grads for now, detailed BN grad math is complex.
     TEST_ASSERT_EQUAL_UINT64(4, input->grad->ndim);
-    
+
     tensor_release(input);
     tensor_release(gamma);
     tensor_release(beta);

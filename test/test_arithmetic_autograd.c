@@ -213,7 +213,7 @@ void test_matmul_backward_simple(void) {
     // sum_j B_yj.
     // So grad_A should be row sums of B? Or col sums?
     // Let's rely on specific values check.
-    
+
     // Manual calc:
     // C = [[1.5, 1.5], [3.5, 3.5]]
     // L = 10.0
@@ -243,7 +243,7 @@ void test_matmul_backward_complex(void) {
     // (A + B) @ C
     uint64_t shape[] = {2, 2};
     float32_t val = 1.0f;
-    Tensor *a = tensor_create(&val, shape, 0, true); // scalar broadcasting attempt? No, create scalar 1.0
+    // Tensor *a = tensor_create(&val, shape, 0, true); // scalar broadcasting attempt? No, create scalar 1.0
     // Wait, tensor_create with shape empty is scalar.
     // Let's use 2x2.
     float32_t data[] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -253,17 +253,17 @@ void test_matmul_backward_complex(void) {
 
     Tensor *sumAB = tensor_add(A, B);
     Tensor *res = tensor_matmul(sumAB, C);
-    
+
     backward(res);
-    
+
     // d(sum(res))/dA = d(sum(res))/d(sumAB) * d(sumAB)/dA
     // d(sum(res))/d(sumAB) = C^T * 1 (approx logic) = [[2,2],[2,2]]
     // d(sumAB)/dA = 1
     // so grad A should be 2 everywhere.
-    
+
     TEST_ASSERT_NOT_NULL(A->grad);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 2.0f, A->grad->data[0]);
-    
+
     tensor_release(A);
     tensor_release(B);
     tensor_release(C);
@@ -292,7 +292,7 @@ void test_add_broadcast_backward(void) {
     // b is (2,1). C is (2,2).
     // b[0,0] adds to C[0,0] and C[0,1].
     // so grad w.r.t b[0,0] is 1+1=2.
-    
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, a->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 2.0f, b->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 2.0f, b->grad->data[1]);
@@ -318,7 +318,7 @@ void test_mul_broadcast_backward(void) {
     // dL/dC = [1, 1]
     // dL/dA = dL/dC * B = [4, 4]
     // dL/dB = sum(dL/dC * A) = 2*1 + 3*1 = 5
-    
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 4.0f, a->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 4.0f, a->grad->data[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 5.0f, b->grad->data[0]);
@@ -366,7 +366,7 @@ void test_div_broadcast_backward(void) {
     // -10/4 = -2.5
     // -20/4 = -5.0
     // sum = -7.5
-    
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.5f, a->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.5f, a->grad->data[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, -7.5f, b->grad->data[0]);
@@ -379,14 +379,14 @@ void test_div_broadcast_backward(void) {
 void test_arithmetic_square(void) {
     uint64_t shape[] = {1};
     float32_t data[] = {3.0f};
-    
+
     Tensor *a = tensor_create(data, shape, 1, true);
     Tensor *sq = tensor_mul(a, a);
     backward(sq);
-    
+
     // y = x^2, dy/dx = 2x = 6
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 6.0f, a->grad->data[0]);
-    
+
     tensor_release(a);
     tensor_release(sq);
 }
@@ -394,15 +394,15 @@ void test_arithmetic_square(void) {
 void test_arithmetic_cubed(void) {
     uint64_t shape[] = {1};
     float32_t data[] = {2.0f};
-    
+
     Tensor *a = tensor_create(data, shape, 1, true);
     Tensor *sq = tensor_mul(a, a);
     Tensor *cb = tensor_mul(sq, a);
     backward(cb);
-    
+
     // y = x^3, dy/dx = 3x^2 = 3*4 = 12
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 12.0f, a->grad->data[0]);
-    
+
     tensor_release(a);
     tensor_release(sq);
     tensor_release(cb);
@@ -412,15 +412,15 @@ void test_neg_via_mul(void) {
     uint64_t shape[] = {1};
     float32_t data[] = {5.0f};
     float32_t neg[] = {-1.0f};
-    
+
     Tensor *a = tensor_create(data, shape, 1, true);
     Tensor *minus_one = tensor_create(neg, shape, 1, false);
-    
+
     Tensor *n = tensor_mul(a, minus_one);
     backward(n);
-    
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, -1.0f, a->grad->data[0]);
-    
+
     tensor_release(a);
     tensor_release(minus_one);
     tensor_release(n);
@@ -431,22 +431,22 @@ void test_complex_expression(void) {
     uint64_t shape[] = {1};
     float32_t data_a[] = {3.0f};
     float32_t data_b[] = {2.0f};
-    
+
     Tensor *a = tensor_create(data_a, shape, 1, true);
     Tensor *b = tensor_create(data_b, shape, 1, true);
-    
+
     Tensor *sum = tensor_add(a, b);
     Tensor *diff = tensor_sub(a, b);
     Tensor *res = tensor_mul(sum, diff);
-    
+
     backward(res);
-    
+
     // dA = 2a = 6
     // dB = -2b = -4
-    
+
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 6.0f, a->grad->data[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, -4.0f, b->grad->data[0]);
-    
+
     tensor_release(a);
     tensor_release(b);
     tensor_release(sum);
