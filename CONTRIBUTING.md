@@ -1,3 +1,5 @@
+Inspired by: https://tigerstyle.dev/
+
 # (1) Safety
 
 - Zero Technical Debt: Fix issues immediately. Never rely on future refactoring.
