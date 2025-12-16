@@ -269,7 +269,7 @@ void train_epoch(const Model *model, Optimizer *opt, const Tensor *train_images,
 
     float32_t avg_loss = total_loss / (float32_t)processed_batches;
     float32_t avg_acc = total_acc / (float32_t)processed_batches;
-    printf("\tavg loss: %.4f, avg acc: %.2f%%\n", avg_loss, avg_acc * 100.0f);
+    printf("avg loss: %.4f, avg acc: %.2f%%\n", avg_loss, avg_acc * 100.0f);
 }
 
 float32_t evaluate(const Model *model, const Tensor *test_images, const Tensor *test_labels, uint64_t batch_size) {
