@@ -89,8 +89,8 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
     if (total == 0)
         return;
 
+    // plot spacing
     if (!plot_initialized) {
-        // plot spacing (frame Top + height + frame bottom = height + 2)
         for (int i = 0; i < TQDM_PLOT_HEIGHT + 2; i++) {
             printf("\n");
         }
@@ -100,7 +100,7 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
         plot_initialized = 1;
     }
 
-    // update history (shift left)
+    // update history buffer
     if (plot_history_count < TQDM_PLOT_WIDTH) {
         plot_loss_history[plot_history_count++] = loss;
     } else {
@@ -120,12 +120,11 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
             max_loss = plot_loss_history[i];
     }
 
-    // safety check for flat line
     if (max_loss == min_loss) {
         max_loss += 1e-6;
     }
 
-    // move cursor up to start of plot area (height + 2 lines for frame)
+    // move cursor up to redraw plot
     printf("\033[%dA", TQDM_PLOT_HEIGHT + 2);
 
     // frame top
@@ -185,7 +184,7 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
         printf("\n");
     }
 
-    // frame Bottom
+    // frame bottom
     printf("\r\033[K");
     printf("└");
     for (int i = 0; i < TQDM_PLOT_WIDTH; i++)
