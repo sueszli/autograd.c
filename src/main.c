@@ -226,7 +226,7 @@ void train_epoch(const Model *model, Optimizer *opt, const Tensor *train_images,
 
     char prefix[64];
     char postfix[128];
-    snprintf(prefix, sizeof(prefix), "epoch %2" PRIu64 "/%d", epoch, NUM_EPOCHS);
+    snprintf(prefix, sizeof(prefix), "loss (epoch %2" PRIu64 "/%d)", epoch, NUM_EPOCHS);
 
     for (uint64_t i = 0; i < num_batches; i++) {
         Tensor *batch_x = get_batch(train_images, i, batch_size);

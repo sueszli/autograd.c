@@ -86,8 +86,9 @@ static int plot_history_count = 0;
 static int plot_initialized = 0;
 
 static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss, const char *prefix) {
-    if (total == 0)
+    if (total == 0) {
         return;
+    }
 
     // plot spacing
     if (!plot_initialized) {
@@ -132,20 +133,24 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
     printf("┌");
     if (prefix && prefix[0] != '\0') {
         int title_len = 0;
-        while (prefix[title_len])
+        while (prefix[title_len]) {
             title_len++;
+        }
         int padding = (TQDM_PLOT_WIDTH - title_len - 2) / 2; // -2 for spaces around title
-        if (padding < 0)
+        if (padding < 0) {
             padding = 0;
-
-        for (int i = 0; i < padding; i++)
+        }
+        for (int i = 0; i < padding; i++) {
             printf("─");
+        }
         printf(" %s ", prefix);
-        for (int i = 0; i < TQDM_PLOT_WIDTH - padding - title_len - 2; i++)
+        for (int i = 0; i < TQDM_PLOT_WIDTH - padding - title_len - 2; i++) {
             printf("─");
+        }
     } else {
-        for (int i = 0; i < TQDM_PLOT_WIDTH; i++)
+        for (int i = 0; i < TQDM_PLOT_WIDTH; i++) {
             printf("─");
+        }
     }
     printf("┐\n");
 
@@ -173,13 +178,24 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
             }
         }
 
-        printf("│");
+        // right border with meter indicator
+        double current_normalized = (loss - min_loss) / (max_loss - min_loss);
+        int current_tick = (int)(current_normalized * (TQDM_PLOT_HEIGHT - 1));
 
-        // axis labels on the right side
-        if (row == TQDM_PLOT_HEIGHT - 1)
+        if (row == current_tick) {
+            printf("┤"); // marker for current value
+        } else {
+            printf("│");
+        }
+
+        // right border axis labels
+        if (row == TQDM_PLOT_HEIGHT - 1) {
             printf(" %.4f (max)", max_loss);
-        if (row == 0)
+        } else if (row == 0) {
             printf(" %.4f (min)", min_loss);
+        } else if (row == current_tick) {
+            printf("––– %.4f", loss);
+        }
 
         printf("\n");
     }
@@ -187,8 +203,9 @@ static inline void tqdm_plot_impl(uint64_t current, uint64_t total, double loss,
     // frame bottom
     printf("\r\033[K");
     printf("└");
-    for (int i = 0; i < TQDM_PLOT_WIDTH; i++)
+    for (int i = 0; i < TQDM_PLOT_WIDTH; i++) {
         printf("─");
+    }
     printf("┘\n");
 
     tqdm(current, total, NULL, NULL);

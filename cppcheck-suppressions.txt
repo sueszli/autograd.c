@@ -2,3 +2,4 @@ unusedFunction
 staticFunction
 checkersReport
 missingIncludeSystem
+duplicateBranch
