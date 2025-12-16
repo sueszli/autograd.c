@@ -1,4 +1,6 @@
 #include "convolutions.h"
+#include "autograd.h"
+#include "convolutions_backward.h"
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
@@ -118,6 +120,42 @@ Tensor *tensor_conv2d(const Tensor *input, const Tensor *weight, const Tensor *b
 
     tensor_free(padded_input);
 
+    if (output->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = conv2d_backward_fn;
+        fn->output = output;
+
+        uint32_t num_inputs = 0;
+        fn->inputs[num_inputs++] = (Tensor *)input;
+        fn->inputs[num_inputs++] = (Tensor *)weight;
+        if (bias != NULL) {
+            fn->inputs[num_inputs++] = (Tensor *)bias;
+        }
+        fn->num_inputs = num_inputs;
+        fn->pending_count = 0;
+
+        Conv2dContext *ctx = (Conv2dContext *)malloc(sizeof(Conv2dContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->stride = stride;
+        ctx->padding = padding;
+        ctx->dilation = dilation;
+        ctx->kernel_h = kernel_h;
+        ctx->kernel_w = kernel_w;
+        fn->ctx = ctx;
+
+        if (input->grad_fn != NULL) {
+            input->grad_fn->pending_count++;
+        }
+        if (weight->grad_fn != NULL) {
+            weight->grad_fn->pending_count++;
+        }
+        if (bias && bias->grad_fn != NULL) {
+            bias->grad_fn->pending_count++;
+        }
+
+        output->grad_fn = fn;
+    }
+
     return output;
 }
 
@@ -168,6 +206,33 @@ Tensor *tensor_maxpool2d(const Tensor *input, uint64_t kernel_size, uint64_t str
     }
 
     tensor_free(padded_input);
+
+    if (output->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = maxpool2d_backward_fn;
+        fn->output = output;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)input;
+        fn->pending_count = 0;
+
+        MaxPool2dContext *ctx = (MaxPool2dContext *)malloc(sizeof(MaxPool2dContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->kernel_size = kernel_size;
+        ctx->stride = eff_stride;
+        ctx->padding = padding;
+        ctx->output_shape[0] = output->shape[0];
+        ctx->output_shape[1] = output->shape[1];
+        ctx->output_shape[2] = output->shape[2];
+        ctx->output_shape[3] = output->shape[3];
+        fn->ctx = ctx;
+
+        if (input->grad_fn != NULL) {
+            input->grad_fn->pending_count++;
+        }
+
+        output->grad_fn = fn;
+    }
+
     return output;
 }
 
@@ -220,6 +285,33 @@ Tensor *tensor_avgpool2d(const Tensor *input, uint64_t kernel_size, uint64_t str
     }
 
     tensor_free(padded_input);
+
+    if (output->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = avgpool2d_backward_fn;
+        fn->output = output;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)input;
+        fn->pending_count = 0;
+
+        AvgPool2dContext *ctx = (AvgPool2dContext *)malloc(sizeof(AvgPool2dContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->kernel_size = kernel_size;
+        ctx->stride = eff_stride;
+        ctx->padding = padding;
+        ctx->output_shape[0] = output->shape[0];
+        ctx->output_shape[1] = output->shape[1];
+        ctx->output_shape[2] = output->shape[2];
+        ctx->output_shape[3] = output->shape[3];
+        fn->ctx = ctx;
+
+        if (input->grad_fn != NULL) {
+            input->grad_fn->pending_count++;
+        }
+
+        output->grad_fn = fn;
+    }
+
     return output;
 }
 
@@ -307,6 +399,44 @@ Tensor *tensor_batchnorm2d(const Tensor *input, const Tensor *gamma, const Tenso
                 }
             }
         }
+    }
+
+    if (output->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = batchnorm2d_backward_fn;
+        fn->output = output;
+
+        fn->num_inputs = 3;
+        fn->inputs[0] = (Tensor *)input;
+        fn->inputs[1] = (Tensor *)gamma;
+        fn->inputs[2] = (Tensor *)beta;
+        fn->pending_count = 0;
+
+        BatchNorm2dContext *ctx = (BatchNorm2dContext *)malloc(sizeof(BatchNorm2dContext));
+        assert(ctx != NULL && "malloc failed");
+        ctx->eps = eps;
+        ctx->training = training;
+
+        // store batch_mean and batch_var as tensors for backward
+        const uint64_t param_shape[] = {channels};
+        ctx->batch_mean = tensor_create(batch_mean, param_shape, 1, false);
+        assert(ctx->batch_mean != NULL && "failed to allocate batch_mean tensor");
+        ctx->batch_var = tensor_create(batch_var, param_shape, 1, false);
+        assert(ctx->batch_var != NULL && "failed to allocate batch_var tensor");
+
+        fn->ctx = ctx;
+
+        if (input->grad_fn != NULL) {
+            input->grad_fn->pending_count++;
+        }
+        if (gamma->grad_fn != NULL) {
+            gamma->grad_fn->pending_count++;
+        }
+        if (beta->grad_fn != NULL) {
+            beta->grad_fn->pending_count++;
+        }
+
+        output->grad_fn = fn;
     }
 
     free(batch_mean);

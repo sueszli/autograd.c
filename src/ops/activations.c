@@ -1,9 +1,12 @@
 #include "activations.h"
+#include "autograd.h"
+#include "ops/activations_backward.h"
 #include "ops/arithmetic.h"
 #include "ops/reductions.h"
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 Tensor *tensor_sigmoid(const Tensor *t) {
     assert(t != NULL);
@@ -27,6 +30,21 @@ Tensor *tensor_sigmoid(const Tensor *t) {
             out->data[i] = ex / (1.0f + ex);
         }
     }
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = sigmoid_backward;
+        fn->output = out;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
 
@@ -40,6 +58,21 @@ Tensor *tensor_relu(const Tensor *t) {
         float32_t x = t->data[i];
         out->data[i] = (x > 0.0f) ? x : 0.0f;
     }
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = relu_backward;
+        fn->output = out;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
 
@@ -52,6 +85,21 @@ Tensor *tensor_tanh(const Tensor *t) {
     for (uint64_t i = 0; i < t->size; i++) {
         out->data[i] = tanhf(t->data[i]);
     }
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = tanh_backward;
+        fn->output = out;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
 
@@ -65,6 +113,21 @@ Tensor *tensor_gelu(const Tensor *t) {
         float32_t x = t->data[i];
         out->data[i] = 0.5f * x * (1.0f + erff(x * 1 / (float32_t)sqrt(2)));
     }
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = gelu_backward;
+        fn->output = out;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+        fn->ctx = NULL;
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }
 
@@ -85,5 +148,26 @@ Tensor *tensor_softmax(const Tensor *t, int64_t dim) {
 
     tensor_free(shifted);
     tensor_free(sum_exp);
+
+    if (out->requires_grad) {
+        Function *fn = arena_alloc_function();
+        fn->apply = softmax_backward;
+        fn->output = out;
+        fn->num_inputs = 1;
+        fn->inputs[0] = (Tensor *)t;
+        fn->pending_count = 0;
+
+        // store dimension in context
+        int64_t *ctx = (int64_t *)malloc(sizeof(int64_t));
+        assert(ctx != NULL && "malloc failed");
+        *ctx = dim;
+        fn->ctx = ctx;
+
+        if (t->grad_fn != NULL) {
+            t->grad_fn->pending_count++;
+        }
+        out->grad_fn = fn;
+    }
+
     return out;
 }

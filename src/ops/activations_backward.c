@@ -1,8 +1,14 @@
 #include "activations_backward.h"
+#include "ops/arithmetic.h"
 #include "tensor.h"
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdlib.h>
+
+//
+// sigmoid
+//
 
 Tensor *tensor_sigmoid_backward(const Tensor *t) {
     assert(t != NULL);
@@ -19,6 +25,33 @@ Tensor *tensor_sigmoid_backward(const Tensor *t) {
     return grad;
 }
 
+void sigmoid_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+
+    Tensor *input = fn->inputs[0];
+    const Tensor *output = fn->output;
+
+    if (input != NULL && input->requires_grad) {
+        // grad_input = grad_output * output * (1 - output)
+        // where output = sigmoid(input)
+        Tensor *local_grad = tensor_create(NULL, output->shape, output->ndim, false);
+        for (uint64_t i = 0; i < output->size; i++) {
+            float32_t out_val = output->data[i];
+            local_grad->data[i] = out_val * (1.0f - out_val);
+        }
+
+        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        tensor_free(local_grad);
+        accumulate_grad(input, grad_input);
+    }
+}
+
+//
+// relu
+//
+
 Tensor *tensor_relu_backward(const Tensor *t) {
     assert(t != NULL);
     assert(t->data != NULL || t->size == 0);
@@ -31,6 +64,29 @@ Tensor *tensor_relu_backward(const Tensor *t) {
 
     return grad;
 }
+void relu_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+
+    Tensor *input = fn->inputs[0];
+
+    if (input != NULL && input->requires_grad) {
+        // grad_input = grad_output * (input > 0 ? 1 : 0)
+        Tensor *local_grad = tensor_create(NULL, input->shape, input->ndim, false);
+        for (uint64_t i = 0; i < input->size; i++) {
+            local_grad->data[i] = (input->data[i] > 0.0f) ? 1.0f : 0.0f;
+        }
+
+        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        tensor_free(local_grad);
+        accumulate_grad(input, grad_input);
+    }
+}
+
+//
+// tanh
+//
 
 Tensor *tensor_tanh_backward(const Tensor *t) {
     assert(t != NULL);
@@ -45,6 +101,33 @@ Tensor *tensor_tanh_backward(const Tensor *t) {
 
     return grad;
 }
+
+void tanh_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+
+    Tensor *input = fn->inputs[0];
+    const Tensor *output = fn->output;
+
+    if (input != NULL && input->requires_grad) {
+        // grad_input = grad_output * (1 - output^2)
+        // where output = tanh(input)
+        Tensor *local_grad = tensor_create(NULL, output->shape, output->ndim, false);
+        for (uint64_t i = 0; i < output->size; i++) {
+            float32_t out_val = output->data[i];
+            local_grad->data[i] = 1.0f - out_val * out_val;
+        }
+
+        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        tensor_free(local_grad);
+        accumulate_grad(input, grad_input);
+    }
+}
+
+//
+// gelu
+//
 
 Tensor *tensor_gelu_backward(const Tensor *t) {
     assert(t != NULL);
@@ -71,6 +154,26 @@ Tensor *tensor_gelu_backward(const Tensor *t) {
 
     return grad;
 }
+
+void gelu_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+
+    Tensor *input = fn->inputs[0];
+
+    if (input != NULL && input->requires_grad) {
+        // Use the existing tensor_gelu_backward function
+        Tensor *local_grad = tensor_gelu_backward(input);
+        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        tensor_free(local_grad);
+        accumulate_grad(input, grad_input);
+    }
+}
+
+//
+// softmax
+//
 
 Tensor *tensor_softmax_backward(const Tensor *t, int64_t dim) {
     assert(t != NULL);
@@ -120,4 +223,62 @@ Tensor *tensor_softmax_backward(const Tensor *t, int64_t dim) {
         }
     }
     return grad;
+}
+
+void softmax_backward(Function *fn, const Tensor *grad_output) {
+    assert(fn != NULL);
+    assert(grad_output != NULL);
+    assert(fn->num_inputs == 1);
+    assert(fn->ctx != NULL && "softmax_backward requires context");
+
+    Tensor *input = fn->inputs[0];
+    const Tensor *output = fn->output;
+    int64_t dim = *(int64_t *)fn->ctx;
+
+    if (input != NULL && input->requires_grad) {
+        // softmax backward: grad_input = output * (grad_output - sum(grad_output * output))
+        // this is the Jacobian-vector product for softmax
+
+        int64_t ndim = (int64_t)output->ndim;
+        int64_t target_dim = (dim < 0) ? (dim + ndim) : dim;
+        assert(target_dim >= 0 && target_dim < ndim && "Invalid dimension");
+
+        uint64_t outer_size = 1;
+        for (int64_t d = 0; d < target_dim; d++) {
+            outer_size *= output->shape[d];
+        }
+
+        uint64_t dim_size = output->shape[target_dim];
+
+        uint64_t inner_size = 1;
+        for (uint64_t d = (uint64_t)target_dim + 1; d < output->ndim; d++) {
+            inner_size *= output->shape[d];
+        }
+
+        Tensor *grad_input = tensor_create(NULL, input->shape, input->ndim, false);
+
+        for (uint64_t outer = 0; outer < outer_size; outer++) {
+            for (uint64_t inner = 0; inner < inner_size; inner++) {
+                uint64_t base_idx = outer * dim_size * inner_size + inner;
+
+                // sum(grad_output * output) along the softmax dimension
+                float32_t sum_grad_output_output = 0.0f;
+                for (uint64_t d = 0; d < dim_size; d++) {
+                    uint64_t idx = base_idx + d * inner_size;
+                    sum_grad_output_output += grad_output->data[idx] * output->data[idx];
+                }
+
+                // grad_input = output * (grad_output - sum)
+                for (uint64_t d = 0; d < dim_size; d++) {
+                    uint64_t idx = base_idx + d * inner_size;
+                    grad_input->data[idx] = output->data[idx] * (grad_output->data[idx] - sum_grad_output_output);
+                }
+            }
+        }
+
+        accumulate_grad(input, grad_input);
+    }
+
+    free(fn->ctx);
+    fn->ctx = NULL;
 }
