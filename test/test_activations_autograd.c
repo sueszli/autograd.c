@@ -371,6 +371,102 @@ void test_relu_backward_requires_grad(void) {
     tensor_release(y);
 }
 
+void test_relu_backward_large_negative(void) {
+    uint64_t shape[] = {1};
+    float32_t val = -1e5f;
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_relu(x);
+    backward(y);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, x->grad->data[0]);
+    tensor_release(x);
+    tensor_release(y);
+}
+
+void test_relu_backward_large_positive(void) {
+    uint64_t shape[] = {1};
+    float32_t val = 1e5f;
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_relu(x);
+    backward(y);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
+    tensor_release(x);
+    tensor_release(y);
+}
+
+void test_gelu_backward_large_value(void) {
+    uint64_t shape[] = {1};
+    float32_t val = 10.0f; 
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_gelu(x);
+    backward(y);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.0f, x->grad->data[0]);
+    tensor_release(x);
+    tensor_release(y);
+}
+
+void test_sigmoid_backward_large_value(void) {
+    uint64_t shape[] = {1};
+    float32_t val = 10.0f;
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_sigmoid(x);
+    backward(y);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[0]);
+    tensor_release(x);
+    tensor_release(y);
+}
+
+void test_tanh_backward_large_value(void) {
+    uint64_t shape[] = {1};
+    float32_t val = 10.0f;
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_tanh(x);
+    backward(y);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[0]);
+    tensor_release(x);
+    tensor_release(y);
+}
+
+void test_multi_layer_chain(void) {
+    uint64_t shape[] = {1};
+    float32_t val = 0.5f;
+    Tensor *x = tensor_create(&val, shape, 1, true);
+    Tensor *y = tensor_relu(x);
+    Tensor *z = tensor_sigmoid(y);
+    Tensor *loss = tensor_sum(z, 0, false);
+    
+    backward(loss);
+    
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.235003f, x->grad->data[0]);
+    
+    tensor_release(x);
+    tensor_release(y);
+    tensor_release(z);
+    tensor_release(loss);
+}
+
+void test_softmax_dim_check(void) {
+    float32_t data[] = {1.0f, 2.0f};
+    uint64_t shape[] = {1, 2};
+    Tensor *x = tensor_create(data, shape, 2, true);
+    Tensor *y = tensor_softmax(x, 1);
+    Tensor *loss = tensor_sum(y, 1, false);
+    
+    backward(loss);
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, x->grad->data[1]);
+    
+    tensor_release(x);
+    tensor_release(y);
+    tensor_release(loss);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_sigmoid_backward_simple);
@@ -392,5 +488,12 @@ int main(void) {
     RUN_TEST(test_tanh_backward_chain_with_add);
     RUN_TEST(test_sigmoid_backward_no_grad);
     RUN_TEST(test_relu_backward_requires_grad);
+    RUN_TEST(test_relu_backward_large_negative);
+    RUN_TEST(test_relu_backward_large_positive);
+    RUN_TEST(test_gelu_backward_large_value);
+    RUN_TEST(test_sigmoid_backward_large_value);
+    RUN_TEST(test_tanh_backward_large_value);
+    RUN_TEST(test_multi_layer_chain);
+    RUN_TEST(test_softmax_dim_check);
     return UNITY_END();
 }

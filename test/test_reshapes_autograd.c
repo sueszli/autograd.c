@@ -543,6 +543,83 @@ void test_transpose_backward_identity_dims(void) {
     tensor_release(loss);
 }
 
+void test_reshape_backward_large_dims(void) {
+    uint64_t shape[] = {100, 100};
+    uint64_t size = 10000;
+    float32_t *data = malloc(size * sizeof(float32_t));
+    for(int i=0; i<size; i++) data[i] = 1.0f;
+    
+    Tensor *x = tensor_create(data, shape, 2, true);
+    int64_t new_shape[] = {10000};
+    Tensor *y = tensor_reshape(x, new_shape, 1);
+    
+    Tensor *loss = tensor_sum(y, 0, false);
+    backward(loss);
+    
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_EQUAL_UINT64(2, x->grad->ndim);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[size-1]);
+    
+    free(data);
+    tensor_release(x);
+    tensor_release(y);
+    tensor_release(loss);
+}
+
+void test_transpose_backward_high_dims(void) {
+    uint64_t shape[] = {2, 2, 2, 2};
+    float32_t data[16] = {0};
+    Tensor *x = tensor_create(data, shape, 4, true);
+    
+    Tensor *y = tensor_transpose(x, 1, 2);
+    Tensor *z = tensor_transpose(y, 0, 3);
+    
+    Tensor *scalar = tensor_sum(z, 0, false);
+    Tensor *scalar2 = tensor_sum(scalar, 0, false);
+    Tensor *scalar3 = tensor_sum(scalar2, 0, false);
+    Tensor *loss = tensor_sum(scalar3, 0, false);
+    
+    backward(loss);
+    
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
+    
+    tensor_release(x);
+    tensor_release(y);
+    tensor_release(z);
+    tensor_release(scalar);
+    tensor_release(scalar2);
+    tensor_release(scalar3);
+    tensor_release(loss);
+}
+
+void test_reshape_cycle(void) {
+    uint64_t shape[] = {2, 2};
+    float32_t data[] = {1, 2, 3, 4};
+    Tensor *x = tensor_create(data, shape, 2, true);
+    
+    int64_t shape1[] = {4};
+    Tensor *y = tensor_reshape(x, shape1, 1);
+    
+    int64_t shape2[] = {2, 2};
+    Tensor *z = tensor_reshape(y, shape2, 2);
+    
+    Tensor *loss = tensor_sum(z, 0, false); 
+    Tensor *final_loss = tensor_sum(loss, 0, false);
+    
+    backward(final_loss);
+    
+    TEST_ASSERT_NOT_NULL(x->grad);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, x->grad->data[0]);
+    
+    tensor_release(x);
+    tensor_release(y);
+    tensor_release(z);
+    tensor_release(loss);
+    tensor_release(final_loss);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_reshape_backward_simple_1d_to_2d);
@@ -566,5 +643,8 @@ int main(void) {
     RUN_TEST(test_transpose_backward_with_mean);
     RUN_TEST(test_reshape_backward_scalar);
     RUN_TEST(test_transpose_backward_identity_dims);
+    RUN_TEST(test_reshape_backward_large_dims);
+    RUN_TEST(test_transpose_backward_high_dims);
+    RUN_TEST(test_reshape_cycle);
     return UNITY_END();
 }
