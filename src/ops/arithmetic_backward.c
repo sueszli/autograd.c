@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static Tensor *unbroadcast(const Tensor *grad, const Tensor *input) {
     assert(grad != NULL);
@@ -135,7 +136,7 @@ Tensor *tensor_mul_backward_a(const Tensor *grad_output, const Tensor *a, const 
     assert(a != NULL);
     assert(b != NULL);
 
-    Tensor *temp = tensor_mul(grad_output, b);
+    Tensor *temp = tensor_mul(grad_output, b, true); // disable_grad=true
     Tensor *result = unbroadcast(temp, a);
     tensor_free(temp);
     return result;
@@ -146,7 +147,7 @@ Tensor *tensor_mul_backward_b(const Tensor *grad_output, const Tensor *a, const 
     assert(a != NULL);
     assert(b != NULL);
 
-    Tensor *temp = tensor_mul(grad_output, a);
+    Tensor *temp = tensor_mul(grad_output, a, true); // disable_grad=true
     Tensor *result = unbroadcast(temp, b);
     tensor_free(temp);
     return result;

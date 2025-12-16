@@ -103,7 +103,7 @@ Tensor *tensor_mean_backward(const Tensor *grad_output, const Tensor *t, int64_t
 
     scale_t->data[0] = 1.0f / (float32_t)count;
 
-    Tensor *grad_input = tensor_mul(sum_grad, scale_t);
+    Tensor *grad_input = tensor_mul(sum_grad, scale_t, true); // disable_grad=true
     assert(grad_input != NULL);
 
     tensor_free(sum_grad);

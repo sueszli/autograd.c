@@ -3,6 +3,7 @@
 #include "ops/arithmetic_backward.h"
 #include "utils/aligned_alloc.h"
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /*
@@ -162,8 +163,14 @@ Tensor *tensor_sub(const Tensor *a, const Tensor *b) {
 //
 
 static float32_t op_mul(float32_t a, float32_t b) { return a * b; }
-Tensor *tensor_mul(const Tensor *a, const Tensor *b) {
+Tensor *tensor_mul_impl(const Tensor *a, const Tensor *b, bool disable_grad) {
     Tensor *result = tensor_binary_op(a, b, op_mul);
+
+    // skip graph construction
+    if (disable_grad) {
+        result->requires_grad = false;
+        return result;
+    }
 
     if (result->requires_grad) {
         Function *fn = arena_alloc_function();

@@ -40,8 +40,8 @@ void test_sigmoid_backward_chain(void) {
     TEST_ASSERT_NOT_NULL(x->grad);
     // z = sigmoid(x) * x
     // dz/dx = sigmoid(x) * (1 - sigmoid(x)) * x + sigmoid(x)
-    // At x=1: sigmoid(1) ≈ 0.731, so dz/dx ≈ 0.731 * 0.269 * 1 + 0.731 ≈ 0.928
-    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.928f, x->grad->data[0]);
+    // At x=1: sigmoid(1) ≈ 0.7311, so dz/dx ≈ 0.7311 * 0.2689 * 1 + 0.7311 ≈ 0.9277
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.9277f, x->grad->data[0]);
 
     tensor_release(x);
     tensor_release(y);

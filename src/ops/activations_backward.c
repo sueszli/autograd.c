@@ -42,7 +42,7 @@ void sigmoid_backward(Function *fn, const Tensor *grad_output) {
             local_grad->data[i] = out_val * (1.0f - out_val);
         }
 
-        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        Tensor *grad_input = tensor_mul(grad_output, local_grad, true); // disable_grad=true
         tensor_free(local_grad);
         accumulate_grad(input, grad_input);
     }
@@ -78,7 +78,7 @@ void relu_backward(Function *fn, const Tensor *grad_output) {
             local_grad->data[i] = (input->data[i] > 0.0f) ? 1.0f : 0.0f;
         }
 
-        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        Tensor *grad_input = tensor_mul(grad_output, local_grad, true); // disable_grad=true
         tensor_free(local_grad);
         accumulate_grad(input, grad_input);
     }
@@ -119,7 +119,7 @@ void tanh_backward(Function *fn, const Tensor *grad_output) {
             local_grad->data[i] = 1.0f - out_val * out_val;
         }
 
-        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        Tensor *grad_input = tensor_mul(grad_output, local_grad, true); // disable_grad=true
         tensor_free(local_grad);
         accumulate_grad(input, grad_input);
     }
@@ -165,7 +165,7 @@ void gelu_backward(Function *fn, const Tensor *grad_output) {
     if (input != NULL && input->requires_grad) {
         // Use the existing tensor_gelu_backward function
         Tensor *local_grad = tensor_gelu_backward(input);
-        Tensor *grad_input = tensor_mul(grad_output, local_grad);
+        Tensor *grad_input = tensor_mul(grad_output, local_grad, true); // disable_grad=true
         tensor_free(local_grad);
         accumulate_grad(input, grad_input);
     }
