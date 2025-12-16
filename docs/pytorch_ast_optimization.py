@@ -1,3 +1,13 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "astunparse==1.6.3",
+#     "jax==0.4.20",
+#     "click==8.1.7",
+#     "torch==2.1.1",
+# ]
+# ///
+
 import ast
 import astunparse
 
