@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //
 // data loader from disk
@@ -105,4 +106,35 @@ const char *label_to_str(label_t label) {
     static const char *const labels[] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
     assert(label >= 0 && label < NUM_CLASSES);
     return labels[label];
+}
+
+Tensor *get_batch(const Tensor *data, uint64_t batch_idx, uint64_t batch_size) {
+    assert(data != NULL);
+    assert(data->ndim >= 1);
+
+    uint64_t total_samples = data->shape[0];
+    uint64_t start = batch_idx * batch_size;
+
+    if (start >= total_samples) {
+        return NULL;
+    }
+
+    uint64_t actual_batch = (start + batch_size > total_samples) ? (total_samples - start) : batch_size; // edge case for last batch
+    uint64_t elements_per_sample = data->size / total_samples;
+    uint64_t batch_elements = actual_batch * elements_per_sample;
+
+    float32_t *batch_data = (float32_t *)malloc(batch_elements * sizeof(float32_t));
+    assert(batch_data != NULL && "malloc failed");
+    memcpy(batch_data, &data->data[start * elements_per_sample], batch_elements * sizeof(float32_t));
+
+    uint64_t *batch_shape = (uint64_t *)malloc(data->ndim * sizeof(uint64_t));
+    assert(batch_shape != NULL && "malloc failed");
+    memcpy(batch_shape, data->shape, data->ndim * sizeof(uint64_t));
+    batch_shape[0] = actual_batch;
+
+    Tensor *batch = tensor_create(batch_data, batch_shape, data->ndim, false);
+    free(batch_data);
+    free(batch_shape);
+
+    return batch;
 }

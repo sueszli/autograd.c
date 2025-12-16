@@ -19,3 +19,4 @@ Tensor *cifar10_get_test_images(void);
 Tensor *cifar10_get_test_labels(void);
 
 const char *label_to_str(label_t label);
+Tensor *get_batch(const Tensor *data, uint64_t batch_idx, uint64_t batch_size);
