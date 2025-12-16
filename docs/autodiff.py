@@ -228,7 +228,6 @@ Module(
 """
 
 if __name__ == "__main__":
-    # clear screen
     os.system("cls" if os.name == "nt" else "clear")
     os.system("uname -a") if os.name == "posix" else os.system("systeminfo")
 
@@ -247,3 +246,19 @@ if __name__ == "__main__":
 
     # run tests
     unittest.main()
+
+
+# Original function:
+# 
+# def f(x):
+#     return exp(x)**3 + cos(x) * x + 10**2
+# 
+# Transformed function:
+# 
+# def f_forward_ad(x: DualNum) -> DualNum:
+#     return DualNumOps.custom_add(DualNumOps.custom_add(DualNumOps.custom_pow(DualNumOps.custom_exp(x), 3), DualNumOps.custom_mul(DualNumOps.custom_cos(x), x)), (10 ** 2))
+# 
+# ----------------------------------------------------------------------
+# Ran 6 tests in 0.388s
+# 
+# OK
