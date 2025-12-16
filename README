@@ -13,3 +13,6 @@ $ make run-release
 $ cat references.txt
 
     - https://github.com/harvard-edge/cs249r_book/tree/dev/tinytorch/src
+
+
+implement something like tqdm but as a plot that shows you how the loss is decreasing over time (same header file as tqdm.h).
