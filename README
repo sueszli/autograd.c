@@ -8,9 +8,12 @@ $ toilet -f mono9 -w 100 "autograd.c"
                                  ▄  █                                    
                                   ▀▀                                     
 
-$ cat docs/about.md | fold -w 100
+❯ cat docs/about.md | fold -w 75
 
-	...
+	a minimal reverse mode autograd engine in c with reference counted tensors,
+	arena allocated function nodes, explicit dependency counting, centralized 
+	gradient accumulation, scalar loss backpropagation and a small set of core 
+	tensor ops implemented with tightly coupled forward and backward code.
 
 $ make download
 
