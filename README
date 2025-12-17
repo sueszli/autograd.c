@@ -7,6 +7,11 @@ $ toilet -f mono9 -w 100 "autograd.c"
     ▀▄▄▀█  ▀▄▄▀█    ▀▄▄  ▀█▄█▀  ▀█▄▀█   █     ▀▄▄▀█  ▀█▄██    █    ▀█▄▄▀ 
                                  ▄  █                                    
                                   ▀▀                                     
+
+$ cat docs/about.md 
+
+	...
+
 $ make download
 
     data/cifar-10-binary  40%[====>         ]  33.10M  2.55MB/s    eta 47s    
