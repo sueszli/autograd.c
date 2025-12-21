@@ -1,4 +1,4 @@
-Inspired by: https://tigerstyle.dev/
+> Based on https://tigerstyle.dev/
 
 # (1) Safety
 
