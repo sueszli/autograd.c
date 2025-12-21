@@ -1,5 +1,3 @@
-> Based on https://tigerstyle.dev/
-
 # (1) Safety
 
 - Zero Technical Debt: Fix issues immediately. Never rely on future refactoring.
@@ -55,3 +53,7 @@ Pre-commit
 - Data Alignment: Ensure critical data (tensors) is **aligned** (e.g., 64 bytes) for SIMD efficiency. Assert alignment on access.
 - Batch Processing: Write functions that transform arrays of data rather than single elements (data transformation > object interaction).
 - Existence-based Processing: Filter data *before* processing so loops run on contiguous, valid data (avoid `if (obj->active)` inside hot loops).
+
+---
+
+> Based on https://tigerstyle.dev/
