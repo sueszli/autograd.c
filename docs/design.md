@@ -3,7 +3,7 @@
 Context
 
 - This is a hobby autograd engine in C for learning and experimentation. This is a learning tool, not a hardened library.
-- The design prioritizes simplicity and code locality over flexibility. We make explicit tradeoffs: no in-place ops, no retain_graph, no non-leaf gradient retention, no views or aliasing, co-located forward/backward code, arena allocation for graph nodes and dependency counting instead of topological sort. These constraints eliminate entire classes of bugs and keep the codebase small.
+- The design prioritizes simplicity and code locality over flexibility. We make explicit tradeoffs: no in-place ops, no `retain_graph`, no non-leaf gradient retention, no views or aliasing, co-located forward/backward code, arena allocation for graph nodes and dependency counting instead of topological sort. These constraints eliminate entire classes of bugs and keep the codebase small.
 
 Core Structures
 
