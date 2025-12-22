@@ -174,7 +174,6 @@ void accumulate_grad(Tensor *tensor, Tensor *new_grad) {
         assert(false && "shape mismatch in accumulate_grad. broadcast reduction not yet implemented");
     }
 
-    // if tensor->grad is NULL, assign directly
     if (tensor->grad == NULL) {
         tensor->grad = new_grad;
         return;
