@@ -38,8 +38,6 @@ Pre-commit
 - Functions: Do one coherent thing (ideally <70 lines). Prefer lambdas/inline logic over tiny single-use functions.
 - Decompose Conditionals: Use named variables to simplify complex `if` conditions.
 - Naming & Comments:
-    - Variable names must include units/qualifiers (e.g., `timeout_ms`, `size_bytes`).
-    - Distinguish types: Index (0-based), Count (1-based), and Size (memory bytes).
     - Comments explain *why*, not *what*; use lowercase single lines. ASCII illustrations are welcome.
 - Paradigm Balance:
     - Functional: Prefer pure functions (data in, data out) and immutability for logic.
