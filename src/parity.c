@@ -101,6 +101,40 @@ int main(void) {
         fprintf(stderr, "FAIL: %ld/%d tensors exceed atol %g\n", (long)failures, N_PARAMS, atol);
     }
 
+    // inference: sample one name, the boundary token both starts and ends it
+    const int64_t bos = (int64_t)field(j, "bos")->valuedouble;
+    uint64_t seed = (uint64_t)time(NULL);
+    int64_t tokens[BLOCK_SIZE] = {bos};
+    char name[BLOCK_SIZE] = {0};
+    for (int64_t n = 1; n < BLOCK_SIZE; n++) {
+        const Tensor *out = logits(&p, tokens, n);
+        double probs[VOCAB_SIZE], max = out->data[(n - 1) * VOCAB_SIZE], sum = 0.0;
+        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
+            max = fmax(max, out->data[(n - 1) * VOCAB_SIZE + c]);
+        }
+        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
+            probs[c] = exp(out->data[(n - 1) * VOCAB_SIZE + c] - max);
+            sum += probs[c];
+        }
+        tape_reset();
+        seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
+        double u = (double)(seed >> 11) / 9007199254740992.0 * sum;    // uniform in [0, sum)
+        int64_t next = VOCAB_SIZE - 1;
+        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
+            u -= probs[c];
+            if (u < 0.0) {
+                next = c;
+                break;
+            }
+        }
+        if (next == bos) {
+            break;
+        }
+        tokens[n] = next;
+        name[n - 1] = (char)('a' + next);
+    }
+    printf("inference (random sampled name): %s\n", name);
+
     adamw_free(&opt);
     params_free(&p);
     params_free(&ref);
