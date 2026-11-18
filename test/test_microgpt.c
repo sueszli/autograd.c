@@ -1,0 +1,102 @@
+#include "autograd.h"
+#include "microgpt.h"
+#include "optim.h"
+#include "unity.h"
+#include <math.h>
+
+void setUp(void) {}
+void tearDown(void) { tape_reset(); }
+
+static const int64_t ids[] = {26, 3, 1, 4, 26, 0};
+static const int64_t targets[] = {3, 1, 4, 26, 0, 0};
+static const double mask[] = {1, 1, 1, 1, 0, 0};
+
+void test_zero_weights_give_uniform_loss(void) {
+    Params p = params_new();
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, log(VOCAB_SIZE), loss(&p, ids, targets, mask, 6)->data[0]);
+    params_free(&p);
+}
+
+void test_logits_shape(void) {
+    Params p = params_new();
+    Tensor *out = logits(&p, ids, 3);
+    TEST_ASSERT_EQUAL_INT64(3, out->rows);
+    TEST_ASSERT_EQUAL_INT64(VOCAB_SIZE, out->cols);
+    params_free(&p);
+}
+
+// every weight of the full model against a central difference
+void test_loss_gradcheck(void) {
+    Params p = params_new();
+    for (int64_t i = 0; i < N_PARAMS; i++) {
+        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
+            p.all[i]->data[j] = 0.3 * (2.0 * rand() / RAND_MAX - 1.0);
+        }
+    }
+    backward(loss(&p, ids, targets, mask, 6));
+    tape_reset();
+    const double h = 1e-6;
+    for (int64_t i = 0; i < N_PARAMS; i++) {
+        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
+            double x = p.all[i]->data[j];
+            p.all[i]->data[j] = x + h;
+            double up = loss(&p, ids, targets, mask, 6)->data[0];
+            tape_reset();
+            p.all[i]->data[j] = x - h;
+            double down = loss(&p, ids, targets, mask, 6)->data[0];
+            tape_reset();
+            p.all[i]->data[j] = x;
+            double numeric = (up - down) / (2 * h);
+            TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, p.all[i]->grad[j]);
+        }
+    }
+    params_free(&p);
+}
+
+// step 1: m = 0.15 g, v = 0.01 g^2, both bias corrections cancel, so p -= lr * g / |g|
+void test_adamw_first_step(void) {
+    Tensor *w = tensor_new(1, 2, (double[]){1, -3}, true);
+    AdamW opt = adamw_new(&w, 1);
+    w->grad = calloc(2, sizeof(double));
+    w->grad[0] = 2.0;
+    adamw_step(&opt, 1, 1000);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.3, opt.m[0][0]);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.04, opt.v[0][0]);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-9, 1 - 0.01, w->data[0]);
+    TEST_ASSERT_EQUAL_DOUBLE(-3, w->data[1]);
+    TEST_ASSERT_EQUAL_DOUBLE(0, w->grad[0]);
+    adamw_free(&opt);
+    tensor_free(w);
+}
+
+// a few hundred steps on one sequence should drive the loss well below uniform
+void test_training_reduces_loss(void) {
+    Params p = params_new();
+    for (int64_t i = 0; i < N_PARAMS; i++) {
+        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
+            p.all[i]->data[j] = 0.08 * (2.0 * rand() / RAND_MAX - 1.0);
+        }
+    }
+    AdamW opt = adamw_new(p.all, N_PARAMS);
+    double last = 0.0;
+    for (int64_t step = 1; step <= 200; step++) {
+        Tensor *l = loss(&p, ids, targets, mask, 6);
+        last = l->data[0];
+        backward(l);
+        tape_reset();
+        adamw_step(&opt, step, 200);
+    }
+    TEST_ASSERT_LESS_THAN_DOUBLE(0.1, last);
+    adamw_free(&opt);
+    params_free(&p);
+}
+
+int main(void) {
+    UNITY_BEGIN();
+    RUN_TEST(test_zero_weights_give_uniform_loss);
+    RUN_TEST(test_logits_shape);
+    RUN_TEST(test_loss_gradcheck);
+    RUN_TEST(test_adamw_first_step);
+    RUN_TEST(test_training_reduces_loss);
+    return UNITY_END();
+}
