@@ -1,63 +1,35 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include "tensor.h"
 
 #define MAX_INPUTS 4
 
-// avoid circular dependency
-typedef struct Tensor Tensor;
-
 /*
- * represents an op in the computation graph
+ * every op appends a node to one global tape. creation order is a valid
+ * topological order, so backward just walks the tape in reverse:
  *
- * example:
- *    forward graph:  (a, b) -> mul -> result -> sum -> loss
- *    backward flow:  loss -> sum -> mul -> (a, b)
+ *   tape:      [h = x @ w1] [a = relu(h)] [loss = a @ w2]
+ *   backward:                                  <- start here, seed 1
  *
- * forward:
- *    Tensor *result = mul(a, b);
- *    if (result->requires_grad) {
- *        Function *fn = malloc_arena();
- *        fn->apply = mul_backward;                       // callback to compute gradients on backprop
- *        fn->num_inputs = 2;
- *        fn->inputs[0] = a;
- *        fn->inputs[1] = b;
- *        fn->output = result;
- *        fn->pending_count = 0;                          // how many ops must finish before this one can run
- *        if (a->grad_fn) a->grad_fn->pending_count++;
- *        if (b->grad_fn) b->grad_fn->pending_count++;
- *        fn->ctx = NULL;                                 // no extra storage needed
- *        result->grad_fn = fn;
- *    }
- *
- * backward:
- *    after forward pass in neural net, traverse graph backward from loss
- *    calling each Function's apply() to compute gradients
- *    to find the contribution of each operation to the final loss.
- *
- *    results can then be retrieved from each Tensor's grad field.
+ * the tape owns every op output. params are created with tensor_new and
+ * owned by the caller. tape_reset frees all op outputs at once.
  */
-typedef struct Function {
-    void (*apply)(struct Function *self, const Tensor *grad_output); // callback to compute gradients
-    uint32_t num_inputs;                                             // number of args for op
-    Tensor *inputs[MAX_INPUTS];                                      // args
-    Tensor *output;                                                  // result Tensor
-    uint32_t pending_count;                                          // how many ops must finish before this one can run
-    void *ctx;                                                       // extra metadata storage, used by complex operations
-} Function;
+typedef struct Node Node;
+typedef void (*BackwardFn)(const Node *node);
+struct Node {
+    Tensor *out;
+    Tensor *in[MAX_INPUTS];
+    int64_t n_in;
+    BackwardFn backward;
+    void *ctx; // op-owned buffer, freed by tape_reset
+};
 
-// memory arena to store Function structs for all ops in a thread
-typedef struct Arena {
-    void *memory;
-    size_t capacity;
-    size_t offset;
-} Arena;
-Function *arena_alloc_function(void);
-void arena_free(void);
+// allocates an op output on the tape and records how to backprop into its inputs
+Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, void *ctx);
+void tape_reset(void);
 
-// traverse computation graph backward from loss tensor
+// lazily zero-initialized grad buffer, NULL if t does not require grad
+double *grad_of(Tensor *t);
+
+// seeds loss->grad with 1 and walks the tape in reverse. param grads accumulate across calls
 void backward(Tensor *loss);
-
-// add a new gradient to tensor->grad
-void accumulate_grad(Tensor *tensor, Tensor *new_grad);
