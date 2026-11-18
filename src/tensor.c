@@ -1,5 +1,4 @@
 #include "tensor.h"
-#include "ops/arithmetic.h"
 #include "utils/aligned_alloc.h"
 #include <assert.h>
 #include <inttypes.h>

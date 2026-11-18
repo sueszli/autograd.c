@@ -27,7 +27,6 @@ Pre-commit
 
 - Add unit tests for each new function and feature
 - Run `make fmt`, `make lint`, `make test`
-- Do NOT run `make run` as it requires downloading large data files
 
 # (2) Quality
 
