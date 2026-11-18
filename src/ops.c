@@ -249,7 +249,6 @@ static void softmax_rows_backward(const Node *node) {
     }
 }
 
-// multiplies by 1/sum instead of dividing, to match the reference rounding
 static void softmax_row(const double *x, double *y, int64_t cols) {
     double max = x[0];
     for (int64_t j = 1; j < cols; j++) {
