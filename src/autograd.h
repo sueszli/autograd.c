@@ -21,11 +21,12 @@ struct Node {
     Tensor *in[MAX_INPUTS];
     int64_t n_in;
     BackwardFn backward;
-    void *ctx; // op-owned buffer, freed by tape_reset
+    double aux; // scalar op argument, eg. a scale factor
+    void *ctx;  // op-owned buffer, freed by tape_reset
 };
 
 // allocates an op output on the tape and records how to backprop into its inputs
-Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, void *ctx);
+Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);
 void tape_reset(void);
 
 // lazily zero-initialized grad buffer, NULL if t does not require grad

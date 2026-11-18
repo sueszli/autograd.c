@@ -4,7 +4,7 @@ static Node *tape = NULL;
 static int64_t tape_len = 0;
 static int64_t tape_cap = 0;
 
-Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, void *ctx) {
+Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx) {
     CHECK(n_in <= MAX_INPUTS, "too many inputs");
     if (tape_len == tape_cap) {
         tape_cap = tape_cap ? 2 * tape_cap : 1024;
@@ -16,7 +16,7 @@ Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in,
         requires_grad |= in[i]->requires_grad;
     }
     Node *node = &tape[tape_len++];
-    *node = (Node){.out = tensor_new(rows, cols, NULL, requires_grad), .n_in = n_in, .backward = backward, .ctx = ctx};
+    *node = (Node){.out = tensor_new(rows, cols, NULL, requires_grad), .n_in = n_in, .backward = backward, .aux = aux, .ctx = ctx};
     for (int64_t i = 0; i < n_in; i++) {
         node->in[i] = in[i];
     }
