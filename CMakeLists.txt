@@ -15,6 +15,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(unity GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git GIT_TAG v2.6.1 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(unity)
+target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
 
 file(GLOB_RECURSE SRCS src/*.c)
 add_library(lib ${SRCS})
