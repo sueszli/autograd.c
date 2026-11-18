@@ -81,6 +81,29 @@ void test_gather_forward(void) {
     tensor_free(table);
 }
 
+void test_rmsnorm_forward(void) {
+    Tensor *a = tensor_new(1, 2, (double[]){3, 4}, false);
+    Tensor *out = rmsnorm(a, 0.0);
+    // rms of (3, 4) is sqrt(12.5)
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 3 / sqrt(12.5), out->data[0]);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 4 / sqrt(12.5), out->data[1]);
+    tensor_free(a);
+}
+
+void test_causal_softmax_forward(void) {
+    Tensor *a = tensor_new(2, 2, (double[]){1, 5, 2, 2}, false);
+    Tensor *out = softmax_rows(causal_mask(a, -1e9));
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){1, 0, 0.5, 0.5}), out->data, 4);
+    tensor_free(a);
+}
+
+void test_relu_scale_forward(void) {
+    Tensor *a = tensor_new(1, 3, (double[]){-1, 0, 2}, false);
+    Tensor *out = scale(relu(a), 0.5);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){0, 0, 1}), out->data, 3);
+    tensor_free(a);
+}
+
 //
 // gradients
 //
@@ -91,6 +114,23 @@ static Tensor *f_matmul(Tensor **in) { return matmul(in[0], in[1]); }
 static Tensor *f_transpose(Tensor **in) { return transpose(in[0]); }
 static Tensor *f_gather(Tensor **in) { return gather(in[0], (int64_t[]){1, 0, 1, 3}, 4); }
 static Tensor *f_chain(Tensor **in) { return matmul(transpose(matmul(in[0], in[1])), in[2]); }
+static Tensor *f_scale(Tensor **in) { return scale(in[0], -0.3); }
+static Tensor *f_relu(Tensor **in) { return relu(in[0]); }
+static Tensor *f_rmsnorm(Tensor **in) { return rmsnorm(in[0], 1e-5); }
+// a small mask value, -1e9 would make the finite difference lose all precision
+static Tensor *f_causal_mask(Tensor **in) { return causal_mask(in[0], -5.0); }
+static Tensor *f_softmax_rows(Tensor **in) { return softmax_rows(in[0]); }
+
+// regressions from the 2026-11-18 review: non-leaf tensors feeding matmul and softmax lost their gradients
+static Tensor *f_mlp(Tensor **in) { return matmul(relu(matmul(in[0], in[1])), in[2]); }
+static Tensor *f_softmax_of_matmul(Tensor **in) { return softmax_rows(matmul(in[0], in[1])); }
+
+// one causal attention head: softmax(mask(q @ k^T / sqrt(d))) @ v
+static Tensor *f_attention(Tensor **in) {
+    Tensor *xn = rmsnorm(in[0], 1e-5);
+    Tensor *q = matmul(xn, in[1]), *k = matmul(xn, in[2]), *v = matmul(xn, in[3]);
+    return matmul(softmax_rows(causal_mask(scale(matmul(q, transpose(k)), 0.5), -1e9)), v);
+}
 
 void test_add_grad(void) { gradcheck(f_add, (Tensor *[]){rand_tensor(3, 4, true), rand_tensor(3, 4, true)}, 2); }
 void test_add_self_grad(void) { gradcheck(f_add_self, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
@@ -99,12 +139,23 @@ void test_matmul_frozen_grad(void) { gradcheck(f_matmul, (Tensor *[]){rand_tenso
 void test_transpose_grad(void) { gradcheck(f_transpose, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
 void test_gather_grad(void) { gradcheck(f_gather, (Tensor *[]){rand_tensor(5, 3, true)}, 1); }
 void test_chain_grad(void) { gradcheck(f_chain, (Tensor *[]){rand_tensor(3, 4, true), rand_tensor(4, 2, true), rand_tensor(3, 5, true)}, 3); }
+void test_scale_grad(void) { gradcheck(f_scale, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
+void test_relu_grad(void) { gradcheck(f_relu, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
+void test_rmsnorm_grad(void) { gradcheck(f_rmsnorm, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
+void test_causal_mask_grad(void) { gradcheck(f_causal_mask, (Tensor *[]){rand_tensor(4, 4, true)}, 1); }
+void test_softmax_rows_grad(void) { gradcheck(f_softmax_rows, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
+void test_mlp_grad(void) { gradcheck(f_mlp, (Tensor *[]){rand_tensor(3, 4, false), rand_tensor(4, 8, true), rand_tensor(8, 2, true)}, 3); }
+void test_softmax_of_matmul_grad(void) { gradcheck(f_softmax_of_matmul, (Tensor *[]){rand_tensor(3, 4, false), rand_tensor(4, 5, true)}, 2); }
+void test_attention_grad(void) { gradcheck(f_attention, (Tensor *[]){rand_tensor(5, 4, true), rand_tensor(4, 4, true), rand_tensor(4, 4, true), rand_tensor(4, 4, true)}, 4); }
 
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_matmul_forward);
     RUN_TEST(test_transpose_forward);
     RUN_TEST(test_gather_forward);
+    RUN_TEST(test_rmsnorm_forward);
+    RUN_TEST(test_causal_softmax_forward);
+    RUN_TEST(test_relu_scale_forward);
     RUN_TEST(test_add_grad);
     RUN_TEST(test_add_self_grad);
     RUN_TEST(test_matmul_grad);
@@ -112,5 +163,13 @@ int main(void) {
     RUN_TEST(test_transpose_grad);
     RUN_TEST(test_gather_grad);
     RUN_TEST(test_chain_grad);
+    RUN_TEST(test_scale_grad);
+    RUN_TEST(test_relu_grad);
+    RUN_TEST(test_rmsnorm_grad);
+    RUN_TEST(test_causal_mask_grad);
+    RUN_TEST(test_softmax_rows_grad);
+    RUN_TEST(test_mlp_grad);
+    RUN_TEST(test_softmax_of_matmul_grad);
+    RUN_TEST(test_attention_grad);
     return UNITY_END();
 }
