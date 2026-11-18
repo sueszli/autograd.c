@@ -104,6 +104,23 @@ void test_relu_scale_forward(void) {
     tensor_free(a);
 }
 
+void test_slice_concat_forward(void) {
+    Tensor *a = tensor_new(2, 3, (double[]){1, 2, 3, 4, 5, 6}, false);
+    Tensor *out = concat_cols((Tensor *[]){slice_cols(a, 2, 1), slice_cols(a, 0, 2)}, 2);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){3, 1, 2, 6, 4, 5}), out->data, 6);
+    tensor_free(a);
+}
+
+void test_cross_entropy_forward(void) {
+    // uniform logits give log(cols) per row, the masked row is ignored
+    Tensor *logits = tensor_new(2, 4, (double[]){0, 0, 0, 0, 9, 1, 2, 3}, false);
+    Tensor *out = masked_cross_entropy(logits, (int64_t[]){1, 2}, (double[]){1, 0});
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, log(4.0), out->data[0]);
+    Tensor *none = masked_cross_entropy(logits, (int64_t[]){1, 2}, (double[]){0, 0});
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, none->data[0]);
+    tensor_free(logits);
+}
+
 //
 // gradients
 //
@@ -120,6 +137,8 @@ static Tensor *f_rmsnorm(Tensor **in) { return rmsnorm(in[0], 1e-5); }
 // a small mask value, -1e9 would make the finite difference lose all precision
 static Tensor *f_causal_mask(Tensor **in) { return causal_mask(in[0], -5.0); }
 static Tensor *f_softmax_rows(Tensor **in) { return softmax_rows(in[0]); }
+static Tensor *f_split_merge(Tensor **in) { return concat_cols((Tensor *[]){slice_cols(in[0], 3, 1), slice_cols(in[0], 0, 3), in[1]}, 3); }
+static Tensor *f_cross_entropy(Tensor **in) { return masked_cross_entropy(in[0], (int64_t[]){2, 0, 4}, (double[]){1, 0, 1}); }
 
 // regressions from the 2026-11-18 review: non-leaf tensors feeding matmul and softmax lost their gradients
 static Tensor *f_mlp(Tensor **in) { return matmul(relu(matmul(in[0], in[1])), in[2]); }
@@ -144,6 +163,8 @@ void test_relu_grad(void) { gradcheck(f_relu, (Tensor *[]){rand_tensor(3, 4, tru
 void test_rmsnorm_grad(void) { gradcheck(f_rmsnorm, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
 void test_causal_mask_grad(void) { gradcheck(f_causal_mask, (Tensor *[]){rand_tensor(4, 4, true)}, 1); }
 void test_softmax_rows_grad(void) { gradcheck(f_softmax_rows, (Tensor *[]){rand_tensor(3, 4, true)}, 1); }
+void test_split_merge_grad(void) { gradcheck(f_split_merge, (Tensor *[]){rand_tensor(3, 4, true), rand_tensor(3, 2, true)}, 2); }
+void test_cross_entropy_grad(void) { gradcheck(f_cross_entropy, (Tensor *[]){rand_tensor(3, 5, true)}, 1); }
 void test_mlp_grad(void) { gradcheck(f_mlp, (Tensor *[]){rand_tensor(3, 4, false), rand_tensor(4, 8, true), rand_tensor(8, 2, true)}, 3); }
 void test_softmax_of_matmul_grad(void) { gradcheck(f_softmax_of_matmul, (Tensor *[]){rand_tensor(3, 4, false), rand_tensor(4, 5, true)}, 2); }
 void test_attention_grad(void) { gradcheck(f_attention, (Tensor *[]){rand_tensor(5, 4, true), rand_tensor(4, 4, true), rand_tensor(4, 4, true), rand_tensor(4, 4, true)}, 4); }
@@ -156,6 +177,8 @@ int main(void) {
     RUN_TEST(test_rmsnorm_forward);
     RUN_TEST(test_causal_softmax_forward);
     RUN_TEST(test_relu_scale_forward);
+    RUN_TEST(test_slice_concat_forward);
+    RUN_TEST(test_cross_entropy_forward);
     RUN_TEST(test_add_grad);
     RUN_TEST(test_add_self_grad);
     RUN_TEST(test_matmul_grad);
@@ -168,6 +191,8 @@ int main(void) {
     RUN_TEST(test_rmsnorm_grad);
     RUN_TEST(test_causal_mask_grad);
     RUN_TEST(test_softmax_rows_grad);
+    RUN_TEST(test_split_merge_grad);
+    RUN_TEST(test_cross_entropy_grad);
     RUN_TEST(test_mlp_grad);
     RUN_TEST(test_softmax_of_matmul_grad);
     RUN_TEST(test_attention_grad);

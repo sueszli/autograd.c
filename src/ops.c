@@ -250,24 +250,134 @@ static void softmax_rows_backward(const Node *node) {
 }
 
 // multiplies by 1/sum instead of dividing, to match the reference rounding
+static void softmax_row(const double *x, double *y, int64_t cols) {
+    double max = x[0];
+    for (int64_t j = 1; j < cols; j++) {
+        max = x[j] > max ? x[j] : max;
+    }
+    double sum = 0.0;
+    for (int64_t j = 0; j < cols; j++) {
+        y[j] = exp(x[j] - max);
+        sum += y[j];
+    }
+    double inv = 1.0 / sum;
+    for (int64_t j = 0; j < cols; j++) {
+        y[j] *= inv;
+    }
+}
+
 Tensor *softmax_rows(Tensor *a) {
     Tensor *out = tape_push(a->rows, a->cols, softmax_rows_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
-        const double *x = &a->data[i * a->cols];
-        double *y = &out->data[i * a->cols];
-        double max = x[0];
-        for (int64_t j = 1; j < a->cols; j++) {
-            max = x[j] > max ? x[j] : max;
-        }
-        double sum = 0.0;
-        for (int64_t j = 0; j < a->cols; j++) {
-            y[j] = exp(x[j] - max);
-            sum += y[j];
-        }
-        double inv = 1.0 / sum;
-        for (int64_t j = 0; j < a->cols; j++) {
-            y[j] *= inv;
+        softmax_row(&a->data[i * a->cols], &out->data[i * a->cols], a->cols);
+    }
+    return out;
+}
+
+//
+// slice and concat columns, used to split and merge attention heads
+//
+
+static void slice_cols_backward(const Node *node) {
+    const Tensor *a = node->in[0], *out = node->out;
+    int64_t start = (int64_t)node->aux;
+    double *g = grad_of(node->in[0]);
+    for (int64_t i = 0; g != NULL && i < out->rows; i++) {
+        for (int64_t j = 0; j < out->cols; j++) {
+            g[i * a->cols + start + j] += out->grad[i * out->cols + j];
         }
     }
+}
+
+Tensor *slice_cols(Tensor *a, int64_t start, int64_t len) {
+    CHECK(start >= 0 && len > 0 && start + len <= a->cols, "slice_cols: out of range");
+    Tensor *out = tape_push(a->rows, len, slice_cols_backward, 1, (Tensor *[]){a}, (double)start, NULL);
+    for (int64_t i = 0; i < a->rows; i++) {
+        memcpy(&out->data[i * len], &a->data[i * a->cols + start], (size_t)len * sizeof(double));
+    }
+    return out;
+}
+
+static void concat_cols_backward(const Node *node) {
+    const Tensor *out = node->out;
+    for (int64_t p = 0, start = 0; p < node->n_in; start += node->in[p]->cols, p++) {
+        double *g = grad_of(node->in[p]);
+        int64_t len = node->in[p]->cols;
+        for (int64_t i = 0; g != NULL && i < out->rows; i++) {
+            for (int64_t j = 0; j < len; j++) {
+                g[i * len + j] += out->grad[i * out->cols + start + j];
+            }
+        }
+    }
+}
+
+Tensor *concat_cols(Tensor *const *parts, int64_t n) {
+    CHECK(n > 0, "concat_cols: no parts");
+    int64_t cols = 0;
+    for (int64_t p = 0; p < n; p++) {
+        CHECK(parts[p]->rows == parts[0]->rows, "concat_cols: row mismatch");
+        cols += parts[p]->cols;
+    }
+    Tensor *out = tape_push(parts[0]->rows, cols, concat_cols_backward, n, parts, 0, NULL);
+    for (int64_t p = 0, start = 0; p < n; start += parts[p]->cols, p++) {
+        for (int64_t i = 0; i < out->rows; i++) {
+            memcpy(&out->data[i * cols + start], &parts[p]->data[i * parts[p]->cols], (size_t)parts[p]->cols * sizeof(double));
+        }
+    }
+    return out;
+}
+
+//
+// masked cross-entropy
+//
+
+/*
+ * fused with its softmax: loss = (1 / sum(mask)) * sum_i -mask[i] * log(p[i, target[i]])
+ * ctx holds targets followed by mask, so one free releases both.
+ */
+static void masked_cross_entropy_backward(const Node *node) {
+    const Tensor *logits = node->in[0];
+    int64_t rows = logits->rows, cols = logits->cols;
+    const int64_t *targets = node->ctx;
+    const double *mask = (const double *)(targets + rows);
+    double *g = grad_of(node->in[0]);
+    double sum_mask = 0.0;
+    for (int64_t i = 0; i < rows; i++) {
+        sum_mask += mask[i];
+    }
+    double inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
+    double *p = malloc((size_t)cols * sizeof(double));
+    CHECK(p != NULL, "malloc failed");
+    for (int64_t i = 0; g != NULL && i < rows; i++) {
+        softmax_row(&logits->data[i * cols], p, cols);
+        for (int64_t j = 0; j < cols; j++) {
+            double onehot = j == targets[i] ? 1.0 : 0.0;
+            g[i * cols + j] += node->out->grad[0] * (mask[i] * (p[j] - onehot) * inv);
+        }
+    }
+    free(p);
+}
+
+Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const double *mask) {
+    int64_t rows = logits->rows, cols = logits->cols;
+    int64_t *ctx = malloc((size_t)rows * (sizeof(int64_t) + sizeof(double)));
+    CHECK(ctx != NULL, "malloc failed");
+    double *mask_copy = (double *)(ctx + rows);
+    for (int64_t i = 0; i < rows; i++) {
+        CHECK(targets[i] >= 0 && targets[i] < cols, "masked_cross_entropy: target out of range");
+        ctx[i] = targets[i];
+        mask_copy[i] = mask[i];
+    }
+    Tensor *out = tape_push(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
+    double *p = malloc((size_t)cols * sizeof(double));
+    CHECK(p != NULL, "malloc failed");
+    double total = 0.0, sum_mask = 0.0;
+    for (int64_t i = 0; i < rows; i++) {
+        softmax_row(&logits->data[i * cols], p, cols);
+        total -= mask[i] * log(fmax(p[targets[i]], 1e-30));
+        sum_mask += mask[i];
+    }
+    free(p);
+    out->data[0] = sum_mask == 0.0 ? 0.0 : (1.0 / sum_mask) * total;
     return out;
 }
