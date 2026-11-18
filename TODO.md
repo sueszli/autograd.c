@@ -12,4 +12,9 @@ One small PR per step.
 - [x] 4. Ops `slice_cols`, `concat_cols`, `masked_cross_entropy`, with gradchecks. Cross-entropy shares its row softmax with `softmax_rows`.
 - [x] 5. MicroGPT forward and AdamW, with unit tests: uniform loss at zero weights, a gradcheck over all 4240 weights, the first AdamW step, and a short training run.
 - [x] 6. `make parity`: load `data/parity.json` with cJSON, train 1000 steps, compare final weights within 1e-11. Passes with max |diff| 5.7e-15 in 0.26 s (clang 22 and gcc 14, Linux).
-- [ ] 7. Inference sampling, README, rewrite `docs/design.md` (it still describes the old engine), pre-push hook.
+- [x] 7. Inference sampling, README, rewritten `docs/design.md` and `CONTRIBUTING.md`, `make precommit` pre-push hook.
+
+## Open
+
+- Not verified on macOS. Only built and tested on Linux with clang 22 and gcc 14.
+- `make lint` is untested because cppcheck is not installed on the machine used so far.

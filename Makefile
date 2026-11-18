@@ -15,3 +15,10 @@ lint:
 .PHONY: fmt
 fmt:
 	find src test -name "*.c" -o -name "*.h" | xargs clang-format -i
+
+.PHONY: precommit
+precommit:
+	printf '#!/bin/sh\nmake precommit\n' > .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+	$(MAKE) fmt
+	$(MAKE) test
+	$(MAKE) parity

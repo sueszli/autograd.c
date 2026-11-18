@@ -7,10 +7,25 @@ $ toilet -f smblock "autograd.c"
 
 $ cat about.txt | fold -w 75
 
-    a minimal reverse mode autograd engine in c, being rewritten to train
-    karpathy's microGPT with numeric weight parity, like autograd.lean.
-    see TODO.md for progress.
+    a minimal reverse-mode autograd engine in c, just big enough to train
+    karpathy's microGPT. float64 tensors, a tape walked in reverse, and 12
+    ops with forward and backward next to each other.
+
+    correctness by:
+
+    - numeric parity with karpathy's microGPT to within 1e-11 atol
+    - a finite-difference gradient check for every op and the full model
+    - asan and ubsan on every test run
 
     discussion on hackernews: https://news.ycombinator.com/item?id=46285424
 
-$ make test
+$ make parity
+
+    trained 1000 steps in 0.256s
+    passed parity check (max |diff| 5.7e-15)
+    inference (random sampled name): mashrh
+
+see also:
+
+- counterpart in lean: https://github.com/sueszli/autograd.lean
+- original microgpt implementation: https://karpathy.github.io/2026/02/12/microgpt/
