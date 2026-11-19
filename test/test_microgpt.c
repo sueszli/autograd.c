@@ -57,7 +57,6 @@ void test_loss_gradcheck(void) {
 void test_adamw_first_step(void) {
     Tensor *w = tensor_new(1, 2, (double[]){1, -3}, true);
     AdamW opt = adamw_new(&w, 1);
-    w->grad = calloc(2, sizeof(double));
     w->grad[0] = 2.0;
     adamw_step(&opt, 1, 1000);
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.3, opt.m[0][0]);

@@ -1,35 +1,43 @@
 #include "autograd.h"
 #include <assert.h>
+#include <string.h>
 
-static Node *tape = NULL;
+static Node tape[TAPE_CAP];
+static Tensor outs[TAPE_CAP];
 static int64_t tape_len = 0;
-static int64_t tape_cap = 0;
+static alignas(16) unsigned char arena[ARENA_BYTES];
+static int64_t arena_len = 0;
+
+void *tape_alloc(int64_t bytes) {
+    bytes = (bytes + 15) / 16 * 16;
+    assert(arena_len + bytes <= ARENA_BYTES && "arena full, raise ARENA_BYTES");
+    void *p = &arena[arena_len];
+    arena_len += bytes;
+    memset(p, 0, (size_t)bytes);
+    return p;
+}
 
 Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx) {
     assert(n_in <= MAX_INPUTS && "too many inputs");
-    if (tape_len == tape_cap) {
-        tape_cap = tape_cap ? 2 * tape_cap : 1024;
-        tape = realloc(tape, (size_t)tape_cap * sizeof(Node));
-        assert(tape != NULL && "realloc failed");
-    }
+    assert(tape_len < TAPE_CAP && "tape full, raise TAPE_CAP");
+    assert(rows > 0 && cols > 0 && "tensor dims must be positive");
     bool requires_grad = false;
     for (int64_t i = 0; i < n_in; i++) {
         requires_grad |= in[i]->requires_grad;
     }
+    Tensor *out = &outs[tape_len];
+    *out = (Tensor){.data = tape_alloc(rows * cols * (int64_t)sizeof(double)), .grad = NULL, .rows = rows, .cols = cols, .requires_grad = requires_grad};
     Node *node = &tape[tape_len++];
-    *node = (Node){.out = tensor_new(rows, cols, NULL, requires_grad), .n_in = n_in, .backward = backward, .aux = aux, .ctx = ctx};
+    *node = (Node){.out = out, .n_in = n_in, .backward = backward, .aux = aux, .ctx = ctx};
     for (int64_t i = 0; i < n_in; i++) {
         node->in[i] = in[i];
     }
-    return node->out;
+    return out;
 }
 
 void tape_reset(void) {
-    for (int64_t i = 0; i < tape_len; i++) {
-        tensor_free(tape[i].out);
-        free(tape[i].ctx);
-    }
     tape_len = 0;
+    arena_len = 0;
 }
 
 double *grad_of(Tensor *t) {
@@ -37,8 +45,7 @@ double *grad_of(Tensor *t) {
         return NULL;
     }
     if (t->grad == NULL) {
-        t->grad = calloc((size_t)(t->rows * t->cols), sizeof(double));
-        assert(t->grad != NULL && "calloc failed");
+        t->grad = tape_alloc(t->rows * t->cols * (int64_t)sizeof(double));
     }
     return t->grad;
 }

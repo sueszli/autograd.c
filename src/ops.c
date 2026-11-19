@@ -109,8 +109,7 @@ static void gather_backward(const Node *node) {
 
 Tensor *gather(Tensor *table, const int64_t *ids, int64_t n) {
     assert(n > 0 && "gather: no ids");
-    int64_t *ids_copy = malloc((size_t)n * sizeof(int64_t));
-    assert(ids_copy != NULL && "malloc failed");
+    int64_t *ids_copy = tape_alloc(n * (int64_t)sizeof(int64_t));
     for (int64_t r = 0; r < n; r++) {
         assert(ids[r] >= 0 && ids[r] < table->rows && "gather: id out of range");
         ids_copy[r] = ids[r];
@@ -333,7 +332,7 @@ Tensor *concat_cols(Tensor *const *parts, int64_t n) {
 
 /*
  * fused with its softmax: loss = (1 / sum(mask)) * sum_i -mask[i] * log(p[i, target[i]])
- * ctx holds targets followed by mask, so one free releases both.
+ * ctx holds targets followed by mask in one arena buffer.
  */
 static void masked_cross_entropy_backward(const Node *node) {
     const Tensor *logits = node->in[0];
@@ -346,8 +345,7 @@ static void masked_cross_entropy_backward(const Node *node) {
         sum_mask += mask[i];
     }
     double inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
-    double *p = malloc((size_t)cols * sizeof(double));
-    assert(p != NULL && "malloc failed");
+    double *p = tape_alloc(cols * (int64_t)sizeof(double));
     for (int64_t i = 0; g != NULL && i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         for (int64_t j = 0; j < cols; j++) {
@@ -355,13 +353,11 @@ static void masked_cross_entropy_backward(const Node *node) {
             g[i * cols + j] += node->out->grad[0] * (mask[i] * (p[j] - onehot) * inv);
         }
     }
-    free(p);
 }
 
 Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const double *mask) {
     int64_t rows = logits->rows, cols = logits->cols;
-    int64_t *ctx = malloc((size_t)rows * (sizeof(int64_t) + sizeof(double)));
-    assert(ctx != NULL && "malloc failed");
+    int64_t *ctx = tape_alloc(rows * (int64_t)(sizeof(int64_t) + sizeof(double)));
     double *mask_copy = (double *)(ctx + rows);
     for (int64_t i = 0; i < rows; i++) {
         assert(targets[i] >= 0 && targets[i] < cols && "masked_cross_entropy: target out of range");
@@ -369,15 +365,13 @@ Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const doubl
         mask_copy[i] = mask[i];
     }
     Tensor *out = tape_push(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
-    double *p = malloc((size_t)cols * sizeof(double));
-    assert(p != NULL && "malloc failed");
+    double *p = tape_alloc(cols * (int64_t)sizeof(double));
     double total = 0.0, sum_mask = 0.0;
     for (int64_t i = 0; i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         total -= mask[i] * log(fmax(p[targets[i]], 1e-30));
         sum_mask += mask[i];
     }
-    free(p);
     out->data[0] = sum_mask == 0.0 ? 0.0 : (1.0 / sum_mask) * total;
     return out;
 }
