@@ -86,12 +86,12 @@ static int64_t check_parity(const Params *p, const Params *ref) {
         }
         worst = fmax(worst, max_diff);
         if (max_diff > atol) {
-            fprintf(stderr, "  %s: max |diff| = %g\n", NAMES[i], max_diff);
+            fprintf(stderr, "  %s: max abs diff = %g\n", NAMES[i], max_diff);
             failures++;
         }
     }
     if (failures == 0) {
-        printf("passed parity check (max |diff| %.2g)\n", worst);
+        printf("passed parity check (max abs diff %.2g)\n", worst);
     } else {
         fprintf(stderr, "FAIL: %ld/%d tensors exceed atol %g\n", (long)failures, N_PARAMS, atol);
     }

@@ -23,7 +23,7 @@ usage:
     $ make parity
 
     trained 1000 steps in 0.101s
-    passed parity check (max |diff| 5.7e-15)
+    passed parity check (max abs diff 5.7e-15)
     inference (random sampled name): kaonle
 
 
