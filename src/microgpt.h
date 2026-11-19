@@ -24,10 +24,10 @@ typedef union {
     Tensor *all[N_PARAMS];
 } Params;
 
-Params params_new(void); // zero weights that require grad, in perm
+[[nodiscard]] Params params_new(void); // zero weights that require grad, in perm
 
-Tensor *logits(const Params *p, const i64 *ids, i64 n);                                    // (n, VOCAB_SIZE)
-Tensor *loss(const Params *p, const i64 *ids, const i64 *targets, const f64 *mask, i64 n); // 1x1
+[[nodiscard]] Tensor *logits(const Params *p, const i64 *ids, i64 n);                                    // (n, VOCAB_SIZE)
+[[nodiscard]] Tensor *loss(const Params *p, const i64 *ids, const i64 *targets, const f64 *mask, i64 n); // 1x1
 
 // draws tokens from softmax(logits) until the boundary token, then writes them as letters
 void sample(const Params *p, u64 seed, char name[BLOCK_SIZE]);

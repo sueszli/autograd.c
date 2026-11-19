@@ -12,21 +12,21 @@
 //
 
 // ops/elementwise.c
-Tensor *add(Tensor *a, Tensor *b); // a + b, same shape
-Tensor *mul(Tensor *a, f64 s);     // a * s
-Tensor *relu(Tensor *a);           // max(a, 0)
+[[nodiscard]] Tensor *add(Tensor *a, Tensor *b); // a + b, same shape
+[[nodiscard]] Tensor *mul(Tensor *a, f64 s);     // a * s
+[[nodiscard]] Tensor *relu(Tensor *a);           // max(a, 0)
 
 // ops/matrix.c
-Tensor *matmul(Tensor *a, Tensor *b); // (..., n, k) @ (k, m) -> (..., n, m)
-Tensor *transpose(Tensor *a);         // swaps the last two dims
+[[nodiscard]] Tensor *matmul(Tensor *a, Tensor *b); // (..., n, k) @ (k, m) -> (..., n, m)
+[[nodiscard]] Tensor *transpose(Tensor *a);         // swaps the last two dims
 
 // ops/indexing.c
-Tensor *embedding(const i64 *ids, i64 n, Tensor *table); // rows of a 2-d table picked by ids, (n, d)
-Tensor *masked_fill_upper(Tensor *a, f64 value);         // entries above the diagonal set to value, last two dims square
-Tensor *narrow(Tensor *a, i64 start, i64 len);           // last dim [start, start + len)
-Tensor *cat(Tensor *const *parts, i64 n);                // parts joined along the last dim
+[[nodiscard]] Tensor *embedding(const i64 *ids, i64 n, Tensor *table); // rows of a 2-d table picked by ids, (n, d)
+[[nodiscard]] Tensor *masked_fill_upper(Tensor *a, f64 value);         // entries above the diagonal set to value, last two dims square
+[[nodiscard]] Tensor *narrow(Tensor *a, i64 start, i64 len);           // last dim [start, start + len)
+[[nodiscard]] Tensor *cat(Tensor *const *parts, i64 n);                // parts joined along the last dim
 
 // ops/normalization.c
-Tensor *rms_norm(Tensor *a, f64 eps);                                       // each row divided by its root mean square
-Tensor *softmax(Tensor *a);                                                 // softmax over the last dim
-Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask); // scalar, mean over rows with mask 1
+[[nodiscard]] Tensor *rms_norm(Tensor *a, f64 eps);                                       // each row divided by its root mean square
+[[nodiscard]] Tensor *softmax(Tensor *a);                                                 // softmax over the last dim
+[[nodiscard]] Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask); // scalar, mean over rows with mask 1

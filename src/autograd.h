@@ -48,10 +48,10 @@ struct Node {
 };
 
 // an op's node and its zeroed output, both in graph
-Tensor *node_new(const i64 *shape, i64 ndim, BackwardFn backward, i64 n_in, Tensor *const *in, f64 aux, void *ctx);
+[[nodiscard]] Tensor *node_new(const i64 *shape, i64 ndim, BackwardFn backward, i64 n_in, Tensor *const *in, f64 aux, void *ctx);
 
 // grad buffer, NULL if t does not require grad
 // op outputs get one on first use
-f64 *grad_of(Tensor *t);
+[[nodiscard]] f64 *grad_of(Tensor *t);
 
-void *graph_alloc(i64 bytes); // zeroed
+[[nodiscard]] void *graph_alloc(i64 bytes); // zeroed

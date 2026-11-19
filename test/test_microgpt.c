@@ -80,7 +80,7 @@ void test_training_reduces_loss(void) {
     TEST_ASSERT_LESS_THAN_DOUBLE(0.1, last);
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_zero_weights_give_uniform_loss);
     RUN_TEST(test_logits_shape);

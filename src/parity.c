@@ -43,7 +43,7 @@ static void check_parity(const Params *p, const Params *ref) {
     printf("passed parity check (max abs diff %.2g)\n", worst);
 }
 
-int main(void) {
+i32 main(void) {
     setvbuf(stdout, NULL, _IONBF, 0); // unbuffered, so stdio never mallocs a buffer
     const cJSON *j = json_load("parity.json");
     assert((i64)json_get(j, "bos")->valuedouble == BOS);

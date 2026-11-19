@@ -7,8 +7,9 @@ static void matmul_backward(const Node *node);
 static void transpose_backward(const Node *node);
 
 // the kernels sum every output element in ascending order, so results are reproducible
+// restrict promises out never overlaps a or b, so the compiler can vectorize
 
-static void kernel_matmul(f64 *out, const f64 *a, const f64 *b, i64 n, i64 k, i64 m) {
+static void kernel_matmul(f64 *restrict out, const f64 *restrict a, const f64 *restrict b, i64 n, i64 k, i64 m) {
     // out (n x m) += a (n x k) @ b (k x m)
     // i-k-j order, so the inner loop runs along rows of b and out
     for (i64 i = 0; i < n; i++) {
@@ -20,7 +21,7 @@ static void kernel_matmul(f64 *out, const f64 *a, const f64 *b, i64 n, i64 k, i6
     }
 }
 
-static void kernel_matmul_transposed_a(f64 *out, const f64 *a, const f64 *b, i64 n, i64 k, i64 m) {
+static void kernel_matmul_transposed_a(f64 *restrict out, const f64 *restrict a, const f64 *restrict b, i64 n, i64 k, i64 m) {
     // out (k x m) += a^T @ b, for a (n x k) and b (n x m), without copying a^T
     // the shared row index i is outermost, so each out element still sums over i in order
     for (i64 i = 0; i < n; i++) {
@@ -32,7 +33,7 @@ static void kernel_matmul_transposed_a(f64 *out, const f64 *a, const f64 *b, i64
     }
 }
 
-static void kernel_transpose(f64 *out, const f64 *a, i64 n, i64 m) {
+static void kernel_transpose(f64 *restrict out, const f64 *restrict a, i64 n, i64 m) {
     // out (m x n) = a^T, for a (n x m)
     for (i64 i = 0; i < n; i++) {
         for (i64 j = 0; j < m; j++) {

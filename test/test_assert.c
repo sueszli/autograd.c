@@ -19,7 +19,7 @@ void test_assert_grad_restores_x(void) {
     TEST_ASSERT_EQUAL_DOUBLE(2, x);
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_assert_allclose_returns_max_abs_diff);
     RUN_TEST(test_assert_grad_restores_x);

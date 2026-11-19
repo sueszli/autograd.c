@@ -28,7 +28,7 @@ void test_reset_reuses_the_buffer_and_zeroes_again(void) {
     TEST_ASSERT_EQUAL(0, x[0]);
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_alloc_is_zeroed_aligned_and_consecutive);
     RUN_TEST(test_reset_reuses_the_buffer_and_zeroes_again);

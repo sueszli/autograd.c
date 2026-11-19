@@ -28,7 +28,7 @@ void test_choice_follows_p(void) {
     TEST_ASSERT_EQUAL_INT64(0, random_choice(&s, (f64[]){1, 0, 0}, 3));
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_same_seed_gives_same_numbers);
     RUN_TEST(test_uniform_stays_in_range);

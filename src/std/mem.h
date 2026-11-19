@@ -33,5 +33,5 @@ typedef struct {
     usize used;
 } Arena;
 
-void *arena_alloc(Arena *a, usize bytes);
+[[nodiscard]] void *arena_alloc(Arena *a, usize bytes);
 void arena_reset(Arena *a);

@@ -27,7 +27,7 @@ typedef struct Tensor {
 #define shape(...) (const i64[]){__VA_ARGS__}, (i64)(sizeof((i64[]){__VA_ARGS__}) / sizeof(i64))
 
 // in perm, data NULL gives zeros
-Tensor *tensor_new(const i64 *shape, i64 ndim, const f64 *data, bool requires_grad);
+[[nodiscard]] Tensor *tensor_new(const i64 *shape, i64 ndim, const f64 *data, bool requires_grad);
 
 // copies the shape and multiplies it out into size
 void tensor_set_shape(Tensor *t, const i64 *shape, i64 ndim);
@@ -38,5 +38,5 @@ static inline i64 cols_of(const Tensor *t) { return t->shape[t->ndim - 1]; }
 // every leading dim flattened into rows
 static inline i64 rows_of(const Tensor *t) { return t->size / cols_of(t); }
 
-void *perm_alloc(i64 bytes); // zeroed
-void perm_reset(void);       // frees every param, only tests need this
+[[nodiscard]] void *perm_alloc(i64 bytes); // zeroed
+void perm_reset(void);                     // frees every param, only tests need this

@@ -13,10 +13,10 @@
 //
 
 // uniform in [0, 1)
-f64 random_float(u64 *state);
+[[nodiscard]] f64 random_float(u64 *state);
 
 // fills out with values uniform in [low, high)
 void random_uniform(u64 *state, f64 *out, i64 n, f64 low, f64 high);
 
 // index i with probability p[i]
-i64 random_choice(u64 *state, const f64 *p, i64 n);
+[[nodiscard]] i64 random_choice(u64 *state, const f64 *p, i64 n);

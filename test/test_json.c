@@ -20,7 +20,7 @@ void test_get(void) {
     cJSON_Delete(j);
 }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_matrix_and_its_transpose);
     RUN_TEST(test_get);

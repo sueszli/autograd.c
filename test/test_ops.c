@@ -193,7 +193,7 @@ void test_softmax_of_matmul_grad(void) { gradcheck(f_softmax_of_matmul, (Tensor 
 void test_batched_grad(void) { gradcheck(f_batched, (Tensor *[]){rand_tensor(shape(2, 3, 3), true), rand_tensor(shape(3, 3), true)}, 2); }
 void test_attention_grad(void) { gradcheck(f_attention, (Tensor *[]){rand_tensor(shape(5, 4), true), rand_tensor(shape(4, 4), true), rand_tensor(shape(4, 4), true), rand_tensor(shape(4, 4), true)}, 4); }
 
-int main(void) {
+i32 main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_matmul_forward);
     RUN_TEST(test_batched_matmul_forward);

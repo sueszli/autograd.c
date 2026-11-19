@@ -20,11 +20,11 @@ static void tree_free(void *p) {
 const cJSON *json_load(const char *path) {
     // read into a static buffer with plain syscalls, stdio would malloc its own buffer
     static char raw[512 * 1024];
-    int fd = open(path, O_RDONLY);
+    i32 fd = open(path, O_RDONLY);
     assert(fd >= 0 && "cannot open json file");
     ssize_t size = read(fd, raw, sizeof(raw) - 1);
     assert(size > 0 && size < (ssize_t)sizeof(raw) - 1 && "cannot read json file, or it outgrew its buffer");
-    int close_ok = close(fd);
+    i32 close_ok = close(fd);
     assert(close_ok == 0 && "cannot close json file");
     cJSON_InitHooks(&(cJSON_Hooks){.malloc_fn = tree_alloc, .free_fn = tree_free});
     const cJSON *j = cJSON_Parse(raw);

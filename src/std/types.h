@@ -38,6 +38,7 @@ static_assert(CHAR_BIT == 8, "a byte must have 8 bits");
 static_assert(sizeof(i8) == 1 && sizeof(u8) == 1, "i8 and u8 must be 8 bits");
 static_assert(sizeof(i16) == 2 && sizeof(u16) == 2, "i16 and u16 must be 16 bits");
 static_assert(sizeof(i32) == 4 && sizeof(u32) == 4, "i32 and u32 must be 32 bits");
+static_assert(_Generic((i32)0, int: true, default: false), "i32 must be int, so main and syscalls can use it");
 static_assert(sizeof(i64) == 8 && sizeof(u64) == 8, "i64 and u64 must be 64 bits");
 
 static_assert(sizeof(f16) == 2, "f16 must be 16 bits");
