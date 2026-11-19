@@ -4,11 +4,14 @@
 #include <stddef.h>
 
 //
-// port of zig's FixedBufferAllocator
+// a static arena: one fixed buffer, one index into it, no malloc.
+// based on zig's FixedBufferAllocator:
 // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/heap/FixedBufferAllocator.zig
 //
-// a bump allocator over a buffer the caller owns.
-// alloc moves end_index forward. reset moves it back to 0.
+//     buffer: [ used | pad | new | ........ free ........ ]
+//             0                  ^end_index             ^buffer_len
+//
+// alloc moves end_index forward. reset moves it back to 0, freeing everything at once.
 // free and resize only act on the most recent allocation.
 // alloc returns NULL when full. it does not zero memory.
 //
