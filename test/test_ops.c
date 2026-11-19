@@ -1,6 +1,7 @@
 #include "autograd.h"
 #include "ops.h"
-#include "std/testing.h"
+#include "std/assert.h"
+#include "std/random.h"
 #include "unity.h"
 #include <math.h>
 
@@ -10,15 +11,17 @@ void tearDown(void) {
     perm_reset();
 }
 
+static uint64_t rng = 1;
+
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
     Tensor *t = tensor_new(rows, cols, NULL, requires_grad);
-    random_uniform(t->data, rows * cols, -1.0, 1.0);
+    random_uniform(&rng, t->data, rows * cols, -1.0, 1.0);
     return t;
 }
 
 /*
  * reduces f(in) to a scalar with fixed random vectors, loss = r1 @ f(in) @ r2,
- * then compares the analytic gradient of every input element to a central difference.
+ * then checks the analytic gradient of every input element with assert_grad.
  */
 typedef Tensor *(*Fn)(Tensor **in);
 
@@ -49,8 +52,10 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     Probe probe = {f, in, r1, r2};
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
-            double numeric = central_difference(loss_of, &probe, &in[t]->data[i], 1e-6);
-            assert_close(in[t]->grad[i] - 0.5, numeric, 1e-6, 1e-6, "grad");
+            in[t]->grad[i] -= 0.5;
+        }
+        if (in[t]->requires_grad) {
+            assert_grad(loss_of, &probe, in[t]->data, in[t]->grad, in[t]->rows * in[t]->cols, 1e-6, 1e-6, "grad");
         }
     }
 }

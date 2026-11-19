@@ -1,14 +1,7 @@
-#include "testing.h"
+#include "assert.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-void random_uniform(double *out, int64_t n, double low, double high) {
-    // low + (high - low) * u, with u uniform in [0, 1]
-    for (int64_t i = 0; i < n; i++) {
-        out[i] = low + (high - low) * rand() / RAND_MAX;
-    }
-}
 
 double assert_allclose(const double *actual, const double *desired, int64_t n, double rtol, double atol, const char *err_msg) {
     // !(diff <= tol) instead of diff > tol, so a nan fails
@@ -29,13 +22,16 @@ void assert_close(double actual, double expected, double rtol, double atol, cons
     assert_allclose(&actual, &expected, 1, rtol, atol, msg);
 }
 
-double central_difference(double (*f)(void *ctx), void *ctx, double *x, double h) {
-    // symmetric difference, error shrinks with h^2
-    double x0 = *x;
-    *x = x0 + h;
-    double up = f(ctx);
-    *x = x0 - h;
-    double down = f(ctx);
-    *x = x0;
-    return (up - down) / (2 * h);
+void assert_grad(double (*f)(void *ctx), void *ctx, double *x, const double *grad, int64_t n, double rtol, double atol, const char *msg) {
+    // (f(x + h) - f(x - h)) / 2h, its error shrinks with h^2
+    const double h = 1e-6;
+    for (int64_t i = 0; i < n; i++) {
+        double x0 = x[i];
+        x[i] = x0 + h;
+        double up = f(ctx);
+        x[i] = x0 - h;
+        double down = f(ctx);
+        x[i] = x0;
+        assert_close(grad[i], (up - down) / (2 * h), rtol, atol, msg);
+    }
 }

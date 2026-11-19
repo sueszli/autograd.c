@@ -1,7 +1,8 @@
 #include "autograd.h"
 #include "microgpt.h"
 #include "optim.h"
-#include "std/testing.h"
+#include "std/assert.h"
+#include "std/random.h"
 #include "unity.h"
 #include <math.h>
 
@@ -10,6 +11,8 @@ void tearDown(void) {
     graph_reset();
     perm_reset();
 }
+
+static uint64_t rng = 1;
 
 static const int64_t ids[] = {26, 3, 1, 4, 26, 0};
 static const int64_t targets[] = {3, 1, 4, 26, 0, 0};
@@ -33,19 +36,16 @@ static double loss_of(void *p) {
     return l;
 }
 
-// every weight of the full model against a central difference
+// every weight of the full model, checked with assert_grad
 void test_loss_gradcheck(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        random_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
+        random_uniform(&rng, p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
     }
     backward(loss(&p, ids, targets, mask, 6));
     graph_reset();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
-            double numeric = central_difference(loss_of, &p, &p.all[i]->data[j], 1e-6);
-            assert_close(p.all[i]->grad[j], numeric, 1e-6, 1e-6, "grad");
-        }
+        assert_grad(loss_of, &p, p.all[i]->data, p.all[i]->grad, p.all[i]->rows * p.all[i]->cols, 1e-6, 1e-6, "grad");
     }
 }
 
@@ -66,7 +66,7 @@ void test_adamw_first_step(void) {
 void test_training_reduces_loss(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        random_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
+        random_uniform(&rng, p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
     }
     AdamW opt = adamw_new(p.all, N_PARAMS);
     double last = 0.0;

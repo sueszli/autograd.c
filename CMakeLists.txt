@@ -36,19 +36,18 @@ FetchContent_MakeAvailable(cjson)
 file(GLOB_RECURSE SRCS src/*.c)
 list(FILTER SRCS EXCLUDE REGEX "src/parity\\.c$")
 
-add_library(lib ${SRCS})
-target_include_directories(lib PUBLIC src)
+# third-party, no warnings
+set_source_files_properties(${cjson_SOURCE_DIR}/cJSON.c PROPERTIES COMPILE_OPTIONS "-w")
+
+add_library(lib ${SRCS} ${cjson_SOURCE_DIR}/cJSON.c)
+target_include_directories(lib PUBLIC src ${cjson_SOURCE_DIR})
 target_link_libraries(lib PUBLIC m)
 
 #
 # parity
 #
 
-# third-party, no warnings
-set_source_files_properties(${cjson_SOURCE_DIR}/cJSON.c PROPERTIES COMPILE_OPTIONS "-w")
-
-add_executable(parity src/parity.c ${cjson_SOURCE_DIR}/cJSON.c)
-target_include_directories(parity PRIVATE ${cjson_SOURCE_DIR})
+add_executable(parity src/parity.c)
 target_link_libraries(parity PRIVATE lib)
 
 #
