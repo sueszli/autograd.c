@@ -23,8 +23,7 @@ typedef union {
     Tensor *all[N_PARAMS];
 } Params;
 
-Params params_new(void); // zero weights that require grad
-void params_free(Params *p);
+Params params_new(void); // zero weights that require grad, in perm_mem
 
 Tensor *logits(const Params *p, const int64_t *ids, int64_t n);                                           // (n, VOCAB_SIZE)
 Tensor *loss(const Params *p, const int64_t *ids, const int64_t *targets, const double *mask, int64_t n); // 1x1

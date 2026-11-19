@@ -23,12 +23,6 @@ Params params_new(void) {
     return p;
 }
 
-void params_free(Params *p) {
-    for (int64_t i = 0; i < N_PARAMS; i++) {
-        tensor_free(p->all[i]);
-    }
-}
-
 // x + attn(rmsnorm(x)), heads attend causally and are merged before the output projection
 static Tensor *attn(Tensor *x, const Layer *l) {
     const int64_t hd = N_EMBED / N_HEAD;

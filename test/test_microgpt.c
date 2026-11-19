@@ -5,7 +5,10 @@
 #include <math.h>
 
 void setUp(void) {}
-void tearDown(void) { autograd_reset(); }
+void tearDown(void) {
+    graph_reset();
+    fba_reset(&perm_mem);
+}
 
 static const int64_t ids[] = {26, 3, 1, 4, 26, 0};
 static const int64_t targets[] = {3, 1, 4, 26, 0, 0};
@@ -14,7 +17,6 @@ static const double mask[] = {1, 1, 1, 1, 0, 0};
 void test_zero_weights_give_uniform_loss(void) {
     Params p = params_new();
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, log(VOCAB_SIZE), loss(&p, ids, targets, mask, 6)->data[0]);
-    params_free(&p);
 }
 
 void test_logits_shape(void) {
@@ -22,7 +24,6 @@ void test_logits_shape(void) {
     Tensor *out = logits(&p, ids, 3);
     TEST_ASSERT_EQUAL_INT64(3, out->rows);
     TEST_ASSERT_EQUAL_INT64(VOCAB_SIZE, out->cols);
-    params_free(&p);
 }
 
 // every weight of the full model against a central difference
@@ -34,23 +35,22 @@ void test_loss_gradcheck(void) {
         }
     }
     backward(loss(&p, ids, targets, mask, 6));
-    autograd_reset();
+    graph_reset();
     const double h = 1e-6;
     for (int64_t i = 0; i < N_PARAMS; i++) {
         for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
             double x = p.all[i]->data[j];
             p.all[i]->data[j] = x + h;
             double up = loss(&p, ids, targets, mask, 6)->data[0];
-            autograd_reset();
+            graph_reset();
             p.all[i]->data[j] = x - h;
             double down = loss(&p, ids, targets, mask, 6)->data[0];
-            autograd_reset();
+            graph_reset();
             p.all[i]->data[j] = x;
             double numeric = (up - down) / (2 * h);
             TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, p.all[i]->grad[j]);
         }
     }
-    params_free(&p);
 }
 
 // step 1: m = 0.15 g, v = 0.01 g^2, both bias corrections cancel, so p -= lr * g / |g|
@@ -64,8 +64,6 @@ void test_adamw_first_step(void) {
     TEST_ASSERT_DOUBLE_WITHIN(1e-9, 1 - 0.01, w->data[0]);
     TEST_ASSERT_EQUAL_DOUBLE(-3, w->data[1]);
     TEST_ASSERT_EQUAL_DOUBLE(0, w->grad[0]);
-    adamw_free(&opt);
-    tensor_free(w);
 }
 
 // a few hundred steps on one sequence should drive the loss well below uniform
@@ -82,12 +80,10 @@ void test_training_reduces_loss(void) {
         Tensor *l = loss(&p, ids, targets, mask, 6);
         last = l->data[0];
         backward(l);
-        autograd_reset();
+        graph_reset();
         adamw_step(&opt, step, 200);
     }
     TEST_ASSERT_LESS_THAN_DOUBLE(0.1, last);
-    adamw_free(&opt);
-    params_free(&p);
 }
 
 int main(void) {

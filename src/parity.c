@@ -54,22 +54,22 @@ static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*d
     }
 }
 
+// cJSON and the raw file get their own static buffers. nothing is freed before exit, so free does nothing
+static alignas(16) unsigned char json_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
+static FixedBufferAllocator json_mem = {.buf = json_buf, .cap = sizeof(json_buf)};
+static void *json_alloc(size_t bytes) { return fba_alloc(&json_mem, (int64_t)bytes); }
+static void json_free(void *p) { (void)p; }
+
 static cJSON *read_json(const char *path) {
+    static char raw[512 * 1024];
     FILE *f = fopen(path, "rb");
     assert(f != NULL && "cannot open parity.json, run from the repo root");
-    int seek_ok = fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    assert(seek_ok == 0 && size > 0 && "cannot size parity.json");
-    rewind(f);
-    char *raw = malloc((size_t)size + 1);
-    assert(raw != NULL && "malloc failed");
-    size_t read = fread(raw, 1, (size_t)size, f);
-    assert(read == (size_t)size && "cannot read parity.json");
-    raw[size] = '\0';
+    size_t size = fread(raw, 1, sizeof(raw) - 1, f);
+    assert(feof(f) && size > 0 && "cannot read parity.json, or it outgrew its buffer");
     int close_ok = fclose(f);
     assert(close_ok == 0 && "cannot close parity.json");
+    cJSON_InitHooks(&(cJSON_Hooks){.malloc_fn = json_alloc, .free_fn = json_free});
     cJSON *j = cJSON_Parse(raw);
-    free(raw);
     assert(j != NULL && "cannot parse parity.json");
     return j;
 }
@@ -112,7 +112,7 @@ static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
             probs[c] = exp(out->data[(n - 1) * VOCAB_SIZE + c] - max);
             sum += probs[c];
         }
-        autograd_reset();
+        graph_reset();
         seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
         double u = (double)(seed >> 11) / 9007199254740992.0 * sum;    // uniform in [0, sum)
         int64_t next = VOCAB_SIZE - 1;
@@ -144,7 +144,7 @@ int main(void) {
     clock_t start = clock();
     for (int64_t step = 0; step < NUM_STEPS; step++) {
         backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
-        autograd_reset();
+        graph_reset();
         adamw_step(&opt, step + 1, NUM_STEPS);
     }
     printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);
@@ -155,9 +155,5 @@ int main(void) {
     sample_name(&p, (int64_t)field(j, "bos")->valuedouble, name);
     printf("inference (random sampled name): %s\n", name);
 
-    adamw_free(&opt);
-    params_free(&p);
-    params_free(&ref);
-    cJSON_Delete(j);
     return failures == 0 ? 0 : 1;
 }

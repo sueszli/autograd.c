@@ -4,7 +4,10 @@
 #include <math.h>
 
 void setUp(void) {}
-void tearDown(void) { autograd_reset(); }
+void tearDown(void) {
+    graph_reset();
+    fba_reset(&perm_mem);
+}
 
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
     Tensor *t = tensor_new(rows, cols, NULL, requires_grad);
@@ -22,7 +25,7 @@ typedef Tensor *(*Fn)(Tensor **in);
 
 static double loss_of(Fn f, Tensor **in, Tensor *r1, Tensor *r2) {
     double loss = matmul(matmul(r1, f(in)), r2)->data[0];
-    autograd_reset();
+    graph_reset();
     return loss;
 }
 
@@ -31,7 +34,7 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     Tensor *r1 = rand_tensor(1, out->rows, false);
     Tensor *r2 = rand_tensor(out->cols, 1, false);
     backward(matmul(matmul(r1, out), r2));
-    autograd_reset();
+    graph_reset();
     const double h = 1e-6;
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
@@ -45,11 +48,6 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
             TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, in[t]->grad[i]);
         }
     }
-    for (int64_t t = 0; t < n_in; t++) {
-        tensor_free(in[t]);
-    }
-    tensor_free(r1);
-    tensor_free(r2);
 }
 
 //
@@ -62,8 +60,6 @@ void test_matmul_forward(void) {
     Tensor *out = matmul(a, b);
     TEST_ASSERT_EQUAL_DOUBLE(17, out->data[0]);
     TEST_ASSERT_EQUAL_DOUBLE(39, out->data[1]);
-    tensor_free(a);
-    tensor_free(b);
 }
 
 void test_transpose_forward(void) {
@@ -71,14 +67,12 @@ void test_transpose_forward(void) {
     Tensor *out = transpose(a);
     TEST_ASSERT_EQUAL_INT64(3, out->rows);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){1, 4, 2, 5, 3, 6}), out->data, 6);
-    tensor_free(a);
 }
 
 void test_gather_forward(void) {
     Tensor *table = tensor_new(3, 2, (double[]){1, 2, 3, 4, 5, 6}, false);
     Tensor *out = gather(table, (int64_t[]){2, 0, 2}, 3);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){5, 6, 1, 2, 5, 6}), out->data, 6);
-    tensor_free(table);
 }
 
 void test_rmsnorm_forward(void) {
@@ -87,28 +81,24 @@ void test_rmsnorm_forward(void) {
     // rms of (3, 4) is sqrt(12.5)
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 3 / sqrt(12.5), out->data[0]);
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 4 / sqrt(12.5), out->data[1]);
-    tensor_free(a);
 }
 
 void test_causal_softmax_forward(void) {
     Tensor *a = tensor_new(2, 2, (double[]){1, 5, 2, 2}, false);
     Tensor *out = softmax_rows(causal_mask(a, -1e9));
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){1, 0, 0.5, 0.5}), out->data, 4);
-    tensor_free(a);
 }
 
 void test_relu_scale_forward(void) {
     Tensor *a = tensor_new(1, 3, (double[]){-1, 0, 2}, false);
     Tensor *out = scale(relu(a), 0.5);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){0, 0, 1}), out->data, 3);
-    tensor_free(a);
 }
 
 void test_slice_concat_forward(void) {
     Tensor *a = tensor_new(2, 3, (double[]){1, 2, 3, 4, 5, 6}, false);
     Tensor *out = concat_cols((Tensor *[]){slice_cols(a, 2, 1), slice_cols(a, 0, 2)}, 2);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){3, 1, 2, 6, 4, 5}), out->data, 6);
-    tensor_free(a);
 }
 
 void test_cross_entropy_forward(void) {
@@ -118,7 +108,6 @@ void test_cross_entropy_forward(void) {
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, log(4.0), out->data[0]);
     Tensor *none = masked_cross_entropy(logits, (int64_t[]){1, 2}, (double[]){0, 0});
     TEST_ASSERT_EQUAL_DOUBLE(0.0, none->data[0]);
-    tensor_free(logits);
 }
 
 //

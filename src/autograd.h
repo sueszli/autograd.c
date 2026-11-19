@@ -1,19 +1,20 @@
 #pragma once
 
-#include "stack.h"
+#include "alloc.h"
 #include "tensor.h"
 
 #define MAX_INPUTS 4
+#define MAX_NODES 128 // one microGPT loss uses 54
 
 /*
- * every op pushes a node onto the nodes stack. push order is a valid
- * topological order, so backward walks the stack from the top down:
+ * every op output points to the node that made it, every node points to its inputs:
  *
- *   nodes:     [h = x @ w1] [a = relu(h)] [loss = a @ w2]
- *   backward:                                  <- start here, seed 1
+ *   x  ─┐
+ *   w1 ─┴─ [matmul] ─ h ─ [relu] ─ a ─┐
+ *   w2 ───────────────────────────────┴─ [matmul] ─ loss
  *
- * op outputs, their grads and scratch buffers live on the mem stack.
- * params come from tensor_new and are owned by the caller.
+ * backward sorts the nodes behind the loss topologically with a dfs,
+ * then runs each node's backward from the loss down to the params.
  */
 typedef struct Node Node;
 typedef void (*BackwardFn)(const Node *node);
@@ -23,20 +24,18 @@ struct Node {
     int64_t n_in;
     BackwardFn backward;
     double aux; // scalar op argument, eg. a scale factor
-    void *ctx;  // op scratch on the mem stack
+    void *ctx;  // op scratch in graph_mem
+    bool visited;
 };
 
-extern Stack nodes; // 128 nodes, one microGPT loss uses 54
-extern Stack mem;   // 256 KiB, one microGPT loss plus backward uses about 184 KB
+// creates an op's node and its output tensor in graph_mem
+Tensor *node_new(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);
 
-// pushes an op output and the node that backprops into its inputs
-Tensor *node_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);
-
-// empties both stacks, call after each backward
-void autograd_reset(void);
+// frees the graph, call after each backward
+void graph_reset(void);
 
 // grad buffer, NULL if t does not require grad. op outputs get one on first use
 double *grad_of(Tensor *t);
 
-// seeds loss->grad with 1 and walks the nodes from the top down. param grads accumulate across calls
+// seeds loss->grad with 1 and backprops through the graph. param grads accumulate across calls
 void backward(Tensor *loss);

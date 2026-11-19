@@ -1,16 +1,14 @@
 #include "optim.h"
-#include <assert.h>
+#include "alloc.h"
 #include <math.h>
 #include <string.h>
 
 AdamW adamw_new(Tensor **params, int64_t n) {
-    AdamW opt = {.params = params, .n = n, .m = calloc((size_t)n, sizeof(double *)), .v = calloc((size_t)n, sizeof(double *))};
-    assert(opt.m != NULL && opt.v != NULL && "calloc failed");
+    AdamW opt = {.params = params, .n = n, .m = fba_alloc(&perm_mem, n * (int64_t)sizeof(double *)), .v = fba_alloc(&perm_mem, n * (int64_t)sizeof(double *))};
     for (int64_t i = 0; i < n; i++) {
-        size_t size = (size_t)(params[i]->rows * params[i]->cols);
-        opt.m[i] = calloc(size, sizeof(double));
-        opt.v[i] = calloc(size, sizeof(double));
-        assert(opt.m[i] != NULL && opt.v[i] != NULL && "calloc failed");
+        int64_t bytes = params[i]->rows * params[i]->cols * (int64_t)sizeof(double);
+        opt.m[i] = fba_alloc(&perm_mem, bytes);
+        opt.v[i] = fba_alloc(&perm_mem, bytes);
     }
     return opt;
 }
@@ -35,13 +33,4 @@ void adamw_step(AdamW *opt, int64_t step, int64_t num_steps) {
             memset(p->grad, 0, (size_t)(p->rows * p->cols) * sizeof(double));
         }
     }
-}
-
-void adamw_free(AdamW *opt) {
-    for (int64_t i = 0; i < opt->n; i++) {
-        free(opt->m[i]);
-        free(opt->v[i]);
-    }
-    free(opt->m);
-    free(opt->v);
 }
