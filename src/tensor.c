@@ -11,7 +11,7 @@ void perm_reset(void) { arena_reset(&perm); }
 
 void tensor_set_shape(Tensor *t, const i64 *shape, i64 ndim) {
     // copies the shape and multiplies it out into size
-    assert(ndim >= 0 && ndim <= max_ndim && "ndim out of range");
+    assert(ndim >= 0 && ndim <= MAX_NDIM && "ndim out of range");
     t->ndim = ndim;
     t->size = 1;
     for (i64 d = 0; d < ndim; d++) {

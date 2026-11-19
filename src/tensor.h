@@ -2,7 +2,7 @@
 
 #include "std/types.h"
 
-enum { max_ndim = 4 };
+static constexpr i64 MAX_NDIM = 4;
 
 //
 // n-d row-major f64 tensors, named after pytorch.
@@ -17,7 +17,7 @@ typedef struct Tensor {
     f64 *data;
     f64 *grad;         // params get one in tensor_new, op outputs when backward reaches them
     struct Node *node; // the op that made this tensor, NULL for params and inputs
-    i64 shape[max_ndim];
+    i64 shape[MAX_NDIM];
     i64 ndim; // 0 for a scalar
     i64 size; // number of elements
     bool requires_grad;

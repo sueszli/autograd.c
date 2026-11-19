@@ -2,7 +2,7 @@
 
 #include "tensor.h"
 
-enum { max_inputs = 4 };
+static constexpr i64 MAX_INPUTS = 4;
 
 //
 // reverse-mode autograd over a graph of op nodes.
@@ -39,7 +39,7 @@ typedef void (*BackwardFn)(const Node *node);
 
 struct Node {
     Tensor *out;
-    Tensor *in[max_inputs];
+    Tensor *in[MAX_INPUTS];
     i64 n_in;
     BackwardFn backward;
     f64 aux;   // scalar op argument, eg. a scale factor

@@ -70,7 +70,7 @@ Tensor *narrow(Tensor *a, i64 start, i64 len) {
     // splits attention heads apart
     i64 cols = cols_of(a);
     assert(start >= 0 && len > 0 && start + len <= cols && "narrow: out of range");
-    i64 shape[max_ndim];
+    i64 shape[MAX_NDIM];
     memcpy(shape, a->shape, sizeof(shape));
     shape[a->ndim - 1] = len;
     Tensor *out = node_new(shape, a->ndim, narrow_backward, 1, (Tensor *[]){a}, (f64)start, NULL);
@@ -100,7 +100,7 @@ Tensor *cat(Tensor *const *parts, i64 n) {
         assert(parts[p]->ndim == parts[0]->ndim && rows_of(parts[p]) == rows_of(parts[0]) && "cat: leading dims mismatch");
         cols += cols_of(parts[p]);
     }
-    i64 shape[max_ndim];
+    i64 shape[MAX_NDIM];
     memcpy(shape, parts[0]->shape, sizeof(shape));
     shape[parts[0]->ndim - 1] = cols;
     Tensor *out = node_new(shape, parts[0]->ndim, cat_backward, n, parts, 0, NULL);

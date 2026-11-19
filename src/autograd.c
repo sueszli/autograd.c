@@ -2,7 +2,7 @@
 #include "std/mem.h"
 #include <assert.h>
 
-enum { max_nodes = 128 }; // one microGPT loss uses 54
+static constexpr i64 MAX_NODES = 128; // one microGPT loss uses 54
 
 static alignas(16) u8 graph_buf[256 * 1024]; // one microGPT loss plus backward uses about 225 KB
 static Arena graph = {.buf = graph_buf, .cap = sizeof(graph_buf)};
@@ -11,7 +11,7 @@ void *graph_alloc(i64 bytes) { return arena_alloc(&graph, (usize)bytes); }
 
 Tensor *node_new(const i64 *shape, i64 ndim, BackwardFn backward, i64 n_in, Tensor *const *in, f64 aux, void *ctx) {
     // an op's node and its zeroed output, both in graph
-    assert(n_in <= max_inputs && "too many inputs");
+    assert(n_in <= MAX_INPUTS && "too many inputs");
     Node *node = graph_alloc(sizeof(Node));
     *node = (Node){.n_in = n_in, .backward = backward, .aux = aux, .ctx = ctx};
     bool requires_grad = false;
@@ -39,7 +39,7 @@ f64 *grad_of(Tensor *t) {
     return t->grad;
 }
 
-static Node *order[max_nodes];
+static Node *order[MAX_NODES];
 static i64 n_order;
 
 static void topo_sort(const Tensor *t) {
@@ -52,7 +52,7 @@ static void topo_sort(const Tensor *t) {
     for (i64 i = 0; i < node->n_in; i++) {
         topo_sort(node->in[i]);
     }
-    assert(n_order < max_nodes && "too many nodes, raise max_nodes");
+    assert(n_order < MAX_NODES && "too many nodes, raise max_nodes");
     order[n_order++] = node;
 }
 

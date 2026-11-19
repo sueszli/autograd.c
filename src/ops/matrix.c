@@ -44,7 +44,7 @@ static void kernel_transpose(f64 *out, const f64 *a, i64 n, i64 m) {
 Tensor *matmul(Tensor *a, Tensor *b) {
     // leading dims of a fold into rows, so a batch is one big matmul
     assert(a->ndim >= 1 && b->ndim == 2 && cols_of(a) == b->shape[0] && "matmul: shape mismatch");
-    i64 shape[max_ndim];
+    i64 shape[MAX_NDIM];
     memcpy(shape, a->shape, sizeof(shape));
     shape[a->ndim - 1] = b->shape[1];
     Tensor *out = node_new(shape, a->ndim, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
@@ -73,7 +73,7 @@ Tensor *transpose(Tensor *a) {
     // copies, there are no strided views
     assert(a->ndim >= 2 && "transpose: needs at least 2 dims");
     i64 r = a->shape[a->ndim - 2], c = cols_of(a);
-    i64 shape[max_ndim];
+    i64 shape[MAX_NDIM];
     memcpy(shape, a->shape, sizeof(shape));
     shape[a->ndim - 2] = c;
     shape[a->ndim - 1] = r;
