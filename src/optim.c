@@ -15,7 +15,7 @@ AdamW adamw_new(Tensor **params, int64_t n) {
     return opt;
 }
 
-// betas and eps match the python reference, and the expression order matches autograd.lean
+// betas and eps match the python reference. sqrt instead of pow(x, 0.5): pow was half the training time
 void adamw_step(AdamW *opt, int64_t step, int64_t num_steps) {
     const double beta1 = 0.85, beta2 = 0.99, eps = 1e-8;
     double lr = fmax(0.01 * (1.0 - (double)(step - 1) / (double)num_steps), 0.0);
@@ -29,7 +29,7 @@ void adamw_step(AdamW *opt, int64_t step, int64_t num_steps) {
             double g = p->grad != NULL ? p->grad[j] : 0.0;
             m[j] = beta1 * m[j] + (1.0 - beta1) * g;
             v[j] = beta2 * v[j] + (1.0 - beta2) * g * g;
-            p->data[j] = p->data[j] - lr_scaled * m[j] / (pow(v[j] * inv_bias2, 0.5) + eps);
+            p->data[j] = p->data[j] - lr_scaled * m[j] / (sqrt(v[j] * inv_bias2) + eps);
         }
         if (p->grad != NULL) {
             memset(p->grad, 0, (size_t)(p->rows * p->cols) * sizeof(double));
