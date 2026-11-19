@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <string.h>
 
-void *arena_alloc(Arena *a, usize bytes) {
+static void *arena_alloc(Arena *a, usize bytes) {
     // pad the next address up to max_align_t, then bump used past the block
     const usize align = alignof(max_align_t);
     usize start = a->used + (align - (usize)(a->buf + a->used) % align) % align;
@@ -11,7 +11,9 @@ void *arena_alloc(Arena *a, usize bytes) {
     return memset(a->buf + start, 0, bytes);
 }
 
-void arena_reset(Arena *a) {
+static void arena_reset(Arena *a) {
     // frees every block at once
     a->used = 0;
 }
+
+const ArenaNamespace arena = {.alloc = arena_alloc, .reset = arena_reset};

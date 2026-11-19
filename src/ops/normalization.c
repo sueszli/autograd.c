@@ -16,7 +16,7 @@ static f64 rms_scale(const f64 *row, i64 cols, f64 eps) {
     return pow(sum_sq * (1.0 / (f64)cols) + eps, -0.5);
 }
 
-Tensor *rms_norm(Tensor *a, f64 eps) {
+Tensor *op_rms_norm(Tensor *a, f64 eps) {
     // no learned weight
     i64 cols = cols_of(a);
     Tensor *out = node_new(a->shape, a->ndim, rms_norm_backward, 1, (Tensor *[]){a}, eps, NULL);
@@ -64,7 +64,7 @@ static void softmax_row(const f64 *x, f64 *y, i64 cols) {
     }
 }
 
-Tensor *softmax(Tensor *a) {
+Tensor *op_softmax(Tensor *a) {
     i64 cols = cols_of(a);
     Tensor *out = node_new(a->shape, a->ndim, softmax_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (i64 i = 0; i < rows_of(a); i++) {
@@ -90,11 +90,11 @@ static void softmax_backward(const Node *node) {
     }
 }
 
-Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask) {
+Tensor *op_cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask) {
     // fused with its softmax, loss = (1 / sum(mask)) * sum_i -mask[i] * log(p[i, target[i]])
     // ctx holds targets followed by mask in one buffer
     i64 rows = rows_of(logits), cols = cols_of(logits);
-    i64 *ctx = graph_alloc(rows * (i64)(sizeof(i64) + sizeof(f64)));
+    i64 *ctx = graph_alloc(logits->mem, rows * (i64)(sizeof(i64) + sizeof(f64)));
     f64 *mask_copy = (f64 *)(ctx + rows);
     for (i64 i = 0; i < rows; i++) {
         assert(targets[i] >= 0 && targets[i] < cols && "cross_entropy: target out of range");
@@ -102,7 +102,7 @@ Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask) {
         mask_copy[i] = mask[i];
     }
     Tensor *out = node_new(NULL, 0, cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
-    f64 *p = graph_alloc(cols * (i64)sizeof(f64));
+    f64 *p = graph_alloc(logits->mem, cols * (i64)sizeof(f64));
     f64 total = 0.0, sum_mask = 0.0;
     for (i64 i = 0; i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
@@ -125,7 +125,7 @@ static void cross_entropy_backward(const Node *node) {
         sum_mask += mask[i];
     }
     f64 inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
-    f64 *p = graph_alloc(cols * (i64)sizeof(f64));
+    f64 *p = graph_alloc(node->out->mem, cols * (i64)sizeof(f64));
     for (i64 i = 0; g != NULL && i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         for (i64 j = 0; j < cols; j++) {

@@ -6,7 +6,7 @@ static void add_backward(const Node *node);
 static void mul_backward(const Node *node);
 static void relu_backward(const Node *node);
 
-Tensor *add(Tensor *a, Tensor *b) {
+Tensor *op_add(Tensor *a, Tensor *b) {
     assert(a->ndim == b->ndim && a->size == b->size && "add: shape mismatch");
     Tensor *out = node_new(a->shape, a->ndim, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
     for (i64 i = 0; i < a->size; i++) {
@@ -26,7 +26,7 @@ static void add_backward(const Node *node) {
     }
 }
 
-Tensor *mul(Tensor *a, f64 s) {
+Tensor *op_mul(Tensor *a, f64 s) {
     Tensor *out = node_new(a->shape, a->ndim, mul_backward, 1, (Tensor *[]){a}, s, NULL);
     for (i64 i = 0; i < a->size; i++) {
         out->data[i] = a->data[i] * s;
@@ -43,7 +43,7 @@ static void mul_backward(const Node *node) {
     }
 }
 
-Tensor *relu(Tensor *a) {
+Tensor *op_relu(Tensor *a) {
     Tensor *out = node_new(a->shape, a->ndim, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (i64 i = 0; i < a->size; i++) {
         out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;

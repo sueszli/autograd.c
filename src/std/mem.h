@@ -10,16 +10,16 @@
 //     buf: [ used | new | ........ free ........ ]
 //          0            ^used                   ^cap
 //
-// alloc hands out the next zeroed block and moves used forward.
-// reset moves used back to 0, freeing every block at once.
+// arena.alloc hands out the next zeroed block and moves used forward.
+// arena.reset moves used back to 0, freeing every block at once.
 // running out of space is a bug, so alloc asserts instead of returning NULL.
 //
 // example:
 // --------
 //     static u8 buf[1024];
 //     Arena a = {.buf = buf, .cap = sizeof(buf)};
-//     f64 *x = arena_alloc(&a, 8 * sizeof(f64)); // used = 64
-//     arena_reset(&a);                                 // used = 0
+//     f64 *x = arena.alloc(&a, 8 * sizeof(f64)); // used = 64
+//     arena.reset(&a);                           // used = 0
 //
 // differences from zig:
 // ---------------------
@@ -33,5 +33,9 @@ typedef struct {
     usize used;
 } Arena;
 
-[[nodiscard]] void *arena_alloc(Arena *a, usize bytes);
-void arena_reset(Arena *a);
+typedef struct {
+    void *(*alloc)(Arena *a, usize bytes); // zeroed, aligned to max_align_t, asserts when full
+    void (*reset)(Arena *a);               // frees every block at once
+} ArenaNamespace;
+
+extern const ArenaNamespace arena;

@@ -7,16 +7,16 @@
 // state is the seed, and each call advances it.
 // https://en.wikipedia.org/wiki/Linear_congruential_generator
 //
-// random_float:   https://numpy.org/doc/stable/reference/random/generated/numpy.random.random.html
-// random_uniform: https://numpy.org/doc/stable/reference/random/generated/numpy.random.uniform.html
-// random_choice:  https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html
+// rng.random:  https://numpy.org/doc/stable/reference/random/generated/numpy.random.random.html
+// rng.uniform: https://numpy.org/doc/stable/reference/random/generated/numpy.random.uniform.html
+// rng.choice:  https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html
 //
 
-// uniform in [0, 1)
-[[nodiscard]] f64 random_float(u64 *state);
+typedef struct {
+    f64 (*random)(u64 *state);                                       // uniform in [0, 1)
+    void (*uniform)(u64 *state, f64 *out, i64 n, f64 low, f64 high); // fills out with values uniform in [low, high)
+    i64 (*choice)(u64 *state, const f64 *p, i64 n);                  // index i with probability p[i]
+} RngNamespace;
 
-// fills out with values uniform in [low, high)
-void random_uniform(u64 *state, f64 *out, i64 n, f64 low, f64 high);
-
-// index i with probability p[i]
-[[nodiscard]] i64 random_choice(u64 *state, const f64 *p, i64 n);
+// not called random, which posix already declares in stdlib.h
+extern const RngNamespace rng;

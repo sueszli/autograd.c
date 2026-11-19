@@ -42,7 +42,7 @@ static void kernel_transpose(f64 *restrict out, const f64 *restrict a, i64 n, i6
     }
 }
 
-Tensor *matmul(Tensor *a, Tensor *b) {
+Tensor *op_matmul(Tensor *a, Tensor *b) {
     // leading dims of a fold into rows, so a batch is one big matmul
     assert(a->ndim >= 1 && b->ndim == 2 && cols_of(a) == b->shape[0] && "matmul: shape mismatch");
     i64 shape[MAX_NDIM];
@@ -61,7 +61,7 @@ static void matmul_backward(const Node *node) {
     f64 *ga = grad_of(node->in[0]);
     f64 *gb = grad_of(node->in[1]);
     if (ga != NULL) {
-        f64 *bt = graph_alloc(k * m * (i64)sizeof(f64));
+        f64 *bt = graph_alloc(out->mem, k * m * (i64)sizeof(f64));
         kernel_transpose(bt, b->data, k, m);
         kernel_matmul(ga, out->grad, bt, n, m, k);
     }
@@ -70,7 +70,7 @@ static void matmul_backward(const Node *node) {
     }
 }
 
-Tensor *transpose(Tensor *a) {
+Tensor *op_transpose(Tensor *a) {
     // copies, there are no strided views
     assert(a->ndim >= 2 && "transpose: needs at least 2 dims");
     i64 r = a->shape[a->ndim - 2], c = cols_of(a);

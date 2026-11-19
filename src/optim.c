@@ -3,19 +3,20 @@
 #include <math.h>
 #include <string.h>
 
-AdamW adamw_new(Tensor **params, i64 n) {
-    AdamW opt = {.params = params, .n = n, .m = perm_alloc(n * (i64)sizeof(f64 *)), .v = perm_alloc(n * (i64)sizeof(f64 *))};
+static AdamW adamw_new(Tensor **params, i64 n) {
+    Arena *perm = &params[0]->mem->perm;
+    AdamW opt = {.params = params, .n = n, .m = arena.alloc(perm, (usize)n * sizeof(f64 *)), .v = arena.alloc(perm, (usize)n * sizeof(f64 *))};
     for (i64 i = 0; i < n; i++) {
-        i64 bytes = params[i]->size * (i64)sizeof(f64);
-        opt.m[i] = perm_alloc(bytes);
-        opt.v[i] = perm_alloc(bytes);
+        usize bytes = (usize)params[i]->size * sizeof(f64);
+        opt.m[i] = arena.alloc(perm, bytes);
+        opt.v[i] = arena.alloc(perm, bytes);
     }
     return opt;
 }
 
 // betas and eps match the python reference
 // sqrt instead of pow(x, 0.5), pow was half the training time
-void adamw_step(AdamW *opt, i64 step, i64 num_steps) {
+static void adamw_step(AdamW *opt, i64 step, i64 num_steps) {
     const f64 beta1 = 0.85, beta2 = 0.99, eps = 1e-8;
     f64 lr = 0.01 * (1.0 - (f64)(step - 1) / (f64)num_steps);
     f64 inv_bias1 = 1.0 / (1.0 - pow(beta1, (f64)step));
@@ -33,3 +34,5 @@ void adamw_step(AdamW *opt, i64 step, i64 num_steps) {
         memset(p->grad, 0, (usize)p->size * sizeof(f64));
     }
 }
+
+const AdamwNamespace adamw = {.new = adamw_new, .step = adamw_step};

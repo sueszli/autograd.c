@@ -8,11 +8,11 @@ static void masked_fill_upper_backward(const Node *node);
 static void narrow_backward(const Node *node);
 static void cat_backward(const Node *node);
 
-Tensor *embedding(const i64 *ids, i64 n, Tensor *table) {
+Tensor *op_embedding(const i64 *ids, i64 n, Tensor *table) {
     // copies the ids, the caller's array may change before backward
     assert(n > 0 && table->ndim == 2 && "embedding: needs ids and a 2-d table");
     i64 d = table->shape[1];
-    i64 *ids_copy = graph_alloc(n * (i64)sizeof(i64));
+    i64 *ids_copy = graph_alloc(table->mem, n * (i64)sizeof(i64));
     for (i64 r = 0; r < n; r++) {
         assert(ids[r] >= 0 && ids[r] < table->shape[0] && "embedding: id out of range");
         ids_copy[r] = ids[r];
@@ -37,7 +37,7 @@ static void embedding_backward(const Node *node) {
     }
 }
 
-Tensor *masked_fill_upper(Tensor *a, f64 value) {
+Tensor *op_masked_fill_upper(Tensor *a, f64 value) {
     // row i keeps columns j <= i, the causal mask of attention
     assert(a->ndim >= 2 && a->shape[a->ndim - 2] == cols_of(a) && "masked_fill_upper: last two dims must be square");
     i64 n = cols_of(a);
@@ -66,7 +66,7 @@ static void masked_fill_upper_backward(const Node *node) {
     }
 }
 
-Tensor *narrow(Tensor *a, i64 start, i64 len) {
+Tensor *op_narrow(Tensor *a, i64 start, i64 len) {
     // splits attention heads apart
     i64 cols = cols_of(a);
     assert(start >= 0 && len > 0 && start + len <= cols && "narrow: out of range");
@@ -92,7 +92,7 @@ static void narrow_backward(const Node *node) {
     }
 }
 
-Tensor *cat(Tensor *const *parts, i64 n) {
+Tensor *op_cat(Tensor *const *parts, i64 n) {
     // merges attention heads back together
     assert(n > 0 && "cat: no parts");
     i64 cols = 0;

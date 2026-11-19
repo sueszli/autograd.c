@@ -9,5 +9,9 @@ typedef struct {
     f64 **m, **v;
 } AdamW;
 
-[[nodiscard]] AdamW adamw_new(Tensor **params, i64 n); // m and v in perm
-void adamw_step(AdamW *opt, i64 step, i64 num_steps);  // step counts from 1, zeroes grads after the update
+typedef struct {
+    AdamW (*new)(Tensor **params, i64 n);              // m and v in the perm arena of params[0]
+    void (*step)(AdamW *opt, i64 step, i64 num_steps); // step counts from 1, zeroes grads after the update
+} AdamwNamespace;
+
+extern const AdamwNamespace adamw;
