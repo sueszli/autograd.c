@@ -5,19 +5,17 @@
 
 
 a reverse-mode autograd engine in c,
-just big enough to train karpathy's microGPT.
+built to train karpathy's microGPT as fast as possible.
 
-ops are recorded on a statically allocated stack that backward walks in
-reverse. all memory is allocated statically, TigerBeetle style, and nothing
-is allocated after startup. attention is composed from the 12 float64 ops.
+all memory is allocated statically, TigerBeetle style. nothing is allocated
+after startup. ops are recorded on a static stack that each training step
+resets in O(1). it uses float64 throughout and builds attention from the 12
+primitive ops. matmul loops are ordered for contiguous inner-loop access,
+and AdamW uses sqrt instead of pow.
 
 
-correctness by:
-
-- final weights that match karpathy's microGPT to within 1e-11 after 1000
-  training steps
-- gradient checks against finite differences for every op and the full model
-- tests under ASan and UBSan
+1000 training steps take 0.101s on one Intel Xeon Gold 6426Y core, about
+101 microseconds per step for forward, backward and AdamW.
 
 
 usage:
