@@ -8,7 +8,7 @@
 // 2-D row-major float64, the only shape microGPT needs
 typedef struct Tensor {
     double *data;
-    double *grad; // NULL until backward reaches it
+    double *grad; // params get one in tensor_new, op outputs when backward reaches them
     int64_t rows;
     int64_t cols;
     bool requires_grad;

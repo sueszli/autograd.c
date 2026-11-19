@@ -7,8 +7,8 @@ Tensor *tensor_new(int64_t rows, int64_t cols, const double *data, bool requires
     Tensor *t = malloc(sizeof(Tensor));
     assert(t != NULL && "malloc failed");
     size_t n = (size_t)(rows * cols);
-    *t = (Tensor){.data = calloc(n, sizeof(double)), .grad = NULL, .rows = rows, .cols = cols, .requires_grad = requires_grad};
-    assert(t->data != NULL && "calloc failed");
+    *t = (Tensor){.data = calloc(n, sizeof(double)), .grad = requires_grad ? calloc(n, sizeof(double)) : NULL, .rows = rows, .cols = cols, .requires_grad = requires_grad};
+    assert(t->data != NULL && (t->grad != NULL || !requires_grad) && "calloc failed");
     if (data != NULL) {
         memcpy(t->data, data, n * sizeof(double));
     }
