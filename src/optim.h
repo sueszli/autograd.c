@@ -5,9 +5,9 @@
 // adam without weight decay and with linear learning rate decay to 0, as in microGPT
 typedef struct {
     Tensor **params;
-    int64_t n;
-    double **m, **v;
+    i64 n;
+    f64 **m, **v;
 } AdamW;
 
-AdamW adamw_new(Tensor **params, int64_t n);                  // m and v in perm
-void adamw_step(AdamW *opt, int64_t step, int64_t num_steps); // step counts from 1, zeroes grads after the update
+AdamW adamw_new(Tensor **params, i64 n);              // m and v in perm
+void adamw_step(AdamW *opt, i64 step, i64 num_steps); // step counts from 1, zeroes grads after the update

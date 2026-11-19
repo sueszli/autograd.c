@@ -1,8 +1,8 @@
 #pragma once
 
 #include "cJSON.h"
+#include "types.h"
 #include <stdbool.h>
-#include <stdint.h>
 
 //
 // json reading on top of cJSON, without malloc.
@@ -23,4 +23,4 @@ const cJSON *json_get(const cJSON *j, const char *key);
 
 // reads a 2-D json array into out, a rows x cols row-major matrix
 // if transposed, the json holds the cols x rows transpose instead
-void json_matrix(const cJSON *j, double *out, int64_t rows, int64_t cols, bool transposed);
+void json_matrix(const cJSON *j, f64 *out, i64 rows, i64 cols, bool transposed);

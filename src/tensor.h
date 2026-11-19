@@ -1,8 +1,7 @@
 #pragma once
 
+#include "std/types.h"
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #define MAX_NDIM 4
 
@@ -30,20 +29,20 @@
 //
 
 typedef struct Tensor {
-    double *data;
-    double *grad;      // params get one in tensor_new, op outputs when backward reaches them
+    f64 *data;
+    f64 *grad;         // params get one in tensor_new, op outputs when backward reaches them
     struct Node *node; // the op that made this tensor, NULL for params and inputs
-    int64_t shape[MAX_NDIM];
-    int64_t ndim; // 0 for a scalar
-    int64_t size; // number of elements
+    i64 shape[MAX_NDIM];
+    i64 ndim; // 0 for a scalar
+    i64 size; // number of elements
     bool requires_grad;
 } Tensor;
 
 // a shape literal and its length, eg. tensor_new(SHAPE(2, 3), NULL, true)
-#define SHAPE(...) (const int64_t[]){__VA_ARGS__}, (int64_t)(sizeof((int64_t[]){__VA_ARGS__}) / sizeof(int64_t))
+#define SHAPE(...) (const i64[]){__VA_ARGS__}, (i64)(sizeof((i64[]){__VA_ARGS__}) / sizeof(i64))
 
 // in perm, data NULL gives zeros
-Tensor *tensor_new(const int64_t *shape, int64_t ndim, const double *data, bool requires_grad);
+Tensor *tensor_new(const i64 *shape, i64 ndim, const f64 *data, bool requires_grad);
 
 // ===----------------------------------------------------------------------=== //
 // autograd and memory
@@ -53,9 +52,9 @@ Tensor *tensor_new(const int64_t *shape, int64_t ndim, const double *data, bool 
 // param grads accumulate across calls
 void backward(Tensor *loss);
 
-void graph_reset(void);          // frees the graph, call after each backward
-void *perm_alloc(int64_t bytes); // zeroed
-void perm_reset(void);           // frees every param, only tests need this
+void graph_reset(void);      // frees the graph, call after each backward
+void *perm_alloc(i64 bytes); // zeroed
+void perm_reset(void);       // frees every param, only tests need this
 
 // ===----------------------------------------------------------------------=== //
 // ops
@@ -63,7 +62,7 @@ void perm_reset(void);           // frees every param, only tests need this
 
 // elementwise
 Tensor *add(Tensor *a, Tensor *b); // a + b, same shape
-Tensor *mul(Tensor *a, double s);  // a * s
+Tensor *mul(Tensor *a, f64 s);     // a * s
 Tensor *relu(Tensor *a);           // max(a, 0)
 
 // matrix
@@ -71,12 +70,12 @@ Tensor *matmul(Tensor *a, Tensor *b); // (..., n, k) @ (k, m) -> (..., n, m)
 Tensor *transpose(Tensor *a);         // swaps the last two dims
 
 // indexing
-Tensor *embedding(const int64_t *ids, int64_t n, Tensor *table); // rows of a 2-d table picked by ids, (n, d)
-Tensor *masked_fill_upper(Tensor *a, double value);              // entries above the diagonal set to value, last two dims square
-Tensor *narrow(Tensor *a, int64_t start, int64_t len);           // last dim [start, start + len)
-Tensor *cat(Tensor *const *parts, int64_t n);                    // parts joined along the last dim
+Tensor *embedding(const i64 *ids, i64 n, Tensor *table); // rows of a 2-d table picked by ids, (n, d)
+Tensor *masked_fill_upper(Tensor *a, f64 value);         // entries above the diagonal set to value, last two dims square
+Tensor *narrow(Tensor *a, i64 start, i64 len);           // last dim [start, start + len)
+Tensor *cat(Tensor *const *parts, i64 n);                // parts joined along the last dim
 
 // normalization and loss
-Tensor *rms_norm(Tensor *a, double eps);                                           // each row divided by its root mean square
-Tensor *softmax(Tensor *a);                                                        // softmax over the last dim
-Tensor *cross_entropy(Tensor *logits, const int64_t *targets, const double *mask); // scalar, mean over rows with mask 1
+Tensor *rms_norm(Tensor *a, f64 eps);                                       // each row divided by its root mean square
+Tensor *softmax(Tensor *a);                                                 // softmax over the last dim
+Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask); // scalar, mean over rows with mask 1

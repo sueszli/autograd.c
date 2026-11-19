@@ -14,30 +14,30 @@ static const char *NAMES[N_PARAMS] = {"wte", "wpe", "lm_head", "layer0.attn_wq",
 
 // the reference stores linear weights as (out, in), wte and wpe are already (rows, cols)
 static void load_params(const cJSON *j, Params *p) {
-    for (int64_t i = 0; i < N_PARAMS; i++) {
+    for (i64 i = 0; i < N_PARAMS; i++) {
         json_matrix(json_get(j, NAMES[i]), p->all[i]->data, p->all[i]->shape[0], p->all[i]->shape[1], i >= 2);
     }
 }
 
 // decoded once before training, so the training loop does no json work
-static int64_t inputs[NUM_STEPS][BLOCK_SIZE], targets[NUM_STEPS][BLOCK_SIZE];
-static double masks[NUM_STEPS][BLOCK_SIZE];
+static i64 inputs[NUM_STEPS][BLOCK_SIZE], targets[NUM_STEPS][BLOCK_SIZE];
+static f64 masks[NUM_STEPS][BLOCK_SIZE];
 
 // json numbers are doubles, token ids are ints
-static void load_ids(const cJSON *j, int64_t ids[NUM_STEPS][BLOCK_SIZE]) {
-    static double raw[NUM_STEPS][BLOCK_SIZE];
+static void load_ids(const cJSON *j, i64 ids[NUM_STEPS][BLOCK_SIZE]) {
+    static f64 raw[NUM_STEPS][BLOCK_SIZE];
     json_matrix(j, &raw[0][0], NUM_STEPS, BLOCK_SIZE, false);
-    for (int64_t s = 0; s < NUM_STEPS; s++) {
-        for (int64_t i = 0; i < BLOCK_SIZE; i++) {
-            ids[s][i] = (int64_t)raw[s][i];
+    for (i64 s = 0; s < NUM_STEPS; s++) {
+        for (i64 i = 0; i < BLOCK_SIZE; i++) {
+            ids[s][i] = (i64)raw[s][i];
         }
     }
 }
 
 // every final weight within 1e-11 of the reference
 static void check_parity(const Params *p, const Params *ref) {
-    double worst = 0.0;
-    for (int64_t i = 0; i < N_PARAMS; i++) {
+    f64 worst = 0.0;
+    for (i64 i = 0; i < N_PARAMS; i++) {
         worst = fmax(worst, assert_allclose(p->all[i]->data, ref->all[i]->data, p->all[i]->size, 0.0, 1e-11, NAMES[i]));
     }
     printf("passed parity check (max abs diff %.2g)\n", worst);
@@ -56,17 +56,17 @@ int main(void) {
 
     AdamW opt = adamw_new(p.all, N_PARAMS);
     clock_t start = clock();
-    for (int64_t step = 0; step < NUM_STEPS; step++) {
+    for (i64 step = 0; step < NUM_STEPS; step++) {
         backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
         graph_reset();
         adamw_step(&opt, step + 1, NUM_STEPS);
     }
-    printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);
+    printf("trained %d steps in %.3fs\n", NUM_STEPS, (f64)(clock() - start) / CLOCKS_PER_SEC);
 
     check_parity(&p, &ref);
 
     char name[BLOCK_SIZE] = {0};
-    sample(&p, (uint64_t)time(NULL), name);
+    sample(&p, (u64)time(NULL), name);
     printf("inference (random sampled name): %s\n", name);
 
     return 0;

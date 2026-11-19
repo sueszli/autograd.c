@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stddef.h>
+#include "types.h"
 
 //
 // a static arena over a buffer the caller owns.
@@ -16,9 +16,9 @@
 //
 // example:
 // --------
-//     static unsigned char buf[1024];
+//     static u8 buf[1024];
 //     Arena a = {.buf = buf, .cap = sizeof(buf)};
-//     double *x = arena_alloc(&a, 8 * sizeof(double)); // used = 64
+//     f64 *x = arena_alloc(&a, 8 * sizeof(f64)); // used = 64
 //     arena_reset(&a);                                 // used = 0
 //
 // differences from zig:
@@ -28,10 +28,10 @@
 //     - there is no free or resize, only reset
 //
 typedef struct {
-    unsigned char *buf;
-    size_t cap;
-    size_t used;
+    u8 *buf;
+    usize cap;
+    usize used;
 } Arena;
 
-void *arena_alloc(Arena *a, size_t bytes);
+void *arena_alloc(Arena *a, usize bytes);
 void arena_reset(Arena *a);

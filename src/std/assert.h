@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include "types.h"
 
 //
 // numeric asserts, named after numpy, torch and jax.
@@ -17,11 +17,11 @@
 //
 
 // passes if |actual - desired| <= atol + rtol * |desired| for every element
-double assert_allclose(const double *actual, const double *desired, int64_t n, double rtol, double atol, const char *err_msg);
+f64 assert_allclose(const f64 *actual, const f64 *desired, i64 n, f64 rtol, f64 atol, const char *err_msg);
 
 // assert_allclose for one scalar
-void assert_close(double actual, double expected, double rtol, double atol, const char *msg);
+void assert_close(f64 actual, f64 expected, f64 rtol, f64 atol, const char *msg);
 
 // checks grad[i] against a central difference of f in x[i], for every i
 // f reads x through ctx
-void assert_grad(double (*f)(void *ctx), void *ctx, double *x, const double *grad, int64_t n, double rtol, double atol, const char *msg);
+void assert_grad(f64 (*f)(void *ctx), void *ctx, f64 *x, const f64 *grad, i64 n, f64 rtol, f64 atol, const char *msg);

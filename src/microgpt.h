@@ -26,8 +26,8 @@ typedef union {
 
 Params params_new(void); // zero weights that require grad, in perm
 
-Tensor *logits(const Params *p, const int64_t *ids, int64_t n);                                           // (n, VOCAB_SIZE)
-Tensor *loss(const Params *p, const int64_t *ids, const int64_t *targets, const double *mask, int64_t n); // 1x1
+Tensor *logits(const Params *p, const i64 *ids, i64 n);                                    // (n, VOCAB_SIZE)
+Tensor *loss(const Params *p, const i64 *ids, const i64 *targets, const f64 *mask, i64 n); // 1x1
 
 // draws tokens from softmax(logits) until the boundary token, then writes them as letters
-void sample(const Params *p, uint64_t seed, char name[BLOCK_SIZE]);
+void sample(const Params *p, u64 seed, char name[BLOCK_SIZE]);

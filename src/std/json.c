@@ -4,10 +4,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-static alignas(16) unsigned char tree_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
+static alignas(16) u8 tree_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
 static Arena tree = {.buf = tree_buf, .cap = sizeof(tree_buf)};
 
-static void *tree_alloc(size_t bytes) {
+static void *tree_alloc(usize bytes) {
     // cJSON's malloc hook
     return arena_alloc(&tree, bytes);
 }
@@ -39,15 +39,15 @@ const cJSON *json_get(const cJSON *j, const char *key) {
     return f;
 }
 
-void json_matrix(const cJSON *j, double *out, int64_t rows, int64_t cols, bool transposed) {
+void json_matrix(const cJSON *j, f64 *out, i64 rows, i64 cols, bool transposed) {
     // walk the linked lists in order, writing each value to its spot in out
-    int64_t outer = transposed ? cols : rows, inner = transposed ? rows : cols;
+    i64 outer = transposed ? cols : rows, inner = transposed ? rows : cols;
     assert(cJSON_GetArraySize(j) == outer && "json matrix has the wrong number of rows");
     const cJSON *row = j->child;
-    for (int64_t r = 0; r < outer; r++, row = row->next) {
+    for (i64 r = 0; r < outer; r++, row = row->next) {
         assert(cJSON_GetArraySize(row) == inner && "json matrix has the wrong number of columns");
         const cJSON *v = row->child;
-        for (int64_t c = 0; c < inner; c++, v = v->next) {
+        for (i64 c = 0; c < inner; c++, v = v->next) {
             out[transposed ? c * cols + r : r * cols + c] = v->valuedouble;
         }
     }

@@ -1,22 +1,22 @@
 #include "random.h"
 
-double random_float(uint64_t *state) {
-    // knuth's mmix constants, then the top 53 bits as a double
+f64 random_float(u64 *state) {
+    // knuth's mmix constants, then the top 53 bits as a f64
     *state = *state * 6364136223846793005ULL + 1442695040888963407ULL;
-    return (double)(*state >> 11) / 9007199254740992.0;
+    return (f64)(*state >> 11) / 9007199254740992.0;
 }
 
-void random_uniform(uint64_t *state, double *out, int64_t n, double low, double high) {
+void random_uniform(u64 *state, f64 *out, i64 n, f64 low, f64 high) {
     // low + (high - low) * u
-    for (int64_t i = 0; i < n; i++) {
+    for (i64 i = 0; i < n; i++) {
         out[i] = low + (high - low) * random_float(state);
     }
 }
 
-int64_t random_choice(uint64_t *state, const double *p, int64_t n) {
+i64 random_choice(u64 *state, const f64 *p, i64 n) {
     // walk the cumulative sum until it passes u, the last index catches rounding
-    double u = random_float(state);
-    for (int64_t i = 0; i < n - 1; i++) {
+    f64 u = random_float(state);
+    for (i64 i = 0; i < n - 1; i++) {
         u -= p[i];
         if (u < 0.0) {
             return i;

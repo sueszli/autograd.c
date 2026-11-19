@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include "types.h"
 
 //
 // random numbers from a 64-bit lcg, as in autograd.lean.
@@ -13,10 +13,10 @@
 //
 
 // uniform in [0, 1)
-double random_float(uint64_t *state);
+f64 random_float(u64 *state);
 
 // fills out with values uniform in [low, high)
-void random_uniform(uint64_t *state, double *out, int64_t n, double low, double high);
+void random_uniform(u64 *state, f64 *out, i64 n, f64 low, f64 high);
 
 // index i with probability p[i]
-int64_t random_choice(uint64_t *state, const double *p, int64_t n);
+i64 random_choice(u64 *state, const f64 *p, i64 n);
