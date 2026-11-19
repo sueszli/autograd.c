@@ -7,9 +7,9 @@ static alignas(16) unsigned char graph_buf[256 * 1024]; // one microGPT loss plu
 FixedBufferAllocator perm_mem = {.buffer = perm_buf, .buffer_len = sizeof(perm_buf)};
 FixedBufferAllocator graph_mem = {.buffer = graph_buf, .buffer_len = sizeof(graph_buf)};
 
-// zig's allocator.alloc followed by @memset(.., 0)
+// zig's allocator.alloc followed by @memset(.., 0), with running out of memory as a crash instead of error.OutOfMemory
 static void *alloc_zeroed(FixedBufferAllocator *a, int64_t bytes) {
-    assert(bytes >= 0);
+    assert(bytes > 0);
     void *p = fixed_buffer_allocator_alloc(a, (size_t)bytes, alignof(double));
     assert(p != NULL && "out of memory, raise the buffer size in autograd.c");
     return memset(p, 0, (size_t)bytes);
