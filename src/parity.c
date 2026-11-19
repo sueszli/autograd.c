@@ -1,10 +1,12 @@
 #include "autograd.h"
 #include "cJSON.h"
 #include "microgpt.h"
+#include "ops.h"
 #include "optim.h"
 #include "std/numeric.h"
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -102,18 +104,9 @@ static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
     uint64_t seed = (uint64_t)time(NULL);
     int64_t tokens[BLOCK_SIZE] = {bos};
     for (int64_t n = 1; n < BLOCK_SIZE; n++) {
-        const Tensor *out = logits(p, tokens, n);
-        double probs[VOCAB_SIZE], max = out->data[(n - 1) * VOCAB_SIZE], sum = 0.0;
-        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
-            max = fmax(max, out->data[(n - 1) * VOCAB_SIZE + c]);
-        }
-        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
-            probs[c] = exp(out->data[(n - 1) * VOCAB_SIZE + c] - max);
-            sum += probs[c];
-        }
-        graph_reset();
+        const double *probs = &softmax_rows(logits(p, tokens, n))->data[(n - 1) * VOCAB_SIZE];
         seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
-        double u = (double)(seed >> 11) / 9007199254740992.0 * sum;    // uniform in [0, sum)
+        double u = (double)(seed >> 11) / 9007199254740992.0;          // uniform in [0, 1)
         int64_t next = VOCAB_SIZE - 1;
         for (int64_t c = 0; c < VOCAB_SIZE; c++) {
             u -= probs[c];
@@ -122,6 +115,7 @@ static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
                 break;
             }
         }
+        graph_reset();
         if (next == bos) {
             return;
         }

@@ -23,7 +23,9 @@ void test_alloc_pads_to_alignment(void) {
     TEST_ASSERT_EQUAL_size_t(24, fba.end_index);
     // padding counts against capacity: 24 rounds up to 32, and 32 + 40 > 64
     TEST_ASSERT_NULL(fixed_buffer_allocator_alloc(&fba, 40, 16));
-    TEST_ASSERT_EQUAL_size_t(24, fba.end_index);
+    TEST_ASSERT_EQUAL_size_t(24, fba.end_index); // padding alone runs past the end
+    fixed_buffer_allocator_alloc(&fba, 35, 1);
+    TEST_ASSERT_NULL(fixed_buffer_allocator_alloc(&fba, 1, 16));
 }
 
 void test_free_only_moves_end_index_for_the_last_allocation(void) {
@@ -48,7 +50,9 @@ void test_resize(void) {
     TEST_ASSERT_TRUE(fixed_buffer_allocator_resize(&fba, b, 8, 48));
     TEST_ASSERT_EQUAL_size_t(56, fba.end_index);
     TEST_ASSERT_FALSE(fixed_buffer_allocator_resize(&fba, b, 48, 57));
-    TEST_ASSERT_TRUE(fixed_buffer_allocator_resize(&fba, b, 48, 2));
+    TEST_ASSERT_TRUE(fixed_buffer_allocator_resize(&fba, b, 48, 56));
+    TEST_ASSERT_EQUAL_size_t(64, fba.end_index);
+    TEST_ASSERT_TRUE(fixed_buffer_allocator_resize(&fba, b, 56, 2));
     TEST_ASSERT_EQUAL_size_t(10, fba.end_index);
 }
 

@@ -37,7 +37,7 @@ static void matmul_backward(const Node *node) {
     double *ga = grad_of(node->in[0]);
     double *gb = grad_of(node->in[1]);
     // ga += dout @ b^T, with b^T copied so the inner loop is contiguous and each output still sums over j in order
-    double *bt = graph_alloc(k * m * (int64_t)sizeof(double));
+    double *bt = ga != NULL ? graph_alloc(k * m * (int64_t)sizeof(double)) : NULL;
     for (int64_t p = 0; ga != NULL && p < k; p++) {
         for (int64_t j = 0; j < m; j++) {
             bt[j * k + p] = b->data[p * m + j];

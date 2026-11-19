@@ -11,7 +11,11 @@ void fill_uniform(double *x, int64_t n, double lo, double hi) {
 double max_abs_diff(const double *a, const double *b, int64_t n) {
     double max = 0.0;
     for (int64_t i = 0; i < n; i++) {
-        max = fmax(max, fabs(a[i] - b[i]));
+        double d = fabs(a[i] - b[i]);
+        if (isnan(d)) {
+            return INFINITY;
+        }
+        max = fmax(max, d);
     }
     return max;
 }

@@ -38,13 +38,19 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     Tensor *out = f(in);
     Tensor *r1 = rand_tensor(1, out->rows, false);
     Tensor *r2 = rand_tensor(out->cols, 1, false);
+    // grads start at 0.5, so a backward that overwrites instead of accumulating fails
+    for (int64_t t = 0; t < n_in; t++) {
+        for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
+            in[t]->grad[i] = 0.5;
+        }
+    }
     backward(matmul(matmul(r1, out), r2));
     graph_reset();
     Probe probe = {f, in, r1, r2};
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
             double numeric = central_difference(loss_of, &probe, &in[t]->data[i], 1e-6);
-            TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, in[t]->grad[i]);
+            TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, in[t]->grad[i] - 0.5);
         }
     }
 }
@@ -88,6 +94,12 @@ void test_causal_softmax_forward(void) {
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){1, 0, 0.5, 0.5}), out->data, 4);
 }
 
+// large logits overflow exp unless each row subtracts its max first
+void test_softmax_large_logits(void) {
+    Tensor *a = tensor_new(2, 2, (double[]){1000, 0, 0, 1000}, false);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(((double[]){1, 0, 0, 1}), softmax_rows(a)->data, 4);
+}
+
 void test_relu_scale_forward(void) {
     Tensor *a = tensor_new(1, 3, (double[]){-1, 0, 2}, false);
     Tensor *out = scale(relu(a), 0.5);
@@ -128,7 +140,7 @@ static Tensor *f_softmax_rows(Tensor **in) { return softmax_rows(in[0]); }
 static Tensor *f_split_merge(Tensor **in) { return concat_cols((Tensor *[]){slice_cols(in[0], 3, 1), slice_cols(in[0], 0, 3), in[1]}, 3); }
 static Tensor *f_cross_entropy(Tensor **in) { return masked_cross_entropy(in[0], (int64_t[]){2, 0, 4}, (double[]){1, 0, 1}); }
 
-// regressions from the 2026-11-18 review: non-leaf tensors feeding matmul and softmax lost their gradients
+// non-leaf inputs to matmul and softmax once lost their gradients
 static Tensor *f_mlp(Tensor **in) { return matmul(relu(matmul(in[0], in[1])), in[2]); }
 static Tensor *f_softmax_of_matmul(Tensor **in) { return softmax_rows(matmul(in[0], in[1])); }
 
@@ -164,6 +176,7 @@ int main(void) {
     RUN_TEST(test_gather_forward);
     RUN_TEST(test_rmsnorm_forward);
     RUN_TEST(test_causal_softmax_forward);
+    RUN_TEST(test_softmax_large_logits);
     RUN_TEST(test_relu_scale_forward);
     RUN_TEST(test_slice_concat_forward);
     RUN_TEST(test_cross_entropy_forward);

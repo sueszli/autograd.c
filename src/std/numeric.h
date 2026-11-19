@@ -5,7 +5,7 @@
 // uniform in [lo, hi] from rand(), so srand seeds it
 void fill_uniform(double *x, int64_t n, double lo, double hi);
 
-// largest |a[i] - b[i]|
+// largest |a[i] - b[i]|, infinity if any is nan so a nan never passes a tolerance check
 double max_abs_diff(const double *a, const double *b, int64_t n);
 
 // (f(x + h) - f(x - h)) / 2h, nudging *x in place and restoring it

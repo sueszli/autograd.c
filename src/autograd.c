@@ -5,7 +5,7 @@
 static alignas(16) unsigned char perm_buf[512 * 1024];  // parity uses about 200 KB: two param sets, their grads and AdamW state
 static alignas(16) unsigned char graph_buf[256 * 1024]; // one microGPT loss plus backward uses about 225 KB
 FixedBufferAllocator perm_mem = {.buffer = perm_buf, .buffer_len = sizeof(perm_buf)};
-FixedBufferAllocator graph_mem = {.buffer = graph_buf, .buffer_len = sizeof(graph_buf)};
+static FixedBufferAllocator graph_mem = {.buffer = graph_buf, .buffer_len = sizeof(graph_buf)};
 
 // zig's allocator.alloc followed by @memset(.., 0), with running out of memory as a crash instead of error.OutOfMemory
 static void *alloc_zeroed(FixedBufferAllocator *a, int64_t bytes) {
@@ -32,8 +32,6 @@ Tensor *node_new(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, 
     *node->out = (Tensor){.data = graph_alloc(rows * cols * (int64_t)sizeof(double)), .node = node, .rows = rows, .cols = cols, .requires_grad = requires_grad};
     return node->out;
 }
-
-void graph_reset(void) { fixed_buffer_allocator_reset(&graph_mem); }
 
 double *grad_of(Tensor *t) {
     if (!t->requires_grad) {
@@ -65,11 +63,15 @@ static void topo_sort(const Tensor *t) {
 void backward(Tensor *loss) {
     assert(loss->rows == 1 && loss->cols == 1 && "loss must be 1x1");
     assert(loss->requires_grad && "loss does not depend on any param");
-    assert(loss->grad == NULL && "backward called twice on one graph, call graph_reset in between");
-    n_order = 0;
+    assert(n_order == 0 && "backward called twice on one graph, call graph_reset in between");
     topo_sort(loss);
     grad_of(loss)[0] = 1.0;
     for (int64_t i = n_order - 1; i >= 0; i--) {
         order[i]->backward(order[i]);
     }
+}
+
+void graph_reset(void) {
+    fixed_buffer_allocator_reset(&graph_mem);
+    n_order = 0;
 }

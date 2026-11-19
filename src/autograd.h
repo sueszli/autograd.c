@@ -29,8 +29,7 @@ struct Node {
 };
 
 // all memory there is, static buffers sized at compile time. nothing calls malloc
-extern FixedBufferAllocator perm_mem;  // params, their grads and optimizer state, never reset
-extern FixedBufferAllocator graph_mem; // nodes, op outputs, their grads and scratch, reset after each backward
+extern FixedBufferAllocator perm_mem; // params, their grads and optimizer state, never reset
 
 // zeroed and 8-byte aligned. running out of memory is a bug, so it asserts instead of returning NULL
 void *perm_alloc(int64_t bytes);
