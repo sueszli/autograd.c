@@ -31,7 +31,7 @@ Attention is built from these in `src/microgpt.c`. It is not a fused op.
 
 ## Errors
 
-`CHECK(cond, msg)` aborts with file and line. Unlike `assert`, it stays on under `-DNDEBUG`.
+Plain `assert(cond && "msg")`. CMake passes `-UNDEBUG`, so asserts stay on in Release builds too.
 
 ## Parity
 

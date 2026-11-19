@@ -5,11 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// always on, unlike assert, which vanishes under -DNDEBUG
-// clang-format off
-#define CHECK(cond, msg) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, msg); abort(); } } while (0)
-// clang-format on
-
 // 2-D row-major float64, the only shape microGPT needs
 typedef struct Tensor {
     double *data;
