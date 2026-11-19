@@ -34,15 +34,22 @@ static void load_params(const cJSON *j, Params *p) {
     }
 }
 
-static void load_row(const cJSON *rows, int64_t step, int64_t *ints, double *doubles) {
-    const cJSON *row = cJSON_GetArrayItem(rows, (int)step);
-    assert(cJSON_GetArraySize(row) == BLOCK_SIZE && "sequence length must be BLOCK_SIZE");
-    for (int64_t i = 0; i < BLOCK_SIZE; i++) {
-        double v = cJSON_GetArrayItem(row, (int)i)->valuedouble;
-        if (ints != NULL) {
-            ints[i] = (int64_t)v;
-        } else {
-            doubles[i] = v;
+// decoded once before training, so the training loop does no json work
+static int64_t inputs[NUM_STEPS][BLOCK_SIZE], targets[NUM_STEPS][BLOCK_SIZE];
+static double masks[NUM_STEPS][BLOCK_SIZE];
+
+static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*doubles)[BLOCK_SIZE]) {
+    assert(cJSON_GetArraySize(rows) >= NUM_STEPS && "not enough sequences");
+    const cJSON *row = rows->child;
+    for (int64_t step = 0; step < NUM_STEPS; step++, row = row->next) {
+        assert(cJSON_GetArraySize(row) == BLOCK_SIZE && "sequence length must be BLOCK_SIZE");
+        const cJSON *v = row->child;
+        for (int64_t i = 0; i < BLOCK_SIZE; i++, v = v->next) {
+            if (ints != NULL) {
+                ints[step][i] = (int64_t)v->valuedouble;
+            } else {
+                doubles[step][i] = v->valuedouble;
+            }
         }
     }
 }
@@ -62,7 +69,9 @@ int main(void) {
     cJSON *j = cJSON_Parse(raw);
     free(raw);
     assert(j != NULL && "cannot parse parity.json");
-    assert(cJSON_GetArraySize(field(j, "inputs")) >= NUM_STEPS && "not enough sequences");
+    load_rows(field(j, "inputs"), inputs, NULL);
+    load_rows(field(j, "targets"), targets, NULL);
+    load_rows(field(j, "masks"), NULL, masks);
 
     Params p = params_new(), ref = params_new();
     load_params(field(j, "init_weights"), &p);
@@ -72,12 +81,7 @@ int main(void) {
     AdamW opt = adamw_new(p.all, N_PARAMS);
     clock_t start = clock();
     for (int64_t step = 0; step < NUM_STEPS; step++) {
-        int64_t ids[BLOCK_SIZE], targets[BLOCK_SIZE];
-        double mask[BLOCK_SIZE];
-        load_row(field(j, "inputs"), step, ids, NULL);
-        load_row(field(j, "targets"), step, targets, NULL);
-        load_row(field(j, "masks"), step, NULL, mask);
-        backward(loss(&p, ids, targets, mask, BLOCK_SIZE));
+        backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
         tape_reset();
         adamw_step(&opt, step + 1, NUM_STEPS);
     }
