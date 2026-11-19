@@ -54,3 +54,27 @@ Tensor *logits(const Params *p, const int64_t *ids, int64_t n) {
 }
 
 Tensor *loss(const Params *p, const int64_t *ids, const int64_t *targets, const double *mask, int64_t n) { return masked_cross_entropy(logits(p, ids, n), targets, mask); }
+
+// the boundary token both starts and ends a name
+void sample(const Params *p, uint64_t seed, char name[BLOCK_SIZE]) {
+    int64_t tokens[BLOCK_SIZE] = {BOS};
+    for (int64_t n = 1; n < BLOCK_SIZE; n++) {
+        const double *probs = &softmax_rows(logits(p, tokens, n))->data[(n - 1) * VOCAB_SIZE];
+        seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
+        double u = (double)(seed >> 11) / 9007199254740992.0;          // uniform in [0, 1)
+        int64_t next = VOCAB_SIZE - 1;
+        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
+            u -= probs[c];
+            if (u < 0.0) {
+                next = c;
+                break;
+            }
+        }
+        graph_reset();
+        if (next == BOS) {
+            return;
+        }
+        tokens[n] = next;
+        name[n - 1] = (char)('a' + next);
+    }
+}

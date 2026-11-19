@@ -4,6 +4,10 @@
 #include <math.h>
 #include <string.h>
 
+// ===----------------------------------------------------------------------=== //
+// elementwise
+// ===----------------------------------------------------------------------=== //
+
 //
 // add
 //
@@ -26,6 +30,50 @@ Tensor *add(Tensor *a, Tensor *b) {
     }
     return out;
 }
+
+//
+// scale
+//
+
+static void scale_backward(const Node *node) {
+    const Tensor *out = node->out;
+    double *g = grad_of(node->in[0]);
+    for (int64_t i = 0; g != NULL && i < out->rows * out->cols; i++) {
+        g[i] += node->aux * out->grad[i];
+    }
+}
+
+Tensor *scale(Tensor *a, double s) {
+    Tensor *out = node_new(a->rows, a->cols, scale_backward, 1, (Tensor *[]){a}, s, NULL);
+    for (int64_t i = 0; i < a->rows * a->cols; i++) {
+        out->data[i] = a->data[i] * s;
+    }
+    return out;
+}
+
+//
+// relu
+//
+
+static void relu_backward(const Node *node) {
+    const Tensor *a = node->in[0], *out = node->out;
+    double *g = grad_of(node->in[0]);
+    for (int64_t i = 0; g != NULL && i < out->rows * out->cols; i++) {
+        g[i] += a->data[i] > 0.0 ? out->grad[i] : 0.0;
+    }
+}
+
+Tensor *relu(Tensor *a) {
+    Tensor *out = node_new(a->rows, a->cols, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
+    for (int64_t i = 0; i < a->rows * a->cols; i++) {
+        out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;
+    }
+    return out;
+}
+
+// ===----------------------------------------------------------------------=== //
+// matrix
+// ===----------------------------------------------------------------------=== //
 
 //
 // matmul
@@ -98,6 +146,10 @@ Tensor *transpose(Tensor *a) {
     return out;
 }
 
+// ===----------------------------------------------------------------------=== //
+// indexing
+// ===----------------------------------------------------------------------=== //
+
 //
 // gather
 //
@@ -129,88 +181,6 @@ Tensor *gather(Tensor *table, const int64_t *ids, int64_t n) {
 }
 
 //
-// scale
-//
-
-static void scale_backward(const Node *node) {
-    const Tensor *out = node->out;
-    double *g = grad_of(node->in[0]);
-    for (int64_t i = 0; g != NULL && i < out->rows * out->cols; i++) {
-        g[i] += node->aux * out->grad[i];
-    }
-}
-
-Tensor *scale(Tensor *a, double s) {
-    Tensor *out = node_new(a->rows, a->cols, scale_backward, 1, (Tensor *[]){a}, s, NULL);
-    for (int64_t i = 0; i < a->rows * a->cols; i++) {
-        out->data[i] = a->data[i] * s;
-    }
-    return out;
-}
-
-//
-// relu
-//
-
-static void relu_backward(const Node *node) {
-    const Tensor *a = node->in[0], *out = node->out;
-    double *g = grad_of(node->in[0]);
-    for (int64_t i = 0; g != NULL && i < out->rows * out->cols; i++) {
-        g[i] += a->data[i] > 0.0 ? out->grad[i] : 0.0;
-    }
-}
-
-Tensor *relu(Tensor *a) {
-    Tensor *out = node_new(a->rows, a->cols, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
-    for (int64_t i = 0; i < a->rows * a->cols; i++) {
-        out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;
-    }
-    return out;
-}
-
-//
-// rmsnorm
-//
-
-// recomputed in backward instead of cached, same inputs give the same bits
-static double rms_scale(const double *row, int64_t cols, double eps) {
-    double sum_sq = 0.0;
-    for (int64_t j = 0; j < cols; j++) {
-        sum_sq += row[j] * row[j];
-    }
-    return pow(sum_sq * (1.0 / (double)cols) + eps, -0.5);
-}
-
-// dx = s * (dy - x * dot(dy, x) * s^2 / d)
-static void rmsnorm_backward(const Node *node) {
-    const Tensor *a = node->in[0], *out = node->out;
-    double *g = grad_of(node->in[0]);
-    for (int64_t i = 0; g != NULL && i < a->rows; i++) {
-        const double *x = &a->data[i * a->cols], *dy = &out->grad[i * a->cols];
-        double s = rms_scale(x, a->cols, node->aux);
-        double dot = 0.0;
-        for (int64_t j = 0; j < a->cols; j++) {
-            dot += dy[j] * x[j];
-        }
-        for (int64_t j = 0; j < a->cols; j++) {
-            g[i * a->cols + j] += s * (dy[j] - x[j] * dot * s * s / (double)a->cols);
-        }
-    }
-}
-
-// normalizes each row to unit root mean square, no learned weight
-Tensor *rmsnorm(Tensor *a, double eps) {
-    Tensor *out = node_new(a->rows, a->cols, rmsnorm_backward, 1, (Tensor *[]){a}, eps, NULL);
-    for (int64_t i = 0; i < a->rows; i++) {
-        double s = rms_scale(&a->data[i * a->cols], a->cols, eps);
-        for (int64_t j = 0; j < a->cols; j++) {
-            out->data[i * a->cols + j] = a->data[i * a->cols + j] * s;
-        }
-    }
-    return out;
-}
-
-//
 // causal mask
 //
 
@@ -232,50 +202,6 @@ Tensor *causal_mask(Tensor *a, double value) {
         for (int64_t j = 0; j < a->cols; j++) {
             out->data[i * a->cols + j] = j <= i ? a->data[i * a->cols + j] : value;
         }
-    }
-    return out;
-}
-
-//
-// softmax
-//
-
-// dx = y * (dy - dot(y, dy)), per row
-static void softmax_rows_backward(const Node *node) {
-    const Tensor *out = node->out;
-    double *g = grad_of(node->in[0]);
-    for (int64_t i = 0; g != NULL && i < out->rows; i++) {
-        const double *y = &out->data[i * out->cols], *dy = &out->grad[i * out->cols];
-        double dot = 0.0;
-        for (int64_t j = 0; j < out->cols; j++) {
-            dot += y[j] * dy[j];
-        }
-        for (int64_t j = 0; j < out->cols; j++) {
-            g[i * out->cols + j] += y[j] * (dy[j] - dot);
-        }
-    }
-}
-
-static void softmax_row(const double *x, double *y, int64_t cols) {
-    double max = x[0];
-    for (int64_t j = 1; j < cols; j++) {
-        max = x[j] > max ? x[j] : max;
-    }
-    double sum = 0.0;
-    for (int64_t j = 0; j < cols; j++) {
-        y[j] = exp(x[j] - max);
-        sum += y[j];
-    }
-    double inv = 1.0 / sum;
-    for (int64_t j = 0; j < cols; j++) {
-        y[j] *= inv;
-    }
-}
-
-Tensor *softmax_rows(Tensor *a) {
-    Tensor *out = node_new(a->rows, a->cols, softmax_rows_backward, 1, (Tensor *[]){a}, 0, NULL);
-    for (int64_t i = 0; i < a->rows; i++) {
-        softmax_row(&a->data[i * a->cols], &out->data[i * a->cols], a->cols);
     }
     return out;
 }
@@ -329,6 +255,96 @@ Tensor *concat_cols(Tensor *const *parts, int64_t n) {
         for (int64_t i = 0; i < out->rows; i++) {
             memcpy(&out->data[i * cols + start], &parts[p]->data[i * parts[p]->cols], (size_t)parts[p]->cols * sizeof(double));
         }
+    }
+    return out;
+}
+
+// ===----------------------------------------------------------------------=== //
+// normalization and loss
+// ===----------------------------------------------------------------------=== //
+
+//
+// rmsnorm
+//
+
+// recomputed in backward instead of cached, same inputs give the same bits
+static double rms_scale(const double *row, int64_t cols, double eps) {
+    double sum_sq = 0.0;
+    for (int64_t j = 0; j < cols; j++) {
+        sum_sq += row[j] * row[j];
+    }
+    return pow(sum_sq * (1.0 / (double)cols) + eps, -0.5);
+}
+
+// dx = s * (dy - x * dot(dy, x) * s^2 / d)
+static void rmsnorm_backward(const Node *node) {
+    const Tensor *a = node->in[0], *out = node->out;
+    double *g = grad_of(node->in[0]);
+    for (int64_t i = 0; g != NULL && i < a->rows; i++) {
+        const double *x = &a->data[i * a->cols], *dy = &out->grad[i * a->cols];
+        double s = rms_scale(x, a->cols, node->aux);
+        double dot = 0.0;
+        for (int64_t j = 0; j < a->cols; j++) {
+            dot += dy[j] * x[j];
+        }
+        for (int64_t j = 0; j < a->cols; j++) {
+            g[i * a->cols + j] += s * (dy[j] - x[j] * dot * s * s / (double)a->cols);
+        }
+    }
+}
+
+// normalizes each row to unit root mean square, no learned weight
+Tensor *rmsnorm(Tensor *a, double eps) {
+    Tensor *out = node_new(a->rows, a->cols, rmsnorm_backward, 1, (Tensor *[]){a}, eps, NULL);
+    for (int64_t i = 0; i < a->rows; i++) {
+        double s = rms_scale(&a->data[i * a->cols], a->cols, eps);
+        for (int64_t j = 0; j < a->cols; j++) {
+            out->data[i * a->cols + j] = a->data[i * a->cols + j] * s;
+        }
+    }
+    return out;
+}
+
+//
+// softmax
+//
+
+// dx = y * (dy - dot(y, dy)), per row
+static void softmax_rows_backward(const Node *node) {
+    const Tensor *out = node->out;
+    double *g = grad_of(node->in[0]);
+    for (int64_t i = 0; g != NULL && i < out->rows; i++) {
+        const double *y = &out->data[i * out->cols], *dy = &out->grad[i * out->cols];
+        double dot = 0.0;
+        for (int64_t j = 0; j < out->cols; j++) {
+            dot += y[j] * dy[j];
+        }
+        for (int64_t j = 0; j < out->cols; j++) {
+            g[i * out->cols + j] += y[j] * (dy[j] - dot);
+        }
+    }
+}
+
+static void softmax_row(const double *x, double *y, int64_t cols) {
+    double max = x[0];
+    for (int64_t j = 1; j < cols; j++) {
+        max = x[j] > max ? x[j] : max;
+    }
+    double sum = 0.0;
+    for (int64_t j = 0; j < cols; j++) {
+        y[j] = exp(x[j] - max);
+        sum += y[j];
+    }
+    double inv = 1.0 / sum;
+    for (int64_t j = 0; j < cols; j++) {
+        y[j] *= inv;
+    }
+}
+
+Tensor *softmax_rows(Tensor *a) {
+    Tensor *out = node_new(a->rows, a->cols, softmax_rows_backward, 1, (Tensor *[]){a}, 0, NULL);
+    for (int64_t i = 0; i < a->rows; i++) {
+        softmax_row(&a->data[i * a->cols], &out->data[i * a->cols], a->cols);
     }
     return out;
 }

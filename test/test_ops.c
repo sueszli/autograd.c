@@ -7,7 +7,7 @@
 void setUp(void) {}
 void tearDown(void) {
     graph_reset();
-    fixed_buffer_allocator_reset(&perm_mem);
+    perm_reset();
 }
 
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {

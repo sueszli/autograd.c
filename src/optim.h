@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensor.h"
+#include "autograd.h"
 
 // adam without weight decay and with linear learning rate decay to 0, as in microGPT
 typedef struct {
@@ -9,5 +9,5 @@ typedef struct {
     double **m, **v;
 } AdamW;
 
-AdamW adamw_new(Tensor **params, int64_t n);                  // m and v in perm_mem
+AdamW adamw_new(Tensor **params, int64_t n);                  // m and v in perm
 void adamw_step(AdamW *opt, int64_t step, int64_t num_steps); // step counts from 1, zeroes grads after the update

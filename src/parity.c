@@ -1,8 +1,8 @@
 #include "autograd.h"
 #include "cJSON.h"
 #include "microgpt.h"
-#include "ops.h"
 #include "optim.h"
+#include "std/mem.h"
 #include "std/testing.h"
 #include <assert.h>
 #include <math.h>
@@ -60,8 +60,8 @@ static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*d
 // cJSON and the raw file get their own static buffers
 // cJSON frees without a length, so free does nothing
 static alignas(16) unsigned char json_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
-static FixedBufferAllocator json_mem;
-static void *json_alloc(size_t bytes) { return fixed_buffer_allocator_alloc(&json_mem, bytes, alignof(max_align_t)); }
+static Arena json_mem = {.buf = json_buf, .cap = sizeof(json_buf)};
+static void *json_alloc(size_t bytes) { return arena_alloc(&json_mem, bytes); }
 static void json_free(void *p) { (void)p; }
 
 static cJSON *read_json(const char *path) {
@@ -72,7 +72,6 @@ static cJSON *read_json(const char *path) {
     assert(feof(f) && size > 0 && "cannot read parity.json, or it outgrew its buffer");
     int close_ok = fclose(f);
     assert(close_ok == 0 && "cannot close parity.json");
-    json_mem = fixed_buffer_allocator_init(json_buf, sizeof(json_buf));
     cJSON_InitHooks(&(cJSON_Hooks){.malloc_fn = json_alloc, .free_fn = json_free});
     cJSON *j = cJSON_Parse(raw);
     assert(j != NULL && "cannot parse parity.json");
@@ -86,31 +85,6 @@ static void check_parity(const Params *p, const Params *ref) {
         worst = fmax(worst, assert_allclose(p->all[i]->data, ref->all[i]->data, p->all[i]->rows * p->all[i]->cols, 0.0, 1e-11, NAMES[i]));
     }
     printf("passed parity check (max abs diff %.2g)\n", worst);
-}
-
-// the boundary token both starts and ends a name
-static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
-    uint64_t seed = (uint64_t)time(NULL);
-    int64_t tokens[BLOCK_SIZE] = {bos};
-    for (int64_t n = 1; n < BLOCK_SIZE; n++) {
-        const double *probs = &softmax_rows(logits(p, tokens, n))->data[(n - 1) * VOCAB_SIZE];
-        seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
-        double u = (double)(seed >> 11) / 9007199254740992.0;          // uniform in [0, 1)
-        int64_t next = VOCAB_SIZE - 1;
-        for (int64_t c = 0; c < VOCAB_SIZE; c++) {
-            u -= probs[c];
-            if (u < 0.0) {
-                next = c;
-                break;
-            }
-        }
-        graph_reset();
-        if (next == bos) {
-            return;
-        }
-        tokens[n] = next;
-        name[n - 1] = (char)('a' + next);
-    }
 }
 
 int main(void) {
@@ -134,7 +108,8 @@ int main(void) {
     check_parity(&p, &ref);
 
     char name[BLOCK_SIZE] = {0};
-    sample_name(&p, (int64_t)field(j, "bos")->valuedouble, name);
+    assert(field(j, "bos")->valuedouble == BOS);
+    sample(&p, (uint64_t)time(NULL), name);
     printf("inference (random sampled name): %s\n", name);
 
     return 0;

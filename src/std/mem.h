@@ -1,44 +1,37 @@
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
 
 //
-// a static arena with one fixed buffer, one index into it and no malloc.
+// a static arena over a buffer the caller owns.
 // based on zig's FixedBufferAllocator:
 // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/heap/FixedBufferAllocator.zig
 //
-//     buffer: [ used | pad | new | ........ free ........ ]
-//             0                  ^end_index             ^buffer_len
+//     buf: [ used | new | ........ free ........ ]
+//          0            ^used                   ^cap
 //
-// alloc moves end_index forward.
-// reset moves it back to 0, freeing everything at once.
-// free and resize only act on the most recent allocation.
-// alloc returns NULL when full.
-// it does not zero memory.
+// alloc hands out the next zeroed block and moves used forward.
+// reset moves used back to 0, freeing every block at once.
+// running out of space is a bug, so alloc asserts instead of returning NULL.
 //
 // example:
 // --------
-//     alignas(8) unsigned char buf[64];
-//     FixedBufferAllocator fba = fixed_buffer_allocator_init(buf, sizeof(buf));
-//     double *x = fixed_buffer_allocator_alloc(&fba, 8 * sizeof(double), alignof(double)); // end_index = 64
-//     fixed_buffer_allocator_alloc(&fba, 1, 1);                                            // NULL, full
-//     fixed_buffer_allocator_reset(&fba);                                                  // end_index = 0
+//     static unsigned char buf[1024];
+//     Arena a = {.buf = buf, .cap = sizeof(buf)};
+//     double *x = arena_alloc(&a, 8 * sizeof(double)); // used = 64
+//     arena_reset(&a);                                 // used = 0
 //
 // differences from zig:
 // ---------------------
-//     - no std.mem.Allocator interface, so zero-length requests reach the allocator
-//     - overflow returns NULL or false, where zig panics
-//     - no remap and no thread-safe variant
+//     - alloc zeroes memory and asserts when full
+//     - every block is aligned to max_align_t
+//     - there is no free or resize, only reset
 //
 typedef struct {
-    unsigned char *buffer;
-    size_t buffer_len;
-    size_t end_index;
-} FixedBufferAllocator;
+    unsigned char *buf;
+    size_t cap;
+    size_t used;
+} Arena;
 
-FixedBufferAllocator fixed_buffer_allocator_init(unsigned char *buffer, size_t buffer_len);
-void *fixed_buffer_allocator_alloc(FixedBufferAllocator *self, size_t n, size_t alignment); // alignment must be a power of 2
-bool fixed_buffer_allocator_resize(FixedBufferAllocator *self, void *buf, size_t len, size_t new_len);
-void fixed_buffer_allocator_free(FixedBufferAllocator *self, void *buf, size_t len);
-void fixed_buffer_allocator_reset(FixedBufferAllocator *self);
+void *arena_alloc(Arena *a, size_t bytes);
+void arena_reset(Arena *a);

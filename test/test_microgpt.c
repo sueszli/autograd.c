@@ -8,7 +8,7 @@
 void setUp(void) {}
 void tearDown(void) {
     graph_reset();
-    fixed_buffer_allocator_reset(&perm_mem);
+    perm_reset();
 }
 
 static const int64_t ids[] = {26, 3, 1, 4, 26, 0};

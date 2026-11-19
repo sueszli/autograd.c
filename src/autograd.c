@@ -1,22 +1,27 @@
 #include "autograd.h"
+#include "std/mem.h"
 #include <assert.h>
 #include <string.h>
 
 static alignas(16) unsigned char perm_buf[512 * 1024];  // parity uses about 200 KB: two param sets, their grads and AdamW state
 static alignas(16) unsigned char graph_buf[256 * 1024]; // one microGPT loss plus backward uses about 225 KB
-FixedBufferAllocator perm_mem = {.buffer = perm_buf, .buffer_len = sizeof(perm_buf)};
-static FixedBufferAllocator graph_mem = {.buffer = graph_buf, .buffer_len = sizeof(graph_buf)};
+static Arena perm = {.buf = perm_buf, .cap = sizeof(perm_buf)};
+static Arena graph = {.buf = graph_buf, .cap = sizeof(graph_buf)};
 
-// zig's allocator.alloc followed by @memset(.., 0), with running out of memory as a crash instead of error.OutOfMemory
-static void *alloc_zeroed(FixedBufferAllocator *a, int64_t bytes) {
-    assert(bytes > 0);
-    void *p = fixed_buffer_allocator_alloc(a, (size_t)bytes, alignof(double));
-    assert(p != NULL && "out of memory, raise the buffer size in autograd.c");
-    return memset(p, 0, (size_t)bytes);
+void *perm_alloc(int64_t bytes) { return arena_alloc(&perm, (size_t)bytes); }
+void perm_reset(void) { arena_reset(&perm); }
+void *graph_alloc(int64_t bytes) { return arena_alloc(&graph, (size_t)bytes); }
+
+Tensor *tensor_new(int64_t rows, int64_t cols, const double *data, bool requires_grad) {
+    assert(rows > 0 && cols > 0 && "tensor dims must be positive");
+    int64_t bytes = rows * cols * (int64_t)sizeof(double);
+    Tensor *t = perm_alloc(sizeof(Tensor));
+    *t = (Tensor){.data = perm_alloc(bytes), .grad = requires_grad ? perm_alloc(bytes) : NULL, .rows = rows, .cols = cols, .requires_grad = requires_grad};
+    if (data != NULL) {
+        memcpy(t->data, data, (size_t)bytes);
+    }
+    return t;
 }
-
-void *perm_alloc(int64_t bytes) { return alloc_zeroed(&perm_mem, bytes); }
-void *graph_alloc(int64_t bytes) { return alloc_zeroed(&graph_mem, bytes); }
 
 Tensor *node_new(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx) {
     assert(n_in <= MAX_INPUTS && "too many inputs");
@@ -72,6 +77,6 @@ void backward(Tensor *loss) {
 }
 
 void graph_reset(void) {
-    fixed_buffer_allocator_reset(&graph_mem);
+    arena_reset(&graph);
     n_order = 0;
 }
