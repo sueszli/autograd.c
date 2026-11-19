@@ -8,7 +8,7 @@ a malloc-free reverse-mode autograd engine in c,
 built to train karpathy's microGPT as fast as possible.
 
 all memory is static, TigerBeetle style: fixed buffers sized at compile time,
-handed out by a FixedBufferAllocator like zig's. every op output points to
+handed out by a port of zig's FixedBufferAllocator. every op output points to
 the node that made it, and backward sorts that graph topologically from the
 loss. each training step frees its whole graph in O(1) by resetting one
 buffer. it uses float64 throughout and builds attention from the 12 primitive

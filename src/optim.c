@@ -1,14 +1,14 @@
 #include "optim.h"
-#include "alloc.h"
+#include "autograd.h"
 #include <math.h>
 #include <string.h>
 
 AdamW adamw_new(Tensor **params, int64_t n) {
-    AdamW opt = {.params = params, .n = n, .m = fba_alloc(&perm_mem, n * (int64_t)sizeof(double *)), .v = fba_alloc(&perm_mem, n * (int64_t)sizeof(double *))};
+    AdamW opt = {.params = params, .n = n, .m = perm_alloc(n * (int64_t)sizeof(double *)), .v = perm_alloc(n * (int64_t)sizeof(double *))};
     for (int64_t i = 0; i < n; i++) {
         int64_t bytes = params[i]->rows * params[i]->cols * (int64_t)sizeof(double);
-        opt.m[i] = fba_alloc(&perm_mem, bytes);
-        opt.v[i] = fba_alloc(&perm_mem, bytes);
+        opt.m[i] = perm_alloc(bytes);
+        opt.v[i] = perm_alloc(bytes);
     }
     return opt;
 }

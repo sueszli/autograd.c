@@ -54,10 +54,10 @@ static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*d
     }
 }
 
-// cJSON and the raw file get their own static buffers. nothing is freed before exit, so free does nothing
+// cJSON and the raw file get their own static buffers. cJSON frees without a length, so free does nothing
 static alignas(16) unsigned char json_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
-static FixedBufferAllocator json_mem = {.buf = json_buf, .cap = sizeof(json_buf)};
-static void *json_alloc(size_t bytes) { return fba_alloc(&json_mem, (int64_t)bytes); }
+static FixedBufferAllocator json_mem;
+static void *json_alloc(size_t bytes) { return fixed_buffer_allocator_alloc(&json_mem, bytes, alignof(max_align_t)); }
 static void json_free(void *p) { (void)p; }
 
 static cJSON *read_json(const char *path) {
@@ -68,6 +68,7 @@ static cJSON *read_json(const char *path) {
     assert(feof(f) && size > 0 && "cannot read parity.json, or it outgrew its buffer");
     int close_ok = fclose(f);
     assert(close_ok == 0 && "cannot close parity.json");
+    json_mem = fixed_buffer_allocator_init(json_buf, sizeof(json_buf));
     cJSON_InitHooks(&(cJSON_Hooks){.malloc_fn = json_alloc, .free_fn = json_free});
     cJSON *j = cJSON_Parse(raw);
     assert(j != NULL && "cannot parse parity.json");

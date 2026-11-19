@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alloc.h"
+#include "fixed_buffer_allocator.h"
 #include "tensor.h"
 
 #define MAX_INPUTS 4
@@ -27,6 +27,14 @@ struct Node {
     void *ctx;  // op scratch in graph_mem
     bool visited;
 };
+
+// all memory there is, static buffers sized at compile time. nothing calls malloc
+extern FixedBufferAllocator perm_mem;  // params, their grads and optimizer state, never reset
+extern FixedBufferAllocator graph_mem; // nodes, op outputs, their grads and scratch, reset after each backward
+
+// zeroed and 8-byte aligned. running out of memory is a bug, so it asserts instead of returning NULL
+void *perm_alloc(int64_t bytes);
+void *graph_alloc(int64_t bytes);
 
 // creates an op's node and its output tensor in graph_mem
 Tensor *node_new(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);

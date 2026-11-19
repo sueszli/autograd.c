@@ -37,7 +37,7 @@ static void matmul_backward(const Node *node) {
     double *ga = grad_of(node->in[0]);
     double *gb = grad_of(node->in[1]);
     // ga += dout @ b^T, with b^T copied so the inner loop is contiguous and each output still sums over j in order
-    double *bt = fba_alloc(&graph_mem, k * m * (int64_t)sizeof(double));
+    double *bt = graph_alloc(k * m * (int64_t)sizeof(double));
     for (int64_t p = 0; ga != NULL && p < k; p++) {
         for (int64_t j = 0; j < m; j++) {
             bt[j * k + p] = b->data[p * m + j];
@@ -116,7 +116,7 @@ static void gather_backward(const Node *node) {
 
 Tensor *gather(Tensor *table, const int64_t *ids, int64_t n) {
     assert(n > 0 && "gather: no ids");
-    int64_t *ids_copy = fba_alloc(&graph_mem, n * (int64_t)sizeof(int64_t));
+    int64_t *ids_copy = graph_alloc(n * (int64_t)sizeof(int64_t));
     for (int64_t r = 0; r < n; r++) {
         assert(ids[r] >= 0 && ids[r] < table->rows && "gather: id out of range");
         ids_copy[r] = ids[r];
@@ -352,7 +352,7 @@ static void masked_cross_entropy_backward(const Node *node) {
         sum_mask += mask[i];
     }
     double inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
-    double *p = fba_alloc(&graph_mem, cols * (int64_t)sizeof(double));
+    double *p = graph_alloc(cols * (int64_t)sizeof(double));
     for (int64_t i = 0; g != NULL && i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         for (int64_t j = 0; j < cols; j++) {
@@ -364,7 +364,7 @@ static void masked_cross_entropy_backward(const Node *node) {
 
 Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const double *mask) {
     int64_t rows = logits->rows, cols = logits->cols;
-    int64_t *ctx = fba_alloc(&graph_mem, rows * (int64_t)(sizeof(int64_t) + sizeof(double)));
+    int64_t *ctx = graph_alloc(rows * (int64_t)(sizeof(int64_t) + sizeof(double)));
     double *mask_copy = (double *)(ctx + rows);
     for (int64_t i = 0; i < rows; i++) {
         assert(targets[i] >= 0 && targets[i] < cols && "masked_cross_entropy: target out of range");
@@ -372,7 +372,7 @@ Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const doubl
         mask_copy[i] = mask[i];
     }
     Tensor *out = node_new(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
-    double *p = fba_alloc(&graph_mem, cols * (int64_t)sizeof(double));
+    double *p = graph_alloc(cols * (int64_t)sizeof(double));
     double total = 0.0, sum_mask = 0.0;
     for (int64_t i = 0; i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
