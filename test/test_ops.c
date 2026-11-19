@@ -4,7 +4,7 @@
 #include <math.h>
 
 void setUp(void) {}
-void tearDown(void) { tape_reset(); }
+void tearDown(void) { autograd_reset(); }
 
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
     Tensor *t = tensor_new(rows, cols, NULL, requires_grad);
@@ -22,7 +22,7 @@ typedef Tensor *(*Fn)(Tensor **in);
 
 static double loss_of(Fn f, Tensor **in, Tensor *r1, Tensor *r2) {
     double loss = matmul(matmul(r1, f(in)), r2)->data[0];
-    tape_reset();
+    autograd_reset();
     return loss;
 }
 
@@ -31,7 +31,7 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     Tensor *r1 = rand_tensor(1, out->rows, false);
     Tensor *r2 = rand_tensor(out->cols, 1, false);
     backward(matmul(matmul(r1, out), r2));
-    tape_reset();
+    autograd_reset();
     const double h = 1e-6;
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {

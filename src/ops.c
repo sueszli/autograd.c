@@ -20,7 +20,7 @@ static void add_backward(const Node *node) {
 
 Tensor *add(Tensor *a, Tensor *b) {
     assert(a->rows == b->rows && a->cols == b->cols && "add: shape mismatch");
-    Tensor *out = tape_push(a->rows, a->cols, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
+    Tensor *out = node_push(a->rows, a->cols, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
     for (int64_t i = 0; i < a->rows * a->cols; i++) {
         out->data[i] = a->data[i] + b->data[i];
     }
@@ -37,7 +37,7 @@ static void matmul_backward(const Node *node) {
     double *ga = grad_of(node->in[0]);
     double *gb = grad_of(node->in[1]);
     // ga += dout @ b^T, with b^T copied so the inner loop is contiguous and each output still sums over j in order
-    double *bt = tape_alloc(k * m * (int64_t)sizeof(double));
+    double *bt = stack_push(&mem, k * m * (int64_t)sizeof(double));
     for (int64_t p = 0; ga != NULL && p < k; p++) {
         for (int64_t j = 0; j < m; j++) {
             bt[j * k + p] = b->data[p * m + j];
@@ -63,7 +63,7 @@ static void matmul_backward(const Node *node) {
 Tensor *matmul(Tensor *a, Tensor *b) {
     assert(a->cols == b->rows && "matmul: inner dims mismatch");
     int64_t n = a->rows, k = a->cols, m = b->cols;
-    Tensor *out = tape_push(n, m, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
+    Tensor *out = node_push(n, m, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
     for (int64_t i = 0; i < n; i++) {
         for (int64_t p = 0; p < k; p++) {
             for (int64_t j = 0; j < m; j++) {
@@ -89,7 +89,7 @@ static void transpose_backward(const Node *node) {
 }
 
 Tensor *transpose(Tensor *a) {
-    Tensor *out = tape_push(a->cols, a->rows, transpose_backward, 1, (Tensor *[]){a}, 0, NULL);
+    Tensor *out = node_push(a->cols, a->rows, transpose_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         for (int64_t j = 0; j < a->cols; j++) {
             out->data[j * a->rows + i] = a->data[i * a->cols + j];
@@ -116,12 +116,12 @@ static void gather_backward(const Node *node) {
 
 Tensor *gather(Tensor *table, const int64_t *ids, int64_t n) {
     assert(n > 0 && "gather: no ids");
-    int64_t *ids_copy = tape_alloc(n * (int64_t)sizeof(int64_t));
+    int64_t *ids_copy = stack_push(&mem, n * (int64_t)sizeof(int64_t));
     for (int64_t r = 0; r < n; r++) {
         assert(ids[r] >= 0 && ids[r] < table->rows && "gather: id out of range");
         ids_copy[r] = ids[r];
     }
-    Tensor *out = tape_push(n, table->cols, gather_backward, 1, (Tensor *[]){table}, 0, ids_copy);
+    Tensor *out = node_push(n, table->cols, gather_backward, 1, (Tensor *[]){table}, 0, ids_copy);
     for (int64_t r = 0; r < n; r++) {
         memcpy(&out->data[r * table->cols], &table->data[ids[r] * table->cols], (size_t)table->cols * sizeof(double));
     }
@@ -141,7 +141,7 @@ static void scale_backward(const Node *node) {
 }
 
 Tensor *scale(Tensor *a, double s) {
-    Tensor *out = tape_push(a->rows, a->cols, scale_backward, 1, (Tensor *[]){a}, s, NULL);
+    Tensor *out = node_push(a->rows, a->cols, scale_backward, 1, (Tensor *[]){a}, s, NULL);
     for (int64_t i = 0; i < a->rows * a->cols; i++) {
         out->data[i] = a->data[i] * s;
     }
@@ -161,7 +161,7 @@ static void relu_backward(const Node *node) {
 }
 
 Tensor *relu(Tensor *a) {
-    Tensor *out = tape_push(a->rows, a->cols, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
+    Tensor *out = node_push(a->rows, a->cols, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows * a->cols; i++) {
         out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;
     }
@@ -200,7 +200,7 @@ static void rmsnorm_backward(const Node *node) {
 
 // normalizes each row to unit root mean square, no learned weight
 Tensor *rmsnorm(Tensor *a, double eps) {
-    Tensor *out = tape_push(a->rows, a->cols, rmsnorm_backward, 1, (Tensor *[]){a}, eps, NULL);
+    Tensor *out = node_push(a->rows, a->cols, rmsnorm_backward, 1, (Tensor *[]){a}, eps, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         double s = rms_scale(&a->data[i * a->cols], a->cols, eps);
         for (int64_t j = 0; j < a->cols; j++) {
@@ -227,7 +227,7 @@ static void causal_mask_backward(const Node *node) {
 // row i may only attend to columns j <= i, the rest are set to value
 Tensor *causal_mask(Tensor *a, double value) {
     assert(a->rows == a->cols && "causal_mask: must be square");
-    Tensor *out = tape_push(a->rows, a->cols, causal_mask_backward, 1, (Tensor *[]){a}, 0, NULL);
+    Tensor *out = node_push(a->rows, a->cols, causal_mask_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         for (int64_t j = 0; j < a->cols; j++) {
             out->data[i * a->cols + j] = j <= i ? a->data[i * a->cols + j] : value;
@@ -273,7 +273,7 @@ static void softmax_row(const double *x, double *y, int64_t cols) {
 }
 
 Tensor *softmax_rows(Tensor *a) {
-    Tensor *out = tape_push(a->rows, a->cols, softmax_rows_backward, 1, (Tensor *[]){a}, 0, NULL);
+    Tensor *out = node_push(a->rows, a->cols, softmax_rows_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         softmax_row(&a->data[i * a->cols], &out->data[i * a->cols], a->cols);
     }
@@ -297,7 +297,7 @@ static void slice_cols_backward(const Node *node) {
 
 Tensor *slice_cols(Tensor *a, int64_t start, int64_t len) {
     assert(start >= 0 && len > 0 && start + len <= a->cols && "slice_cols: out of range");
-    Tensor *out = tape_push(a->rows, len, slice_cols_backward, 1, (Tensor *[]){a}, (double)start, NULL);
+    Tensor *out = node_push(a->rows, len, slice_cols_backward, 1, (Tensor *[]){a}, (double)start, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         memcpy(&out->data[i * len], &a->data[i * a->cols + start], (size_t)len * sizeof(double));
     }
@@ -324,7 +324,7 @@ Tensor *concat_cols(Tensor *const *parts, int64_t n) {
         assert(parts[p]->rows == parts[0]->rows && "concat_cols: row mismatch");
         cols += parts[p]->cols;
     }
-    Tensor *out = tape_push(parts[0]->rows, cols, concat_cols_backward, n, parts, 0, NULL);
+    Tensor *out = node_push(parts[0]->rows, cols, concat_cols_backward, n, parts, 0, NULL);
     for (int64_t p = 0, start = 0; p < n; start += parts[p]->cols, p++) {
         for (int64_t i = 0; i < out->rows; i++) {
             memcpy(&out->data[i * cols + start], &parts[p]->data[i * parts[p]->cols], (size_t)parts[p]->cols * sizeof(double));
@@ -352,7 +352,7 @@ static void masked_cross_entropy_backward(const Node *node) {
         sum_mask += mask[i];
     }
     double inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
-    double *p = tape_alloc(cols * (int64_t)sizeof(double));
+    double *p = stack_push(&mem, cols * (int64_t)sizeof(double));
     for (int64_t i = 0; g != NULL && i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         for (int64_t j = 0; j < cols; j++) {
@@ -364,15 +364,15 @@ static void masked_cross_entropy_backward(const Node *node) {
 
 Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const double *mask) {
     int64_t rows = logits->rows, cols = logits->cols;
-    int64_t *ctx = tape_alloc(rows * (int64_t)(sizeof(int64_t) + sizeof(double)));
+    int64_t *ctx = stack_push(&mem, rows * (int64_t)(sizeof(int64_t) + sizeof(double)));
     double *mask_copy = (double *)(ctx + rows);
     for (int64_t i = 0; i < rows; i++) {
         assert(targets[i] >= 0 && targets[i] < cols && "masked_cross_entropy: target out of range");
         ctx[i] = targets[i];
         mask_copy[i] = mask[i];
     }
-    Tensor *out = tape_push(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
-    double *p = tape_alloc(cols * (int64_t)sizeof(double));
+    Tensor *out = node_push(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
+    double *p = stack_push(&mem, cols * (int64_t)sizeof(double));
     double total = 0.0, sum_mask = 0.0;
     for (int64_t i = 0; i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);

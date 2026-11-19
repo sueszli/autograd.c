@@ -4,37 +4,34 @@
 ▝▀▘▝▀▘ ▀ ▝▀ ▗▄▘▘  ▝▀▘▝▀▘▝▘▝▀
 
 
-A reverse-mode autograd engine in C, just big
-enough to train karpathy's microGPT.
+a reverse-mode autograd engine in c,
+just big enough to train karpathy's microGPT.
+
+ops are recorded on a statically allocated stack that backward walks in
+reverse. all memory is allocated statically, TigerBeetle style, and nothing
+is allocated after startup. attention is composed from the 12 float64 ops.
 
 
-Ops record onto a tape that backward walks in
-reverse. The tape and a 256 KiB arena for all
-activations and gradients are allocated statically,
-TigerBeetle style, so nothing is allocated after
-startup and a training step resets in O(1).
+correctness by:
+
+- final weights that match karpathy's microGPT to within 1e-11 after 1000
+  training steps
+- gradient checks against finite differences for every op and the full model
+- tests under ASan and UBSan
 
 
-Attention is composed from 12 primitive float64 ops
-like matmul, softmax, rmsnorm and causal mask, each
-with its backward right next to its forward.
-
+usage:
 
     $ make parity
+
     trained 1000 steps in 0.101s
     passed parity check (max |diff| 5.7e-15)
     inference (random sampled name): kaonle
 
 
-Training from karpathy's initial weights reproduces
-his final weights to within 1e-11. Every op and the
-full model are also checked against finite
-differences under ASan and UBSan.
+see also:
 
-
-References:
-
-- autograd.lean: https://github.com/sueszli/autograd.lean
-- microGPT: https://karpathy.github.io/2026/02/12/microgpt/
-- TigerStyle: https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md
-- Hacker News: https://news.ycombinator.com/item?id=46285424
+- discussion on hackernews: https://news.ycombinator.com/item?id=46285424
+- counterpart in lean: https://github.com/sueszli/autograd.lean
+- original microgpt implementation: https://karpathy.github.io/2026/02/12/microgpt/
+- tigerstyle: https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md

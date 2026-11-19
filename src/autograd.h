@@ -1,21 +1,19 @@
 #pragma once
 
+#include "stack.h"
 #include "tensor.h"
 
 #define MAX_INPUTS 4
-#define TAPE_CAP 128             // nodes, one microGPT loss plus backward at BLOCK_SIZE uses 54
-#define ARENA_BYTES (256 * 1024) // op outputs, their grads and ctx, one microGPT loss plus backward uses 184032
 
 /*
- * every op appends a node to one global tape. creation order is a valid
- * topological order, so backward just walks the tape in reverse:
+ * every op pushes a node onto the nodes stack. push order is a valid
+ * topological order, so backward walks the stack from the top down:
  *
- *   tape:      [h = x @ w1] [a = relu(h)] [loss = a @ w2]
+ *   nodes:     [h = x @ w1] [a = relu(h)] [loss = a @ w2]
  *   backward:                                  <- start here, seed 1
  *
- * the tape owns every op output. their data, grads and ctx live in one static
- * arena, so nothing is malloc'd after startup. params are created with
- * tensor_new and owned by the caller. tape_reset rewinds the tape and arena.
+ * op outputs, their grads and scratch buffers live on the mem stack.
+ * params come from tensor_new and are owned by the caller.
  */
 typedef struct Node Node;
 typedef void (*BackwardFn)(const Node *node);
@@ -25,18 +23,20 @@ struct Node {
     int64_t n_in;
     BackwardFn backward;
     double aux; // scalar op argument, eg. a scale factor
-    void *ctx;  // op-owned buffer from tape_alloc
+    void *ctx;  // op scratch on the mem stack
 };
 
-// allocates an op output on the tape and records how to backprop into its inputs
-Tensor *tape_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);
-void tape_reset(void);
+extern Stack nodes; // 128 nodes, one microGPT loss uses 54
+extern Stack mem;   // 256 KiB, one microGPT loss plus backward uses about 184 KB
 
-// zeroed memory from the arena, valid until the next tape_reset
-void *tape_alloc(int64_t bytes);
+// pushes an op output and the node that backprops into its inputs
+Tensor *node_push(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, Tensor *const *in, double aux, void *ctx);
 
-// grad buffer, NULL if t does not require grad. params get one in tensor_new, op outputs get one from the arena on first use
+// empties both stacks, call after each backward
+void autograd_reset(void);
+
+// grad buffer, NULL if t does not require grad. op outputs get one on first use
 double *grad_of(Tensor *t);
 
-// seeds loss->grad with 1 and walks the tape in reverse. param grads accumulate across calls
+// seeds loss->grad with 1 and walks the nodes from the top down. param grads accumulate across calls
 void backward(Tensor *loss);

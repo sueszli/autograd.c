@@ -112,7 +112,7 @@ static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
             probs[c] = exp(out->data[(n - 1) * VOCAB_SIZE + c] - max);
             sum += probs[c];
         }
-        tape_reset();
+        autograd_reset();
         seed = seed * 6364136223846793005ULL + 1442695040888963407ULL; // 64-bit lcg, as in autograd.lean
         double u = (double)(seed >> 11) / 9007199254740992.0 * sum;    // uniform in [0, sum)
         int64_t next = VOCAB_SIZE - 1;
@@ -144,7 +144,7 @@ int main(void) {
     clock_t start = clock();
     for (int64_t step = 0; step < NUM_STEPS; step++) {
         backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
-        tape_reset();
+        autograd_reset();
         adamw_step(&opt, step + 1, NUM_STEPS);
     }
     printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);

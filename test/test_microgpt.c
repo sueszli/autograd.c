@@ -5,7 +5,7 @@
 #include <math.h>
 
 void setUp(void) {}
-void tearDown(void) { tape_reset(); }
+void tearDown(void) { autograd_reset(); }
 
 static const int64_t ids[] = {26, 3, 1, 4, 26, 0};
 static const int64_t targets[] = {3, 1, 4, 26, 0, 0};
@@ -34,17 +34,17 @@ void test_loss_gradcheck(void) {
         }
     }
     backward(loss(&p, ids, targets, mask, 6));
-    tape_reset();
+    autograd_reset();
     const double h = 1e-6;
     for (int64_t i = 0; i < N_PARAMS; i++) {
         for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
             double x = p.all[i]->data[j];
             p.all[i]->data[j] = x + h;
             double up = loss(&p, ids, targets, mask, 6)->data[0];
-            tape_reset();
+            autograd_reset();
             p.all[i]->data[j] = x - h;
             double down = loss(&p, ids, targets, mask, 6)->data[0];
-            tape_reset();
+            autograd_reset();
             p.all[i]->data[j] = x;
             double numeric = (up - down) / (2 * h);
             TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, p.all[i]->grad[j]);
@@ -82,7 +82,7 @@ void test_training_reduces_loss(void) {
         Tensor *l = loss(&p, ids, targets, mask, 6);
         last = l->data[0];
         backward(l);
-        tape_reset();
+        autograd_reset();
         adamw_step(&opt, step, 200);
     }
     TEST_ASSERT_LESS_THAN_DOUBLE(0.1, last);
