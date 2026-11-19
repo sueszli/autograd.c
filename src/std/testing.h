@@ -12,7 +12,7 @@
 //
 // differences from numpy:
 // -----------------------
-//     - nan never passes. numpy treats two nans as equal
+//     - nan never passes, where numpy treats two nans as equal
 //     - assert_allclose returns the max abs diff, so callers can report it
 //
 
@@ -25,5 +25,6 @@ double assert_allclose(const double *actual, const double *desired, int64_t n, d
 // assert_allclose for one scalar
 void assert_close(double actual, double expected, double rtol, double atol, const char *msg);
 
-// (f(x + h) - f(x - h)) / 2h. nudges *x in place, then restores it
+// (f(x + h) - f(x - h)) / 2h
+// nudges *x in place, then restores it
 double central_difference(double (*f)(void *ctx), void *ctx, double *x, double h);

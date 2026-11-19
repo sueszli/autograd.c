@@ -13,7 +13,8 @@ AdamW adamw_new(Tensor **params, int64_t n) {
     return opt;
 }
 
-// betas and eps match the python reference. sqrt instead of pow(x, 0.5): pow was half the training time
+// betas and eps match the python reference
+// sqrt instead of pow(x, 0.5), pow was half the training time
 void adamw_step(AdamW *opt, int64_t step, int64_t num_steps) {
     const double beta1 = 0.85, beta2 = 0.99, eps = 1e-8;
     double lr = 0.01 * (1.0 - (double)(step - 1) / (double)num_steps);

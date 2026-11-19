@@ -57,7 +57,8 @@ static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*d
     }
 }
 
-// cJSON and the raw file get their own static buffers. cJSON frees without a length, so free does nothing
+// cJSON and the raw file get their own static buffers
+// cJSON frees without a length, so free does nothing
 static alignas(16) unsigned char json_buf[4 * 1024 * 1024]; // parity.json parses into about 3.8 MB
 static FixedBufferAllocator json_mem;
 static void *json_alloc(size_t bytes) { return fixed_buffer_allocator_alloc(&json_mem, bytes, alignof(max_align_t)); }

@@ -11,9 +11,11 @@
 //     buffer: [ used | pad | new | ........ free ........ ]
 //             0                  ^end_index             ^buffer_len
 //
-// alloc moves end_index forward. reset moves it back to 0, freeing everything at once.
+// alloc moves end_index forward.
+// reset moves it back to 0, freeing everything at once.
 // free and resize only act on the most recent allocation.
-// alloc returns NULL when full. it does not zero memory.
+// alloc returns NULL when full.
+// it does not zero memory.
 //
 // example:
 // --------
@@ -26,7 +28,7 @@
 // differences from zig:
 // ---------------------
 //     - no std.mem.Allocator interface, so zero-length requests reach the allocator
-//     - overflow returns NULL or false. zig panics
+//     - overflow returns NULL or false, where zig panics
 //     - no remap and no thread-safe variant
 //
 typedef struct {

@@ -14,7 +14,8 @@ static bool owns_slice(const FixedBufferAllocator *self, const void *buf, size_t
 }
 
 static bool is_last_allocation(const FixedBufferAllocator *self, const void *buf, size_t len) {
-    // misses a block whose successor was padded and then freed, the padding stays used. same as zig
+    // misses a block whose successor was padded and then freed, the padding stays used
+    // same as zig
     return (uintptr_t)buf + len == (uintptr_t)(self->buffer + self->end_index);
 }
 
@@ -31,7 +32,8 @@ void *fixed_buffer_allocator_alloc(FixedBufferAllocator *self, size_t n, size_t 
 }
 
 bool fixed_buffer_allocator_resize(FixedBufferAllocator *self, void *buf, size_t len, size_t new_len) {
-    // the last block grows or shrinks in place. older blocks can only shrink, and nothing is reclaimed
+    // the last block grows or shrinks in place
+    // older blocks can only shrink, and nothing is reclaimed
     assert(owns_slice(self, buf, len));
     if (!is_last_allocation(self, buf, len)) {
         return new_len <= len;

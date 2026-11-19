@@ -28,10 +28,12 @@ struct Node {
     bool visited;
 };
 
-// all memory there is, static buffers sized at compile time. nothing calls malloc
+// all memory there is, static buffers sized at compile time
+// nothing calls malloc
 extern FixedBufferAllocator perm_mem; // params, their grads and optimizer state, never reset
 
-// zeroed and 8-byte aligned. running out of memory is a bug, so it asserts instead of returning NULL
+// zeroed and 8-byte aligned
+// running out of memory is a bug, so it asserts instead of returning NULL
 void *perm_alloc(int64_t bytes);
 void *graph_alloc(int64_t bytes);
 
@@ -41,8 +43,10 @@ Tensor *node_new(int64_t rows, int64_t cols, BackwardFn backward, int64_t n_in, 
 // frees the graph, call after each backward
 void graph_reset(void);
 
-// grad buffer, NULL if t does not require grad. op outputs get one on first use
+// grad buffer, NULL if t does not require grad
+// op outputs get one on first use
 double *grad_of(Tensor *t);
 
-// seeds loss->grad with 1 and backprops through the graph. param grads accumulate across calls
+// seeds loss->grad with 1 and backprops through the graph
+// param grads accumulate across calls
 void backward(Tensor *loss);
