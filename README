@@ -17,13 +17,31 @@ $ cat about.txt | fold -w 75
     - a finite-difference gradient check for every op and the full model
     - asan and ubsan on every test run
 
+    design decisions:
+
+    - 2-D float64 only. no strides, views or broadcasting. float64 because
+      the reference uses python floats.
+    - a tape instead of refcounted graph nodes. creation order is already a
+      topological order, so backward is one reverse loop.
+    - static allocation in the style of tigerbeetle. the tape (128 nodes) and
+      one 256 KiB arena for op outputs, grads and scratch are fixed at
+      compile time. nothing is allocated after startup. tape_reset rewinds
+      two offsets.
+    - backward kernels are plain loops that never call ops, so backward
+      cannot grow the graph it is walking.
+    - attention is composed from primitive ops, not fused.
+    - asserts are the only error handling and stay on in release builds.
+    - not adopted from tigerbeetle and nasa's power of ten: 2 asserts per
+      function and no function pointers. both would make the code longer
+      and split each op's forward from its backward.
+
     discussion on hackernews: https://news.ycombinator.com/item?id=46285424
 
 $ make parity
 
-    trained 1000 steps in 0.256s
+    trained 1000 steps in 0.101s
     passed parity check (max |diff| 5.7e-15)
-    inference (random sampled name): mashrh
+    inference (random sampled name): kaonle
 
 see also:
 
