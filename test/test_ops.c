@@ -12,7 +12,7 @@ void tearDown(void) {
 
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
     Tensor *t = tensor_new(rows, cols, NULL, requires_grad);
-    fill_uniform(t->data, rows * cols, -1.0, 1.0);
+    random_uniform(t->data, rows * cols, -1.0, 1.0);
     return t;
 }
 
@@ -50,7 +50,7 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
             double numeric = central_difference(loss_of, &probe, &in[t]->data[i], 1e-6);
-            TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, in[t]->grad[i] - 0.5);
+            assert_close(in[t]->grad[i] - 0.5, numeric, 1e-6, 1e-6, "grad");
         }
     }
 }

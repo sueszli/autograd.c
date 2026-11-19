@@ -37,14 +37,14 @@ static double loss_of(void *p) {
 void test_loss_gradcheck(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        fill_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
+        random_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
     }
     backward(loss(&p, ids, targets, mask, 6));
     graph_reset();
     for (int64_t i = 0; i < N_PARAMS; i++) {
         for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
             double numeric = central_difference(loss_of, &p, &p.all[i]->data[j], 1e-6);
-            TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, p.all[i]->grad[j]);
+            assert_close(p.all[i]->grad[j], numeric, 1e-6, 1e-6, "grad");
         }
     }
 }
@@ -66,7 +66,7 @@ void test_adamw_first_step(void) {
 void test_training_reduces_loss(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        fill_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
+        random_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
     }
     AdamW opt = adamw_new(p.all, N_PARAMS);
     double last = 0.0;

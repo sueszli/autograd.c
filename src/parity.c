@@ -78,25 +78,13 @@ static cJSON *read_json(const char *path) {
     return j;
 }
 
-// returns the number of tensors further than atol from the reference
-static int64_t check_parity(const Params *p, const Params *ref) {
-    const double atol = 1e-11;
-    int64_t failures = 0;
+// every final weight within 1e-11 of the reference
+static void check_parity(const Params *p, const Params *ref) {
     double worst = 0.0;
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        double max_diff = max_abs_diff(p->all[i]->data, ref->all[i]->data, p->all[i]->rows * p->all[i]->cols);
-        worst = fmax(worst, max_diff);
-        if (max_diff > atol) {
-            fprintf(stderr, "  %s: max abs diff = %g\n", NAMES[i], max_diff);
-            failures++;
-        }
+        worst = fmax(worst, assert_allclose(p->all[i]->data, ref->all[i]->data, p->all[i]->rows * p->all[i]->cols, 0.0, 1e-11, NAMES[i]));
     }
-    if (failures == 0) {
-        printf("passed parity check (max abs diff %.2g)\n", worst);
-    } else {
-        fprintf(stderr, "FAIL: %ld/%d tensors exceed atol %g\n", (long)failures, N_PARAMS, atol);
-    }
-    return failures;
+    printf("passed parity check (max abs diff %.2g)\n", worst);
 }
 
 // the boundary token both starts and ends a name
@@ -142,11 +130,11 @@ int main(void) {
     }
     printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);
 
-    int64_t failures = check_parity(&p, &ref);
+    check_parity(&p, &ref);
 
     char name[BLOCK_SIZE] = {0};
     sample_name(&p, (int64_t)field(j, "bos")->valuedouble, name);
     printf("inference (random sampled name): %s\n", name);
 
-    return failures == 0 ? 0 : 1;
+    return 0;
 }
