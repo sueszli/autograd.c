@@ -10,9 +10,16 @@ A reverse-mode autograd engine in C, just big
 enough to train karpathy's microGPT.
 
 
-12 float64 ops record onto a tape that backward
-walks in reverse. Memory is allocated statically,
-TigerBeetle style: nothing is allocated after startup.
+Ops record onto a tape that backward walks in
+reverse. The tape and a 256 KiB arena for all
+activations and gradients are allocated statically,
+TigerBeetle style, so nothing is allocated after
+startup and a training step resets in O(1).
+
+
+Attention is composed from 12 primitive float64 ops
+like matmul, softmax, rmsnorm and causal mask, each
+with its backward right next to its forward.
 
 
     $ make parity
@@ -21,8 +28,10 @@ TigerBeetle style: nothing is allocated after startup.
     inference (random sampled name): kaonle
 
 
-Final weights match karpathy's microGPT to 1e-11.
-Every op is also checked against finite differences.
+Training from karpathy's initial weights reproduces
+his final weights to within 1e-11. Every op and the
+full model are also checked against finite
+differences under ASan and UBSan.
 
 
 References:
