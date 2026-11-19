@@ -8,16 +8,16 @@ a malloc-free reverse-mode autograd engine in c,
 built to train karpathy's microGPT as fast as possible.
 
 
-all memory is static, handed out by a port of zig's FixedBufferAllocator.
+all memory is static, handed out by an arena based on zig's FixedBufferAllocator.
 
-1000 training steps take 0.107s on one core.
+1000 training steps take 0.104s on one core.
 
 
 usage:
 
     $ make parity
 
-    trained 1000 steps in 0.107s
+    trained 1000 steps in 0.104s
     passed parity check (max abs diff 5.7e-15)
     inference (random sampled name): kaonle
 

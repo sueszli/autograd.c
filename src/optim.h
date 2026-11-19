@@ -1,6 +1,6 @@
 #pragma once
 
-#include "autograd.h"
+#include "tensor.h"
 
 // adam without weight decay and with linear learning rate decay to 0, as in microGPT
 typedef struct {

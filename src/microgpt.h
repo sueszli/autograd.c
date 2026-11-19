@@ -1,6 +1,6 @@
 #pragma once
 
-#include "autograd.h"
+#include "tensor.h"
 
 #define N_LAYER 1
 #define N_EMBED 16

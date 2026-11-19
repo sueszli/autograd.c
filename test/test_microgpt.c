@@ -1,8 +1,8 @@
-#include "autograd.h"
 #include "microgpt.h"
 #include "optim.h"
 #include "std/assert.h"
 #include "std/random.h"
+#include "tensor.h"
 #include "unity.h"
 #include <math.h>
 
@@ -26,8 +26,8 @@ void test_zero_weights_give_uniform_loss(void) {
 void test_logits_shape(void) {
     Params p = params_new();
     Tensor *out = logits(&p, ids, 3);
-    TEST_ASSERT_EQUAL_INT64(3, out->rows);
-    TEST_ASSERT_EQUAL_INT64(VOCAB_SIZE, out->cols);
+    TEST_ASSERT_EQUAL_INT64(3, out->shape[0]);
+    TEST_ASSERT_EQUAL_INT64(VOCAB_SIZE, out->shape[1]);
 }
 
 static double loss_of(void *p) {
@@ -40,18 +40,18 @@ static double loss_of(void *p) {
 void test_loss_gradcheck(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        random_uniform(&rng, p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
+        random_uniform(&rng, p.all[i]->data, p.all[i]->size, -0.3, 0.3);
     }
     backward(loss(&p, ids, targets, mask, 6));
     graph_reset();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        assert_grad(loss_of, &p, p.all[i]->data, p.all[i]->grad, p.all[i]->rows * p.all[i]->cols, 1e-6, 1e-6, "grad");
+        assert_grad(loss_of, &p, p.all[i]->data, p.all[i]->grad, p.all[i]->size, 1e-6, 1e-6, "grad");
     }
 }
 
 // step 1: m = 0.15 g, v = 0.01 g^2, both bias corrections cancel, so p -= lr * g / |g|
 void test_adamw_first_step(void) {
-    Tensor *w = tensor_new(1, 2, (double[]){1, -3}, true);
+    Tensor *w = tensor_new(SHAPE(1, 2), (double[]){1, -3}, true);
     AdamW opt = adamw_new(&w, 1);
     w->grad[0] = 2.0;
     adamw_step(&opt, 1, 1000);
@@ -66,7 +66,7 @@ void test_adamw_first_step(void) {
 void test_training_reduces_loss(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        random_uniform(&rng, p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
+        random_uniform(&rng, p.all[i]->data, p.all[i]->size, -0.08, 0.08);
     }
     AdamW opt = adamw_new(p.all, N_PARAMS);
     double last = 0.0;

@@ -1,8 +1,8 @@
-#include "autograd.h"
 #include "microgpt.h"
 #include "optim.h"
 #include "std/assert.h"
 #include "std/json.h"
+#include "tensor.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -15,7 +15,7 @@ static const char *NAMES[N_PARAMS] = {"wte", "wpe", "lm_head", "layer0.attn_wq",
 // the reference stores linear weights as (out, in), wte and wpe are already (rows, cols)
 static void load_params(const cJSON *j, Params *p) {
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        json_matrix(json_get(j, NAMES[i]), p->all[i]->data, p->all[i]->rows, p->all[i]->cols, i >= 2);
+        json_matrix(json_get(j, NAMES[i]), p->all[i]->data, p->all[i]->shape[0], p->all[i]->shape[1], i >= 2);
     }
 }
 
@@ -38,7 +38,7 @@ static void load_ids(const cJSON *j, int64_t ids[NUM_STEPS][BLOCK_SIZE]) {
 static void check_parity(const Params *p, const Params *ref) {
     double worst = 0.0;
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        worst = fmax(worst, assert_allclose(p->all[i]->data, ref->all[i]->data, p->all[i]->rows * p->all[i]->cols, 0.0, 1e-11, NAMES[i]));
+        worst = fmax(worst, assert_allclose(p->all[i]->data, ref->all[i]->data, p->all[i]->size, 0.0, 1e-11, NAMES[i]));
     }
     printf("passed parity check (max abs diff %.2g)\n", worst);
 }
