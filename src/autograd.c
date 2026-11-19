@@ -46,7 +46,7 @@ double *grad_of(Tensor *t) {
 static Node *order[MAX_NODES];
 static int64_t n_order;
 
-// postorder: a node lands in order only after all nodes it depends on
+// postorder puts each node after all the nodes it depends on
 static void topo_sort(const Tensor *t) {
     Node *node = t->node;
     if (!t->requires_grad || node == NULL || node->visited) {

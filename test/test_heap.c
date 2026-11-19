@@ -42,7 +42,7 @@ void test_resize(void) {
     FixedBufferAllocator fba = fixed_buffer_allocator_init(buf, sizeof(buf));
     unsigned char *a = fixed_buffer_allocator_alloc(&fba, 8, 8);
     unsigned char *b = fixed_buffer_allocator_alloc(&fba, 8, 8);
-    // not the last allocation: shrinking succeeds without freeing anything, growing fails
+    // an older allocation can shrink without freeing anything, but it cannot grow
     TEST_ASSERT_TRUE(fixed_buffer_allocator_resize(&fba, a, 8, 4));
     TEST_ASSERT_FALSE(fixed_buffer_allocator_resize(&fba, a, 8, 9));
     TEST_ASSERT_EQUAL_size_t(16, fba.end_index);

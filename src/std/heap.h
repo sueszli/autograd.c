@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 //
-// a static arena: one fixed buffer, one index into it, no malloc.
+// a static arena with one fixed buffer, one index into it and no malloc.
 // based on zig's FixedBufferAllocator:
 // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/heap/FixedBufferAllocator.zig
 //
