@@ -54,47 +54,35 @@ static void load_rows(const cJSON *rows, int64_t (*ints)[BLOCK_SIZE], double (*d
     }
 }
 
-int main(void) {
-    FILE *f = fopen("parity.json", "rb");
+static cJSON *read_json(const char *path) {
+    FILE *f = fopen(path, "rb");
     assert(f != NULL && "cannot open parity.json, run from the repo root");
-    fseek(f, 0, SEEK_END);
+    int seek_ok = fseek(f, 0, SEEK_END);
     long size = ftell(f);
+    assert(seek_ok == 0 && size > 0 && "cannot size parity.json");
     rewind(f);
     char *raw = malloc((size_t)size + 1);
     assert(raw != NULL && "malloc failed");
     size_t read = fread(raw, 1, (size_t)size, f);
     assert(read == (size_t)size && "cannot read parity.json");
     raw[size] = '\0';
-    fclose(f);
+    int close_ok = fclose(f);
+    assert(close_ok == 0 && "cannot close parity.json");
     cJSON *j = cJSON_Parse(raw);
     free(raw);
     assert(j != NULL && "cannot parse parity.json");
-    load_rows(field(j, "inputs"), inputs, NULL);
-    load_rows(field(j, "targets"), targets, NULL);
-    load_rows(field(j, "masks"), NULL, masks);
+    return j;
+}
 
-    Params p = params_new(), ref = params_new();
-    load_params(field(j, "init_weights"), &p);
-    load_params(field(j, "final_weights"), &ref);
-
-    // train
-    AdamW opt = adamw_new(p.all, N_PARAMS);
-    clock_t start = clock();
-    for (int64_t step = 0; step < NUM_STEPS; step++) {
-        backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
-        tape_reset();
-        adamw_step(&opt, step + 1, NUM_STEPS);
-    }
-    printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);
-
-    // parity
+// returns the number of tensors further than atol from the reference
+static int64_t check_parity(const Params *p, const Params *ref) {
     const double atol = 1e-11;
     int64_t failures = 0;
     double worst = 0.0;
     for (int64_t i = 0; i < N_PARAMS; i++) {
         double max_diff = 0.0;
-        for (int64_t k = 0; k < p.all[i]->rows * p.all[i]->cols; k++) {
-            max_diff = fmax(max_diff, fabs(p.all[i]->data[k] - ref.all[i]->data[k]));
+        for (int64_t k = 0; k < p->all[i]->rows * p->all[i]->cols; k++) {
+            max_diff = fmax(max_diff, fabs(p->all[i]->data[k] - ref->all[i]->data[k]));
         }
         worst = fmax(worst, max_diff);
         if (max_diff > atol) {
@@ -107,14 +95,15 @@ int main(void) {
     } else {
         fprintf(stderr, "FAIL: %ld/%d tensors exceed atol %g\n", (long)failures, N_PARAMS, atol);
     }
+    return failures;
+}
 
-    // inference: sample one name, the boundary token both starts and ends it
-    const int64_t bos = (int64_t)field(j, "bos")->valuedouble;
+// the boundary token both starts and ends a name
+static void sample_name(const Params *p, int64_t bos, char name[BLOCK_SIZE]) {
     uint64_t seed = (uint64_t)time(NULL);
     int64_t tokens[BLOCK_SIZE] = {bos};
-    char name[BLOCK_SIZE] = {0};
     for (int64_t n = 1; n < BLOCK_SIZE; n++) {
-        const Tensor *out = logits(&p, tokens, n);
+        const Tensor *out = logits(p, tokens, n);
         double probs[VOCAB_SIZE], max = out->data[(n - 1) * VOCAB_SIZE], sum = 0.0;
         for (int64_t c = 0; c < VOCAB_SIZE; c++) {
             max = fmax(max, out->data[(n - 1) * VOCAB_SIZE + c]);
@@ -135,11 +124,35 @@ int main(void) {
             }
         }
         if (next == bos) {
-            break;
+            return;
         }
         tokens[n] = next;
         name[n - 1] = (char)('a' + next);
     }
+}
+
+int main(void) {
+    cJSON *j = read_json("parity.json");
+    load_rows(field(j, "inputs"), inputs, NULL);
+    load_rows(field(j, "targets"), targets, NULL);
+    load_rows(field(j, "masks"), NULL, masks);
+    Params p = params_new(), ref = params_new();
+    load_params(field(j, "init_weights"), &p);
+    load_params(field(j, "final_weights"), &ref);
+
+    AdamW opt = adamw_new(p.all, N_PARAMS);
+    clock_t start = clock();
+    for (int64_t step = 0; step < NUM_STEPS; step++) {
+        backward(loss(&p, inputs[step], targets[step], masks[step], BLOCK_SIZE));
+        tape_reset();
+        adamw_step(&opt, step + 1, NUM_STEPS);
+    }
+    printf("trained %d steps in %.3fs\n", NUM_STEPS, (double)(clock() - start) / CLOCKS_PER_SEC);
+
+    int64_t failures = check_parity(&p, &ref);
+
+    char name[BLOCK_SIZE] = {0};
+    sample_name(&p, (int64_t)field(j, "bos")->valuedouble, name);
     printf("inference (random sampled name): %s\n", name);
 
     adamw_free(&opt);
