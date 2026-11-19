@@ -3,6 +3,9 @@
 #include <assert.h>
 #include <string.h>
 
+static void matmul_backward(const Node *node);
+static void transpose_backward(const Node *node);
+
 // the kernels sum every output element in ascending order, so results are reproducible
 
 static void kernel_matmul(f64 *out, const f64 *a, const f64 *b, i64 n, i64 k, i64 m) {
@@ -38,6 +41,17 @@ static void kernel_transpose(f64 *out, const f64 *a, i64 n, i64 m) {
     }
 }
 
+Tensor *matmul(Tensor *a, Tensor *b) {
+    // leading dims of a fold into rows, so a batch is one big matmul
+    assert(a->ndim >= 1 && b->ndim == 2 && cols_of(a) == b->shape[0] && "matmul: shape mismatch");
+    i64 shape[MAX_NDIM];
+    memcpy(shape, a->shape, sizeof(shape));
+    shape[a->ndim - 1] = b->shape[1];
+    Tensor *out = node_new(shape, a->ndim, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
+    kernel_matmul(out->data, a->data, b->data, rows_of(a), cols_of(a), b->shape[1]);
+    return out;
+}
+
 static void matmul_backward(const Node *node) {
     // ga += dout @ b^T, with b^T copied so the inner loop stays contiguous
     // gb += a^T @ dout
@@ -55,14 +69,18 @@ static void matmul_backward(const Node *node) {
     }
 }
 
-Tensor *matmul(Tensor *a, Tensor *b) {
-    // leading dims of a fold into rows, so a batch is one big matmul
-    assert(a->ndim >= 1 && b->ndim == 2 && cols_of(a) == b->shape[0] && "matmul: shape mismatch");
+Tensor *transpose(Tensor *a) {
+    // copies, there are no strided views
+    assert(a->ndim >= 2 && "transpose: needs at least 2 dims");
+    i64 r = a->shape[a->ndim - 2], c = cols_of(a);
     i64 shape[MAX_NDIM];
     memcpy(shape, a->shape, sizeof(shape));
-    shape[a->ndim - 1] = b->shape[1];
-    Tensor *out = node_new(shape, a->ndim, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
-    kernel_matmul(out->data, a->data, b->data, rows_of(a), cols_of(a), b->shape[1]);
+    shape[a->ndim - 2] = c;
+    shape[a->ndim - 1] = r;
+    Tensor *out = node_new(shape, a->ndim, transpose_backward, 1, (Tensor *[]){a}, 0, NULL);
+    for (i64 off = 0; off < a->size; off += r * c) {
+        kernel_transpose(&out->data[off], &a->data[off], r, c);
+    }
     return out;
 }
 
@@ -78,19 +96,4 @@ static void transpose_backward(const Node *node) {
             }
         }
     }
-}
-
-Tensor *transpose(Tensor *a) {
-    // copies, there are no strided views
-    assert(a->ndim >= 2 && "transpose: needs at least 2 dims");
-    i64 r = a->shape[a->ndim - 2], c = cols_of(a);
-    i64 shape[MAX_NDIM];
-    memcpy(shape, a->shape, sizeof(shape));
-    shape[a->ndim - 2] = c;
-    shape[a->ndim - 1] = r;
-    Tensor *out = node_new(shape, a->ndim, transpose_backward, 1, (Tensor *[]){a}, 0, NULL);
-    for (i64 off = 0; off < a->size; off += r * c) {
-        kernel_transpose(&out->data[off], &a->data[off], r, c);
-    }
-    return out;
 }

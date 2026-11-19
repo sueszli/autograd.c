@@ -2,6 +2,7 @@
 
 #include <float.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,6 +31,8 @@ typedef double f64;
 typedef ptrdiff_t isize;
 typedef size_t usize;
 
+// bool, true and false come from stdbool.h, and are keywords from c23 on
+
 static_assert(CHAR_BIT == 8, "a byte must have 8 bits");
 
 static_assert(sizeof(i8) == 1 && sizeof(u8) == 1, "i8 and u8 must be 8 bits");
@@ -40,5 +43,7 @@ static_assert(sizeof(i64) == 8 && sizeof(u64) == 8, "i64 and u64 must be 64 bits
 static_assert(sizeof(f16) == 2, "f16 must be 16 bits");
 static_assert(sizeof(f32) == 4 && FLT_MANT_DIG == 24, "f32 must be ieee 754 binary32");
 static_assert(sizeof(f64) == 8 && DBL_MANT_DIG == 53, "f64 must be ieee 754 binary64");
+
+static_assert(sizeof(bool) == 1, "bool must be 1 byte");
 
 static_assert(sizeof(isize) == sizeof(void *) && sizeof(usize) == sizeof(void *), "isize and usize must be pointer-sized");

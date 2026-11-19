@@ -2,6 +2,19 @@
 #include "ops.h"
 #include <assert.h>
 
+static void add_backward(const Node *node);
+static void mul_backward(const Node *node);
+static void relu_backward(const Node *node);
+
+Tensor *add(Tensor *a, Tensor *b) {
+    assert(a->ndim == b->ndim && a->size == b->size && "add: shape mismatch");
+    Tensor *out = node_new(a->shape, a->ndim, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
+    for (i64 i = 0; i < a->size; i++) {
+        out->data[i] = a->data[i] + b->data[i];
+    }
+    return out;
+}
+
 static void add_backward(const Node *node) {
     // both inputs get the output grad
     const Tensor *out = node->out;
@@ -13,11 +26,10 @@ static void add_backward(const Node *node) {
     }
 }
 
-Tensor *add(Tensor *a, Tensor *b) {
-    assert(a->ndim == b->ndim && a->size == b->size && "add: shape mismatch");
-    Tensor *out = node_new(a->shape, a->ndim, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
+Tensor *mul(Tensor *a, f64 s) {
+    Tensor *out = node_new(a->shape, a->ndim, mul_backward, 1, (Tensor *[]){a}, s, NULL);
     for (i64 i = 0; i < a->size; i++) {
-        out->data[i] = a->data[i] + b->data[i];
+        out->data[i] = a->data[i] * s;
     }
     return out;
 }
@@ -31,10 +43,10 @@ static void mul_backward(const Node *node) {
     }
 }
 
-Tensor *mul(Tensor *a, f64 s) {
-    Tensor *out = node_new(a->shape, a->ndim, mul_backward, 1, (Tensor *[]){a}, s, NULL);
+Tensor *relu(Tensor *a) {
+    Tensor *out = node_new(a->shape, a->ndim, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (i64 i = 0; i < a->size; i++) {
-        out->data[i] = a->data[i] * s;
+        out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;
     }
     return out;
 }
@@ -46,12 +58,4 @@ static void relu_backward(const Node *node) {
     for (i64 i = 0; g != NULL && i < out->size; i++) {
         g[i] += a->data[i] > 0.0 ? out->grad[i] : 0.0;
     }
-}
-
-Tensor *relu(Tensor *a) {
-    Tensor *out = node_new(a->shape, a->ndim, relu_backward, 1, (Tensor *[]){a}, 0, NULL);
-    for (i64 i = 0; i < a->size; i++) {
-        out->data[i] = a->data[i] > 0.0 ? a->data[i] : 0.0;
-    }
-    return out;
 }

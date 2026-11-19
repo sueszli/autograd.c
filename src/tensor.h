@@ -1,7 +1,6 @@
 #pragma once
 
 #include "std/types.h"
-#include <stdbool.h>
 
 #define MAX_NDIM 4
 

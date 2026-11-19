@@ -2,7 +2,6 @@
 
 #include "cJSON.h"
 #include "types.h"
-#include <stdbool.h>
 
 //
 // json reading on top of cJSON, without malloc.

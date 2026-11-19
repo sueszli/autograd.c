@@ -3,18 +3,10 @@
 #include <assert.h>
 #include <string.h>
 
-static void embedding_backward(const Node *node) {
-    // scatter rows back by id, summing duplicates
-    const Tensor *out = node->out;
-    const i64 *ids = node->ctx;
-    i64 d = cols_of(out);
-    f64 *g = grad_of(node->in[0]);
-    for (i64 r = 0; g != NULL && r < rows_of(out); r++) {
-        for (i64 c = 0; c < d; c++) {
-            g[ids[r] * d + c] += out->grad[r * d + c];
-        }
-    }
-}
+static void embedding_backward(const Node *node);
+static void masked_fill_upper_backward(const Node *node);
+static void narrow_backward(const Node *node);
+static void cat_backward(const Node *node);
 
 Tensor *embedding(const i64 *ids, i64 n, Tensor *table) {
     // copies the ids, the caller's array may change before backward
@@ -32,16 +24,15 @@ Tensor *embedding(const i64 *ids, i64 n, Tensor *table) {
     return out;
 }
 
-static void masked_fill_upper_backward(const Node *node) {
-    // only the kept entries, on and below the diagonal, get a grad
+static void embedding_backward(const Node *node) {
+    // scatter rows back by id, summing duplicates
     const Tensor *out = node->out;
-    i64 n = cols_of(out);
+    const i64 *ids = node->ctx;
+    i64 d = cols_of(out);
     f64 *g = grad_of(node->in[0]);
-    for (i64 off = 0; g != NULL && off < out->size; off += n * n) {
-        for (i64 i = 0; i < n; i++) {
-            for (i64 j = 0; j <= i; j++) {
-                g[off + i * n + j] += out->grad[off + i * n + j];
-            }
+    for (i64 r = 0; g != NULL && r < rows_of(out); r++) {
+        for (i64 c = 0; c < d; c++) {
+            g[ids[r] * d + c] += out->grad[r * d + c];
         }
     }
 }
@@ -61,14 +52,16 @@ Tensor *masked_fill_upper(Tensor *a, f64 value) {
     return out;
 }
 
-static void narrow_backward(const Node *node) {
-    // the slice's grad lands back in its columns
-    const Tensor *a = node->in[0], *out = node->out;
-    i64 start = (i64)node->aux, len = cols_of(out), cols = cols_of(a);
+static void masked_fill_upper_backward(const Node *node) {
+    // only the kept entries, on and below the diagonal, get a grad
+    const Tensor *out = node->out;
+    i64 n = cols_of(out);
     f64 *g = grad_of(node->in[0]);
-    for (i64 i = 0; g != NULL && i < rows_of(out); i++) {
-        for (i64 j = 0; j < len; j++) {
-            g[i * cols + start + j] += out->grad[i * len + j];
+    for (i64 off = 0; g != NULL && off < out->size; off += n * n) {
+        for (i64 i = 0; i < n; i++) {
+            for (i64 j = 0; j <= i; j++) {
+                g[off + i * n + j] += out->grad[off + i * n + j];
+            }
         }
     }
 }
@@ -87,17 +80,14 @@ Tensor *narrow(Tensor *a, i64 start, i64 len) {
     return out;
 }
 
-static void cat_backward(const Node *node) {
-    // each part gets its own columns of the grad
-    const Tensor *out = node->out;
-    i64 cols = cols_of(out);
-    for (i64 p = 0, start = 0; p < node->n_in; start += cols_of(node->in[p]), p++) {
-        f64 *g = grad_of(node->in[p]);
-        i64 len = cols_of(node->in[p]);
-        for (i64 i = 0; g != NULL && i < rows_of(out); i++) {
-            for (i64 j = 0; j < len; j++) {
-                g[i * len + j] += out->grad[i * cols + start + j];
-            }
+static void narrow_backward(const Node *node) {
+    // the slice's grad lands back in its columns
+    const Tensor *a = node->in[0], *out = node->out;
+    i64 start = (i64)node->aux, len = cols_of(out), cols = cols_of(a);
+    f64 *g = grad_of(node->in[0]);
+    for (i64 i = 0; g != NULL && i < rows_of(out); i++) {
+        for (i64 j = 0; j < len; j++) {
+            g[i * cols + start + j] += out->grad[i * len + j];
         }
     }
 }
@@ -121,4 +111,19 @@ Tensor *cat(Tensor *const *parts, i64 n) {
         }
     }
     return out;
+}
+
+static void cat_backward(const Node *node) {
+    // each part gets its own columns of the grad
+    const Tensor *out = node->out;
+    i64 cols = cols_of(out);
+    for (i64 p = 0, start = 0; p < node->n_in; start += cols_of(node->in[p]), p++) {
+        f64 *g = grad_of(node->in[p]);
+        i64 len = cols_of(node->in[p]);
+        for (i64 i = 0; g != NULL && i < rows_of(out); i++) {
+            for (i64 j = 0; j < len; j++) {
+                g[i * len + j] += out->grad[i * cols + start + j];
+            }
+        }
+    }
 }
