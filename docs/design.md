@@ -35,5 +35,5 @@ Plain `assert(cond && "msg")`. CMake passes `-UNDEBUG`, so asserts stay on in Re
 
 ## Parity
 
-- `data/parity.json` comes from autograd.lean. It holds initial weights, final weights and 1000 tokenized sequences. Linear weights are stored (out, in) and transposed on load.
+- `parity.json` comes from autograd.lean. It holds initial weights, final weights and 1000 tokenized sequences. Linear weights are stored (out, in) and transposed on load.
 - Measured margin: rounding-order changes (softmax divide vs multiply, matmul summation order, FMA contraction) stay around 1e-15. Masking one token at step 500 moves the weights by about 1e-1. So 1e-11 separates rounding noise from real differences.

@@ -48,20 +48,20 @@ static void load_row(const cJSON *rows, int64_t step, int64_t *ints, double *dou
 }
 
 int main(void) {
-    FILE *f = fopen("data/parity.json", "rb");
-    assert(f != NULL && "cannot open data/parity.json, run from the repo root");
+    FILE *f = fopen("parity.json", "rb");
+    assert(f != NULL && "cannot open parity.json, run from the repo root");
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     rewind(f);
     char *raw = malloc((size_t)size + 1);
     assert(raw != NULL && "malloc failed");
     size_t read = fread(raw, 1, (size_t)size, f);
-    assert(read == (size_t)size && "cannot read data/parity.json");
+    assert(read == (size_t)size && "cannot read parity.json");
     raw[size] = '\0';
     fclose(f);
     cJSON *j = cJSON_Parse(raw);
     free(raw);
-    assert(j != NULL && "cannot parse data/parity.json");
+    assert(j != NULL && "cannot parse parity.json");
     assert(cJSON_GetArraySize(field(j, "inputs")) >= NUM_STEPS && "not enough sequences");
 
     Params p = params_new(), ref = params_new();
