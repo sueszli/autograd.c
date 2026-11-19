@@ -5,45 +5,29 @@ $ toilet -f smblock "autograd.c"
     ▞▀▌▌ ▌▐ ▖▌ ▌▚▄▌▌  ▞▀▌▌ ▌▗▖▌ ▖
     ▝▀▘▝▀▘ ▀ ▝▀ ▗▄▘▘  ▝▀▘▝▀▘▝▘▝▀
 
-$ cat about.txt | fold -w 75
 
-    a minimal reverse-mode autograd engine in c, just big enough to train
-    karpathy's microGPT. float64 tensors, a tape walked in reverse, and 12
-    ops with forward and backward next to each other.
+A reverse-mode autograd engine in C, just big
+enough to train karpathy's microGPT.
 
-    correctness by:
 
-    - numeric parity with karpathy's microGPT to within 1e-11 atol
-    - a finite-difference gradient check for every op and the full model
-    - asan and ubsan on every test run
+12 float64 ops record onto a tape that backward
+walks in reverse. Memory is allocated statically,
+TigerBeetle style: nothing is allocated after startup.
 
-    design decisions:
 
-    - 2-D float64 only. no strides, views or broadcasting. float64 because
-      the reference uses python floats.
-    - a tape instead of refcounted graph nodes. creation order is already a
-      topological order, so backward is one reverse loop.
-    - static allocation in the style of tigerbeetle. the tape (128 nodes) and
-      one 256 KiB arena for op outputs, grads and scratch are fixed at
-      compile time. nothing is allocated after startup. tape_reset rewinds
-      two offsets.
-    - backward kernels are plain loops that never call ops, so backward
-      cannot grow the graph it is walking.
-    - attention is composed from primitive ops, not fused.
-    - asserts are the only error handling and stay on in release builds.
-    - not adopted from tigerbeetle and nasa's power of ten: 2 asserts per
-      function and no function pointers. both would make the code longer
-      and split each op's forward from its backward.
-
-    discussion on hackernews: https://news.ycombinator.com/item?id=46285424
-
-$ make parity
-
+    $ make parity
     trained 1000 steps in 0.101s
     passed parity check (max |diff| 5.7e-15)
     inference (random sampled name): kaonle
 
-see also:
 
-- counterpart in lean: https://github.com/sueszli/autograd.lean
-- original microgpt implementation: https://karpathy.github.io/2026/02/12/microgpt/
+Final weights match karpathy's microGPT to 1e-11.
+Every op is also checked against finite differences.
+
+
+References:
+
+- autograd.lean: https://github.com/sueszli/autograd.lean
+- microGPT: https://karpathy.github.io/2026/02/12/microgpt/
+- TigerStyle: https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md
+- Hacker News: https://news.ycombinator.com/item?id=46285424
