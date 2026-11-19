@@ -17,7 +17,7 @@ Tensor *embedding(const i64 *ids, i64 n, Tensor *table) {
         assert(ids[r] >= 0 && ids[r] < table->shape[0] && "embedding: id out of range");
         ids_copy[r] = ids[r];
     }
-    Tensor *out = node_new(SHAPE(n, d), embedding_backward, 1, (Tensor *[]){table}, 0, ids_copy);
+    Tensor *out = node_new(shape(n, d), embedding_backward, 1, (Tensor *[]){table}, 0, ids_copy);
     for (i64 r = 0; r < n; r++) {
         memcpy(&out->data[r * d], &table->data[ids[r] * d], (usize)d * sizeof(f64));
     }
@@ -70,7 +70,7 @@ Tensor *narrow(Tensor *a, i64 start, i64 len) {
     // splits attention heads apart
     i64 cols = cols_of(a);
     assert(start >= 0 && len > 0 && start + len <= cols && "narrow: out of range");
-    i64 shape[MAX_NDIM];
+    i64 shape[max_ndim];
     memcpy(shape, a->shape, sizeof(shape));
     shape[a->ndim - 1] = len;
     Tensor *out = node_new(shape, a->ndim, narrow_backward, 1, (Tensor *[]){a}, (f64)start, NULL);
@@ -100,7 +100,7 @@ Tensor *cat(Tensor *const *parts, i64 n) {
         assert(parts[p]->ndim == parts[0]->ndim && rows_of(parts[p]) == rows_of(parts[0]) && "cat: leading dims mismatch");
         cols += cols_of(parts[p]);
     }
-    i64 shape[MAX_NDIM];
+    i64 shape[max_ndim];
     memcpy(shape, parts[0]->shape, sizeof(shape));
     shape[parts[0]->ndim - 1] = cols;
     Tensor *out = node_new(shape, parts[0]->ndim, cat_backward, n, parts, 0, NULL);
