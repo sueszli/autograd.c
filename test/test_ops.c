@@ -1,5 +1,6 @@
 #include "autograd.h"
 #include "ops.h"
+#include "std/numeric.h"
 #include "unity.h"
 #include <math.h>
 
@@ -11,9 +12,7 @@ void tearDown(void) {
 
 static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
     Tensor *t = tensor_new(rows, cols, NULL, requires_grad);
-    for (int64_t i = 0; i < rows * cols; i++) {
-        t->data[i] = 2.0 * rand() / RAND_MAX - 1.0;
-    }
+    fill_uniform(t->data, rows * cols, -1.0, 1.0);
     return t;
 }
 
@@ -23,8 +22,14 @@ static Tensor *rand_tensor(int64_t rows, int64_t cols, bool requires_grad) {
  */
 typedef Tensor *(*Fn)(Tensor **in);
 
-static double loss_of(Fn f, Tensor **in, Tensor *r1, Tensor *r2) {
-    double loss = matmul(matmul(r1, f(in)), r2)->data[0];
+typedef struct {
+    Fn f;
+    Tensor **in, *r1, *r2;
+} Probe;
+
+static double loss_of(void *ctx) {
+    const Probe *p = ctx;
+    double loss = matmul(matmul(p->r1, p->f(p->in)), p->r2)->data[0];
     graph_reset();
     return loss;
 }
@@ -35,16 +40,10 @@ static void gradcheck(Fn f, Tensor **in, int64_t n_in) {
     Tensor *r2 = rand_tensor(out->cols, 1, false);
     backward(matmul(matmul(r1, out), r2));
     graph_reset();
-    const double h = 1e-6;
+    Probe probe = {f, in, r1, r2};
     for (int64_t t = 0; t < n_in; t++) {
         for (int64_t i = 0; in[t]->requires_grad && i < in[t]->rows * in[t]->cols; i++) {
-            double x = in[t]->data[i];
-            in[t]->data[i] = x + h;
-            double up = loss_of(f, in, r1, r2);
-            in[t]->data[i] = x - h;
-            double down = loss_of(f, in, r1, r2);
-            in[t]->data[i] = x;
-            double numeric = (up - down) / (2 * h);
+            double numeric = central_difference(loss_of, &probe, &in[t]->data[i], 1e-6);
             TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, in[t]->grad[i]);
         }
     }

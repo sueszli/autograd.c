@@ -2,6 +2,7 @@
 #include "cJSON.h"
 #include "microgpt.h"
 #include "optim.h"
+#include "std/numeric.h"
 #include <assert.h>
 #include <math.h>
 #include <string.h>
@@ -81,10 +82,7 @@ static int64_t check_parity(const Params *p, const Params *ref) {
     int64_t failures = 0;
     double worst = 0.0;
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        double max_diff = 0.0;
-        for (int64_t k = 0; k < p->all[i]->rows * p->all[i]->cols; k++) {
-            max_diff = fmax(max_diff, fabs(p->all[i]->data[k] - ref->all[i]->data[k]));
-        }
+        double max_diff = max_abs_diff(p->all[i]->data, ref->all[i]->data, p->all[i]->rows * p->all[i]->cols);
         worst = fmax(worst, max_diff);
         if (max_diff > atol) {
             fprintf(stderr, "  %s: max abs diff = %g\n", NAMES[i], max_diff);

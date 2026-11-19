@@ -1,6 +1,7 @@
 #include "autograd.h"
 #include "microgpt.h"
 #include "optim.h"
+#include "std/numeric.h"
 #include "unity.h"
 #include <math.h>
 
@@ -26,28 +27,23 @@ void test_logits_shape(void) {
     TEST_ASSERT_EQUAL_INT64(VOCAB_SIZE, out->cols);
 }
 
+static double loss_of(void *p) {
+    double l = loss(p, ids, targets, mask, 6)->data[0];
+    graph_reset();
+    return l;
+}
+
 // every weight of the full model against a central difference
 void test_loss_gradcheck(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
-            p.all[i]->data[j] = 0.3 * (2.0 * rand() / RAND_MAX - 1.0);
-        }
+        fill_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.3, 0.3);
     }
     backward(loss(&p, ids, targets, mask, 6));
     graph_reset();
-    const double h = 1e-6;
     for (int64_t i = 0; i < N_PARAMS; i++) {
         for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
-            double x = p.all[i]->data[j];
-            p.all[i]->data[j] = x + h;
-            double up = loss(&p, ids, targets, mask, 6)->data[0];
-            graph_reset();
-            p.all[i]->data[j] = x - h;
-            double down = loss(&p, ids, targets, mask, 6)->data[0];
-            graph_reset();
-            p.all[i]->data[j] = x;
-            double numeric = (up - down) / (2 * h);
+            double numeric = central_difference(loss_of, &p, &p.all[i]->data[j], 1e-6);
             TEST_ASSERT_DOUBLE_WITHIN(1e-6 * (1 + fabs(numeric)), numeric, p.all[i]->grad[j]);
         }
     }
@@ -70,9 +66,7 @@ void test_adamw_first_step(void) {
 void test_training_reduces_loss(void) {
     Params p = params_new();
     for (int64_t i = 0; i < N_PARAMS; i++) {
-        for (int64_t j = 0; j < p.all[i]->rows * p.all[i]->cols; j++) {
-            p.all[i]->data[j] = 0.08 * (2.0 * rand() / RAND_MAX - 1.0);
-        }
+        fill_uniform(p.all[i]->data, p.all[i]->rows * p.all[i]->cols, -0.08, 0.08);
     }
     AdamW opt = adamw_new(p.all, N_PARAMS);
     double last = 0.0;
