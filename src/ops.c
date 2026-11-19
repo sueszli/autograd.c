@@ -1,5 +1,6 @@
 #include "ops.h"
 #include "autograd.h"
+#include <assert.h>
 #include <math.h>
 #include <string.h>
 
@@ -18,7 +19,7 @@ static void add_backward(const Node *node) {
 }
 
 Tensor *add(Tensor *a, Tensor *b) {
-    CHECK(a->rows == b->rows && a->cols == b->cols, "add: shape mismatch");
+    assert(a->rows == b->rows && a->cols == b->cols && "add: shape mismatch");
     Tensor *out = tape_push(a->rows, a->cols, add_backward, 2, (Tensor *[]){a, b}, 0, NULL);
     for (int64_t i = 0; i < a->rows * a->cols; i++) {
         out->data[i] = a->data[i] + b->data[i];
@@ -53,7 +54,7 @@ static void matmul_backward(const Node *node) {
 
 // i-k-j order keeps the inner loop contiguous and sums each output over k in ascending order
 Tensor *matmul(Tensor *a, Tensor *b) {
-    CHECK(a->cols == b->rows, "matmul: inner dims mismatch");
+    assert(a->cols == b->rows && "matmul: inner dims mismatch");
     int64_t n = a->rows, k = a->cols, m = b->cols;
     Tensor *out = tape_push(n, m, matmul_backward, 2, (Tensor *[]){a, b}, 0, NULL);
     for (int64_t i = 0; i < n; i++) {
@@ -107,11 +108,11 @@ static void gather_backward(const Node *node) {
 }
 
 Tensor *gather(Tensor *table, const int64_t *ids, int64_t n) {
-    CHECK(n > 0, "gather: no ids");
+    assert(n > 0 && "gather: no ids");
     int64_t *ids_copy = malloc((size_t)n * sizeof(int64_t));
-    CHECK(ids_copy != NULL, "malloc failed");
+    assert(ids_copy != NULL && "malloc failed");
     for (int64_t r = 0; r < n; r++) {
-        CHECK(ids[r] >= 0 && ids[r] < table->rows, "gather: id out of range");
+        assert(ids[r] >= 0 && ids[r] < table->rows && "gather: id out of range");
         ids_copy[r] = ids[r];
     }
     Tensor *out = tape_push(n, table->cols, gather_backward, 1, (Tensor *[]){table}, 0, ids_copy);
@@ -219,7 +220,7 @@ static void causal_mask_backward(const Node *node) {
 
 // row i may only attend to columns j <= i, the rest are set to value
 Tensor *causal_mask(Tensor *a, double value) {
-    CHECK(a->rows == a->cols, "causal_mask: must be square");
+    assert(a->rows == a->cols && "causal_mask: must be square");
     Tensor *out = tape_push(a->rows, a->cols, causal_mask_backward, 1, (Tensor *[]){a}, 0, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         for (int64_t j = 0; j < a->cols; j++) {
@@ -289,7 +290,7 @@ static void slice_cols_backward(const Node *node) {
 }
 
 Tensor *slice_cols(Tensor *a, int64_t start, int64_t len) {
-    CHECK(start >= 0 && len > 0 && start + len <= a->cols, "slice_cols: out of range");
+    assert(start >= 0 && len > 0 && start + len <= a->cols && "slice_cols: out of range");
     Tensor *out = tape_push(a->rows, len, slice_cols_backward, 1, (Tensor *[]){a}, (double)start, NULL);
     for (int64_t i = 0; i < a->rows; i++) {
         memcpy(&out->data[i * len], &a->data[i * a->cols + start], (size_t)len * sizeof(double));
@@ -311,10 +312,10 @@ static void concat_cols_backward(const Node *node) {
 }
 
 Tensor *concat_cols(Tensor *const *parts, int64_t n) {
-    CHECK(n > 0, "concat_cols: no parts");
+    assert(n > 0 && "concat_cols: no parts");
     int64_t cols = 0;
     for (int64_t p = 0; p < n; p++) {
-        CHECK(parts[p]->rows == parts[0]->rows, "concat_cols: row mismatch");
+        assert(parts[p]->rows == parts[0]->rows && "concat_cols: row mismatch");
         cols += parts[p]->cols;
     }
     Tensor *out = tape_push(parts[0]->rows, cols, concat_cols_backward, n, parts, 0, NULL);
@@ -346,7 +347,7 @@ static void masked_cross_entropy_backward(const Node *node) {
     }
     double inv = sum_mask == 0.0 ? 0.0 : 1.0 / sum_mask;
     double *p = malloc((size_t)cols * sizeof(double));
-    CHECK(p != NULL, "malloc failed");
+    assert(p != NULL && "malloc failed");
     for (int64_t i = 0; g != NULL && i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);
         for (int64_t j = 0; j < cols; j++) {
@@ -360,16 +361,16 @@ static void masked_cross_entropy_backward(const Node *node) {
 Tensor *masked_cross_entropy(Tensor *logits, const int64_t *targets, const double *mask) {
     int64_t rows = logits->rows, cols = logits->cols;
     int64_t *ctx = malloc((size_t)rows * (sizeof(int64_t) + sizeof(double)));
-    CHECK(ctx != NULL, "malloc failed");
+    assert(ctx != NULL && "malloc failed");
     double *mask_copy = (double *)(ctx + rows);
     for (int64_t i = 0; i < rows; i++) {
-        CHECK(targets[i] >= 0 && targets[i] < cols, "masked_cross_entropy: target out of range");
+        assert(targets[i] >= 0 && targets[i] < cols && "masked_cross_entropy: target out of range");
         ctx[i] = targets[i];
         mask_copy[i] = mask[i];
     }
     Tensor *out = tape_push(1, 1, masked_cross_entropy_backward, 1, (Tensor *[]){logits}, 0, ctx);
     double *p = malloc((size_t)cols * sizeof(double));
-    CHECK(p != NULL, "malloc failed");
+    assert(p != NULL && "malloc failed");
     double total = 0.0, sum_mask = 0.0;
     for (int64_t i = 0; i < rows; i++) {
         softmax_row(&logits->data[i * cols], p, cols);

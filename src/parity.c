@@ -2,6 +2,7 @@
 #include "cJSON.h"
 #include "microgpt.h"
 #include "optim.h"
+#include <assert.h>
 #include <math.h>
 #include <string.h>
 #include <time.h>
@@ -12,7 +13,7 @@ static const char *NAMES[N_PARAMS] = {"wte", "wpe", "lm_head", "layer0.attn_wq",
 
 static cJSON *field(const cJSON *j, const char *key) {
     cJSON *f = cJSON_GetObjectItemCaseSensitive(j, key);
-    CHECK(f != NULL, key);
+    assert(f != NULL);
     return f;
 }
 
@@ -22,10 +23,10 @@ static void load_params(const cJSON *j, Params *p) {
         Tensor *t = p->all[i];
         const cJSON *rows = field(j, NAMES[i]);
         bool transposed = i >= 2;
-        CHECK(cJSON_GetArraySize(rows) == (transposed ? t->cols : t->rows), NAMES[i]);
+        assert(cJSON_GetArraySize(rows) == (transposed ? t->cols : t->rows));
         for (int64_t r = 0; r < cJSON_GetArraySize(rows); r++) {
             const cJSON *row = cJSON_GetArrayItem(rows, (int)r);
-            CHECK(cJSON_GetArraySize(row) == (transposed ? t->rows : t->cols), NAMES[i]);
+            assert(cJSON_GetArraySize(row) == (transposed ? t->rows : t->cols));
             for (int64_t c = 0; c < cJSON_GetArraySize(row); c++) {
                 t->data[transposed ? c * t->cols + r : r * t->cols + c] = cJSON_GetArrayItem(row, (int)c)->valuedouble;
             }
@@ -35,7 +36,7 @@ static void load_params(const cJSON *j, Params *p) {
 
 static void load_row(const cJSON *rows, int64_t step, int64_t *ints, double *doubles) {
     const cJSON *row = cJSON_GetArrayItem(rows, (int)step);
-    CHECK(cJSON_GetArraySize(row) == BLOCK_SIZE, "sequence length must be BLOCK_SIZE");
+    assert(cJSON_GetArraySize(row) == BLOCK_SIZE && "sequence length must be BLOCK_SIZE");
     for (int64_t i = 0; i < BLOCK_SIZE; i++) {
         double v = cJSON_GetArrayItem(row, (int)i)->valuedouble;
         if (ints != NULL) {
@@ -47,19 +48,21 @@ static void load_row(const cJSON *rows, int64_t step, int64_t *ints, double *dou
 }
 
 int main(void) {
-    FILE *f = fopen("data/parity.json", "rb");
-    CHECK(f != NULL, "cannot open data/parity.json, run from the repo root");
+    FILE *f = fopen("parity.json", "rb");
+    assert(f != NULL && "cannot open parity.json, run from the repo root");
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     rewind(f);
     char *raw = malloc((size_t)size + 1);
-    CHECK(raw != NULL && fread(raw, 1, (size_t)size, f) == (size_t)size, "cannot read data/parity.json");
+    assert(raw != NULL && "malloc failed");
+    size_t read = fread(raw, 1, (size_t)size, f);
+    assert(read == (size_t)size && "cannot read parity.json");
     raw[size] = '\0';
     fclose(f);
     cJSON *j = cJSON_Parse(raw);
     free(raw);
-    CHECK(j != NULL, "cannot parse data/parity.json");
-    CHECK(cJSON_GetArraySize(field(j, "inputs")) >= NUM_STEPS, "not enough sequences");
+    assert(j != NULL && "cannot parse parity.json");
+    assert(cJSON_GetArraySize(field(j, "inputs")) >= NUM_STEPS && "not enough sequences");
 
     Params p = params_new(), ref = params_new();
     load_params(field(j, "init_weights"), &p);

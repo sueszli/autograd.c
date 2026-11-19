@@ -7,6 +7,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # no fma contraction, so results are identical across compilers and cpus
 add_compile_options(-Wall -Wextra -Wconversion -Wsign-conversion -Werror -ffp-contract=off)
 
+# asserts are the only error handling, so keep them in release builds too
+add_compile_options(-UNDEBUG)
+
 if(NOT DISABLE_SANITIZERS)
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
   add_link_options(-fsanitize=address,undefined)

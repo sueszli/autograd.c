@@ -1,5 +1,6 @@
 #include "microgpt.h"
 #include "ops.h"
+#include <assert.h>
 #include <math.h>
 
 _Static_assert(sizeof(Params) == N_PARAMS * sizeof(Tensor *), "Params must be a flat array of tensors");
@@ -46,7 +47,7 @@ static Tensor *attn(Tensor *x, const Layer *l) {
 static Tensor *mlp(Tensor *x, const Layer *l) { return add(x, matmul(relu(matmul(rmsnorm(x, 1e-5), l->mlp_fc1)), l->mlp_fc2)); }
 
 Tensor *logits(const Params *p, const int64_t *ids, int64_t n) {
-    CHECK(n > 0 && n <= BLOCK_SIZE, "logits: sequence length out of range");
+    assert(n > 0 && n <= BLOCK_SIZE && "logits: sequence length out of range");
     int64_t pos[BLOCK_SIZE];
     for (int64_t i = 0; i < n; i++) {
         pos[i] = i;

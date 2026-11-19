@@ -1,15 +1,16 @@
 #include "optim.h"
+#include <assert.h>
 #include <math.h>
 #include <string.h>
 
 AdamW adamw_new(Tensor **params, int64_t n) {
     AdamW opt = {.params = params, .n = n, .m = calloc((size_t)n, sizeof(double *)), .v = calloc((size_t)n, sizeof(double *))};
-    CHECK(opt.m != NULL && opt.v != NULL, "calloc failed");
+    assert(opt.m != NULL && opt.v != NULL && "calloc failed");
     for (int64_t i = 0; i < n; i++) {
         size_t size = (size_t)(params[i]->rows * params[i]->cols);
         opt.m[i] = calloc(size, sizeof(double));
         opt.v[i] = calloc(size, sizeof(double));
-        CHECK(opt.m[i] != NULL && opt.v[i] != NULL, "calloc failed");
+        assert(opt.m[i] != NULL && opt.v[i] != NULL && "calloc failed");
     }
     return opt;
 }
