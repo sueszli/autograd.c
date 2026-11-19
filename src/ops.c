@@ -36,10 +36,17 @@ static void matmul_backward(const Node *node) {
     int64_t n = a->rows, k = a->cols, m = b->cols;
     double *ga = grad_of(node->in[0]);
     double *gb = grad_of(node->in[1]);
+    // ga += dout @ b^T, with b^T copied so the inner loop is contiguous and each output still sums over j in order
+    double *bt = tape_alloc(k * m * (int64_t)sizeof(double));
+    for (int64_t p = 0; ga != NULL && p < k; p++) {
+        for (int64_t j = 0; j < m; j++) {
+            bt[j * k + p] = b->data[p * m + j];
+        }
+    }
     for (int64_t i = 0; ga != NULL && i < n; i++) {
-        for (int64_t p = 0; p < k; p++) {
-            for (int64_t j = 0; j < m; j++) {
-                ga[i * k + p] += out->grad[i * m + j] * b->data[p * m + j];
+        for (int64_t j = 0; j < m; j++) {
+            for (int64_t p = 0; p < k; p++) {
+                ga[i * k + p] += out->grad[i * m + j] * bt[j * k + p];
             }
         }
     }
