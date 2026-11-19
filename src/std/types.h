@@ -7,11 +7,8 @@
 #include <stdint.h>
 
 //
-// rust-style fixed-width types.
+// rust-style fixed-width types, checked at compile time.
 // https://doc.rust-lang.org/book/ch03-02-data-types.html
-//
-// the static asserts check every width at compile time.
-// on a system where one differs, the build fails before anything runs.
 //
 
 typedef int8_t i8;
@@ -30,8 +27,6 @@ typedef double f64;
 
 typedef ptrdiff_t isize;
 typedef size_t usize;
-
-// bool, true and false come from stdbool.h, and are keywords from c23 on
 
 static_assert(CHAR_BIT == 8, "a byte must have 8 bits");
 

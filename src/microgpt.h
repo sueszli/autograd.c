@@ -25,17 +25,10 @@ typedef union {
 } Params;
 
 typedef struct {
-    // zero weights that require grad, in mem->perm
-    Params (*params)(Mem *mem);
-
-    // (n, VOCAB_SIZE)
-    Tensor *(*logits)(const Params *p, const i64 *ids, i64 n);
-
-    // scalar
-    Tensor *(*loss)(const Params *p, const i64 *ids, const i64 *targets, const f64 *mask, i64 n);
-
-    // draws tokens from softmax(logits) until the boundary token, then writes them as letters
-    void (*sample)(const Params *p, u64 seed, char name[BLOCK_SIZE]);
+    Params (*params)(Mem *mem);                                                                   // zero weights
+    Tensor *(*logits)(const Params *p, const i64 *ids, i64 n);                                    // (n, VOCAB_SIZE)
+    Tensor *(*loss)(const Params *p, const i64 *ids, const i64 *targets, const f64 *mask, i64 n); // scalar
+    void (*sample)(const Params *p, u64 seed, char name[BLOCK_SIZE]);                             // a random name
 } MicrogptNamespace;
 
 extern const MicrogptNamespace microgpt;
