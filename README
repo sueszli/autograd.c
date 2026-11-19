@@ -7,7 +7,9 @@
 a malloc-free reverse-mode autograd engine in c,
 built to train karpathy's microGPT as fast as possible.
 
+
 all memory is static, handed out by a port of zig's FixedBufferAllocator.
+
 1000 training steps take 0.107s on one core.
 
 

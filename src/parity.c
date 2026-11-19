@@ -3,7 +3,7 @@
 #include "microgpt.h"
 #include "ops.h"
 #include "optim.h"
-#include "std/numeric.h"
+#include "std/testing.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
