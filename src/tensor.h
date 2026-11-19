@@ -6,26 +6,12 @@
 #define MAX_NDIM 4
 
 //
-// n-d row-major float64 tensors with reverse-mode autograd, named after pytorch.
-// https://pytorch.org/docs/stable/torch.html
+// n-d row-major f64 tensors, named after pytorch.
+// https://pytorch.org/docs/stable/tensors.html
 //
-// every op output points to the node that made it.
-// every node points to its inputs.
-//
-//     x  ─┐
-//     w1 ─┴─ [matmul] ─ h ─ [relu] ─ a ─┐
-//     w2 ───────────────────────────────┴─ [matmul] ─ loss
-//
-// backward sorts the nodes behind the loss topologically with a dfs.
-// then it runs each node's backward from the loss down to the params.
-//
-// row-wise ops act on the last dim.
-// matmul and transpose act on the last two dims, and leading dims are a batch.
-// there is no broadcasting.
-//
-// all memory lives in two static arenas, and nothing calls malloc.
-// perm holds params, their grads and optimizer state.
-// graph holds nodes, op outputs, their grads and scratch.
+// data is contiguous, there are no strides and no broadcasting.
+// params and inputs live in the perm arena, which is never reset.
+// op outputs live in the graph arena, see autograd.h.
 //
 
 typedef struct Tensor {
@@ -44,38 +30,14 @@ typedef struct Tensor {
 // in perm, data NULL gives zeros
 Tensor *tensor_new(const i64 *shape, i64 ndim, const f64 *data, bool requires_grad);
 
-// ===----------------------------------------------------------------------=== //
-// autograd and memory
-// ===----------------------------------------------------------------------=== //
+// copies the shape and multiplies it out into size
+void tensor_set_shape(Tensor *t, const i64 *shape, i64 ndim);
 
-// seeds loss->grad with 1 and backprops through the graph
-// param grads accumulate across calls
-void backward(Tensor *loss);
+// the last dim, which row-wise ops act on
+static inline i64 cols_of(const Tensor *t) { return t->shape[t->ndim - 1]; }
 
-void graph_reset(void);      // frees the graph, call after each backward
+// every leading dim flattened into rows
+static inline i64 rows_of(const Tensor *t) { return t->size / cols_of(t); }
+
 void *perm_alloc(i64 bytes); // zeroed
 void perm_reset(void);       // frees every param, only tests need this
-
-// ===----------------------------------------------------------------------=== //
-// ops
-// ===----------------------------------------------------------------------=== //
-
-// elementwise
-Tensor *add(Tensor *a, Tensor *b); // a + b, same shape
-Tensor *mul(Tensor *a, f64 s);     // a * s
-Tensor *relu(Tensor *a);           // max(a, 0)
-
-// matrix
-Tensor *matmul(Tensor *a, Tensor *b); // (..., n, k) @ (k, m) -> (..., n, m)
-Tensor *transpose(Tensor *a);         // swaps the last two dims
-
-// indexing
-Tensor *embedding(const i64 *ids, i64 n, Tensor *table); // rows of a 2-d table picked by ids, (n, d)
-Tensor *masked_fill_upper(Tensor *a, f64 value);         // entries above the diagonal set to value, last two dims square
-Tensor *narrow(Tensor *a, i64 start, i64 len);           // last dim [start, start + len)
-Tensor *cat(Tensor *const *parts, i64 n);                // parts joined along the last dim
-
-// normalization and loss
-Tensor *rms_norm(Tensor *a, f64 eps);                                       // each row divided by its root mean square
-Tensor *softmax(Tensor *a);                                                 // softmax over the last dim
-Tensor *cross_entropy(Tensor *logits, const i64 *targets, const f64 *mask); // scalar, mean over rows with mask 1

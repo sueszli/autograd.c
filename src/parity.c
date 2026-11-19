@@ -1,8 +1,8 @@
+#include "autograd.h"
 #include "microgpt.h"
 #include "optim.h"
 #include "std/assert.h"
 #include "std/json.h"
-#include "tensor.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>

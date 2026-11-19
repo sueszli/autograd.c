@@ -1,4 +1,6 @@
 #include "microgpt.h"
+#include "autograd.h"
+#include "ops.h"
 #include "std/random.h"
 #include <assert.h>
 #include <math.h>

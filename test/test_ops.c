@@ -1,6 +1,7 @@
+#include "autograd.h"
+#include "ops.h"
 #include "std/assert.h"
 #include "std/random.h"
-#include "tensor.h"
 #include "unity.h"
 #include <math.h>
 
